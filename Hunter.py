@@ -1,5 +1,4 @@
 import datetime
-import hashlib
 import json
 import logging
 import os
@@ -7,8 +6,6 @@ import platform
 import sys
 import time
 from typing import Final, Optional
-
-import colorama
 
 import panutils
 from config import PANHuntConfigSingleton
@@ -18,7 +15,7 @@ from pbar import FileProgressbar, MainProgressbar
 
 TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
 
-# TODO: Move progressbar and colorama related stuff to CLI
+# TODO: Move progressbar related stuff to CLI
 
 
 class Hunter:
@@ -129,12 +126,12 @@ class Hunter:
             report['interesting_files']['files'] = [
                 f.filename for f in interesting_files]
 
-        text: str = json.dumps(report, sort_keys=True)
-        hash_check: str = self.get_text_hash(text)
-        report['hash'] = hash_check
-        json_report: str = json.dumps(report)
+        initial_report: str = json.dumps(report, sort_keys=True)
+        digest: str = panutils.get_text_hash(initial_report)
+        report['hash'] = digest
+        final_report: str = json.dumps(report)
         with open(PANHuntConfigSingleton.instance().json_path, "w") as f:  # type: ignore
-            f.write(json_report)
+            f.write(final_report)
 
         logging.debug("Created JSON report.")
 
@@ -240,38 +237,14 @@ class Hunter:
                 psts_completed += 1
         return total_psts, matches_found
 
-    def check_file_hash(self, text_file: str) -> None:
-
-        with open(text_file, encoding='utf-8', mode='r') as f:
-            text_output: str = f.read()
-
-        hash_pos: int = text_output.rfind(os.linesep)
-        hash_in_file: str = text_output[hash_pos + len(os.linesep):]
-        hash_check: str = self.get_text_hash(text_output[:hash_pos])
-        if hash_in_file == hash_check:
-            print(colorama.Fore.GREEN + 'Hashes OK')
-        else:
-            print(colorama.Fore.RED + 'Hashes Not OK')
-        print(colorama.Fore.WHITE + hash_in_file + '\n' + hash_check)
-
     def append_hash(self, text_file: str) -> None:
 
         with open(text_file, encoding='utf-8', mode='r') as f:
             text: str = f.read()
 
-        hash_check: str = self.get_text_hash(text)
+        hash_check: str = panutils.get_text_hash(text)
 
         text += os.linesep + hash_check
 
         with open(text_file, encoding='utf-8', mode='w') as f:
             f.write(text)
-
-    def get_text_hash(self, text: str | bytes) -> str:
-        encoded_text: bytes
-
-        if isinstance(text, str):
-            encoded_text = text.encode('utf-8')
-        else:
-            encoded_text = text
-
-        return hashlib.sha512(encoded_text + 'PAN'.encode('utf-8')).hexdigest()

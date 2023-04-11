@@ -16,11 +16,11 @@ import sys
 from typing import Final, Optional
 
 import colorama
-from PANFile import PANFile
-import panutils
 
+import panutils
 from config import PANHuntConfigSingleton
 from Hunter import Hunter
+from PANFile import PANFile
 
 APP_VERSION: Final[str] = '1.3'
 
@@ -41,6 +41,21 @@ def print_report(all_files: list[PANFile]) -> None:
 
     print(colorama.Fore.WHITE +
           f'Report written to {panutils.unicode_to_ascii(PANHuntConfigSingleton.instance().output_file)}')
+
+
+def check_file_hash(text_file: str) -> None:
+
+    with open(text_file, encoding='utf-8', mode='r') as f:
+        text_output: str = f.read()
+
+    hash_pos: int = text_output.rfind(os.linesep)
+    hash_in_file: str = text_output[hash_pos + len(os.linesep):]
+    hash_check: str = panutils.get_text_hash(text_output[:hash_pos])
+    if hash_in_file == hash_check:
+        print(colorama.Fore.GREEN + 'Hashes OK')
+    else:
+        print(colorama.Fore.RED + 'Hashes Not OK')
+    print(colorama.Fore.WHITE + hash_in_file + '\n' + hash_check)
 
 
 def main() -> None:
@@ -92,9 +107,8 @@ def main() -> None:
 
     args: argparse.Namespace = arg_parser.parse_args()
 
-    hunter = Hunter()
     if args.check_file_hash:
-        hunter.check_file_hash(args.check_file_hash)
+        check_file_hash(args.check_file_hash)
         sys.exit()
 
     search_dir = str(args.search)
@@ -129,16 +143,16 @@ def main() -> None:
                                                 excluded_pans_string=excluded_pans_string,
                                                 json_path=json_path)
 
+    hunter = Hunter()
     total_files_searched, pans_found, all_files = hunter.hunt_pans()
 
     # report findings
     hunter.create_report(all_files,
                          total_files_searched, pans_found)
-
-    print_report(all_files=all_files)
-
     if json_path:
         hunter.create_json_report(all_files, total_files_searched, pans_found)
+
+    print_report(all_files=all_files)
 
 
 if __name__ == "__main__":
