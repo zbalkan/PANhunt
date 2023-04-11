@@ -16,11 +16,31 @@ import sys
 from typing import Final, Optional
 
 import colorama
+from PANFile import PANFile
+import panutils
 
 from config import PANHuntConfigSingleton
 from Hunter import Hunter
 
 APP_VERSION: Final[str] = '1.3'
+
+
+def print_report(all_files: list[PANFile]) -> None:
+
+    logging.debug("Creating TXT report.")
+    pan_sep: str = '\n\t'
+    for pan_file in sorted([pan_file for pan_file in all_files if pan_file.matches], key=lambda x: x.filename):
+        pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
+
+        print(colorama.Fore.RED + panutils.unicode_to_ascii(pan_header))
+        pan_list: str = '\t' + \
+            pan_sep.join([pan.get_masked_pan()
+                          for pan in pan_file.matches])
+        print(colorama.Fore.YELLOW +
+              panutils.unicode_to_ascii(pan_list))
+
+    print(colorama.Fore.WHITE +
+          f'Report written to {panutils.unicode_to_ascii(PANHuntConfigSingleton.instance().output_file)}')
 
 
 def main() -> None:
@@ -114,6 +134,8 @@ def main() -> None:
     # report findings
     hunter.create_report(all_files,
                          total_files_searched, pans_found)
+
+    print_report(all_files=all_files)
 
     if json_path:
         hunter.create_json_report(all_files, total_files_searched, pans_found)

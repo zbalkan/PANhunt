@@ -61,7 +61,6 @@ class Hunter:
 
         return total_files_searched, pans_found, all_files
 
-    # TODO: Separate TXT report generation from GUI code
     def create_report(self, all_files: list[PANFile], total_files_searched: int, pans_found: int) -> None:
 
         logging.debug("Creating TXT report.")
@@ -80,13 +79,10 @@ class Hunter:
         for pan_file in sorted([pan_file for pan_file in all_files if pan_file.matches], key=lambda x: x.filename):
             pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
 
-            print(colorama.Fore.RED + panutils.unicode_to_ascii(pan_header))
             pan_report += pan_header + '\n'
             pan_list: str = '\t' + \
                 pan_sep.join([pan.get_masked_pan()
                               for pan in pan_file.matches])
-            print(colorama.Fore.YELLOW +
-                  panutils.unicode_to_ascii(pan_list))
             pan_report += pan_list + '\n\n'
 
         if len([pan_file for pan_file in all_files if pan_file.filetype == 'OTHER']) != 0:
@@ -96,9 +92,6 @@ class Hunter:
                                             panutils.size_friendly(pan_file.size), pan_file.modified.strftime('%d/%m/%Y'))
 
         pan_report = pan_report.replace('\n', os.linesep)
-
-        print(colorama.Fore.WHITE +
-              f'Report written to {panutils.unicode_to_ascii(PANHuntConfigSingleton.instance().output_file)}')
 
         with open(PANHuntConfigSingleton.instance().output_file, encoding='utf-8', mode='w') as f:
             f.write(pan_report)
