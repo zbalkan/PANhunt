@@ -32,6 +32,11 @@ class Hunter:
     start: datetime.datetime
     end: datetime.datetime
 
+    __all_files__: list[PANFile]
+
+    def __init__(self) -> None:
+        self.__all_files__ = []
+
     def hunt_pans(self) -> None:
 
         # Start timer
@@ -40,29 +45,44 @@ class Hunter:
         logging.debug("Started searching directories.")
 
         # find all files to check
-        all_files: list[PANFile] = self.find_all_files_in_search_directory()
+        with DocProgressbar('Doc') as pbar:
+            for docs_found, root_total_items, root_items_completed in self.find_all_files_in_search_directory():
+                pbar.update(items_found=docs_found,
+                            items_total=root_total_items, items_completed=root_items_completed)
 
         logging.debug("Finished searching directories.")
 
         logging.debug("Started searching in files.")
 
-        # Create the bar
-        hunt_type = 'PAN'
-
         # check each non-PST file
-        with DocProgressbar(hunt_type=hunt_type) as pbar:
+        with DocProgressbar(hunt_type='PAN') as pbar:
             doc_pans_found: int = 0
-            nonpst_files: list[PANFile] = [pan_file for pan_file in all_files if not pan_file.errors and pan_file.filetype in (
+            nonpst_files: list[PANFile] = [pan_file for pan_file in self.__all_files__ if not pan_file.errors and pan_file.filetype in (
                 'TEXT', 'ZIP', 'SPECIAL')]
-            for doc_pans_found, files_completed in self.find_all_regexs_in_files(nonpst_files):
+            for doc_pans_found, files_completed in self.find_all_regexs_in_files():
                 pbar.update(items_found=doc_pans_found,
                             items_total=len(nonpst_files), items_completed=files_completed)
 
         logging.debug("Finished searching in non-PST files.")
 
         # check each pst message and attachment
-        total_psts, pst_pans_found = self.find_all_regexs_in_psts(
-            [pan_file for pan_file in all_files if not pan_file.errors and pan_file.filetype == 'MAIL'], 'PAN')
+
+        pst_files: list[PANFile] = self.filter_pst_files()
+        total_psts: int = len(pst_files)
+        psts_completed = 0
+        pst_pans_found: int = 0
+
+        for pst_file in pst_files:
+
+            with PstProgressbar('PAN', pst_file.filename) as pbar:
+                for completed, total_items in pst_file.check_pst_regexs(
+                        excluded_pans_list=PANHuntConfigSingleton.instance().excluded_pans,
+                        search_extensions=PANHuntConfigSingleton.instance().search_extensions):
+                    pst_pans_found += len(pst_file.matches)
+                    pbar.update(items_found=len(pst_file.matches),
+                                items_total=total_items, items_completed=completed)
+                psts_completed += 1
+
         logging.debug("Finished searching in PST files.")
 
         total_files_searched: int = len(nonpst_files) + total_psts
@@ -75,7 +95,7 @@ class Hunter:
 
         # return total_files_searched, pans_found, all_files
         self.stats = Stats(files_total=total_files_searched,
-                           pans_found=pans_found, all_files=all_files)
+                           pans_found=pans_found, all_files=self.__all_files__)
 
     def create_report(self) -> None:
 
@@ -104,7 +124,7 @@ class Hunter:
                               for pan in pan_file.matches])
             pan_report += pan_list + '\n\n'
 
-        interesting_files = [
+        interesting_files: list[PANFile] = [
             pan_file for pan_file in self.stats.all_files if pan_file.filetype == 'OTHER']
         if len(interesting_files) != 0:
             pan_report += 'Interesting Files to check separately:\n'
@@ -159,7 +179,7 @@ class Hunter:
 
         logging.debug("Created JSON report.")
 
-    def find_all_files_in_search_directory(self) -> list[PANFile]:
+    def find_all_files_in_search_directory(self) -> Generator[tuple[int, int, int], None, None]:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
 
         all_extensions: list[str] = [ext for ext_list in list(
@@ -170,15 +190,12 @@ class Hunter:
             for ext in ext_list:
                 extension_types[ext] = ext_type
 
-        self.pbar = DocProgressbar()
-        self.pbar.create('Doc')
-
         doc_files: list[PANFile] = []
         root_dir_dirs: Optional[list[str]] = None
         root_items_completed = 0
         docs_found = 0
-
         root_total_items: int = 0
+
         for root, sub_ds, files in os.walk(PANHuntConfigSingleton.instance().search_dir):
             sub_dirs: list[str] = [check_dir for check_dir in sub_ds if os.path.join(
                 root, check_dir)
@@ -189,11 +206,8 @@ class Hunter:
                 root_total_items = len(root_dir_dirs) + len(files)
             if root in root_dir_dirs:
                 root_items_completed += 1
-                self.pbar.update(
-                    hunt_type='Doc',
-                    items_found=docs_found,
-                    items_total=root_total_items,
-                    items_completed=root_items_completed)
+
+                yield docs_found, root_total_items, root_items_completed
 
             for filename in files:
                 if root == PANHuntConfigSingleton.instance().search_dir:
@@ -201,7 +215,8 @@ class Hunter:
                 pan_file = PANFile(filename, root)
                 if pan_file.ext.lower() in all_extensions:
                     pan_file.set_file_stats()
-                    pan_file.filetype = extension_types[pan_file.ext.lower()]
+                    pan_file.filetype = extension_types[pan_file.ext.lower(
+                    )]
                     if pan_file.filetype in ('TEXT', 'SPECIAL') and pan_file.size > TEXT_FILE_SIZE_LIMIT:
                         pan_file.filetype = 'OTHER'
                         pan_file.set_error(
@@ -209,48 +224,31 @@ class Hunter:
                     doc_files.append(pan_file)
                     if not pan_file.errors:
                         docs_found += 1
-                    self.pbar.update(
-                        hunt_type='Doc',
-                        items_found=docs_found,
-                        items_total=root_total_items,
-                        items_completed=root_items_completed)
 
-        self.pbar.finish()
+                    yield docs_found, root_total_items, root_items_completed
 
-        return doc_files
+        self.__all_files__ += doc_files
 
-    def find_all_regexs_in_files(self, text_or_zip_files: list[PANFile]) -> Generator[tuple[int, int], None, None]:
+    def find_all_regexs_in_files(self) -> Generator[tuple[int, int], None, None]:
         """ Searches files in doc_files list for regular expressions"""
 
         files_completed: int = 0
         matches_found: int = 0
 
-        for pan_file in text_or_zip_files:
+        for pan_file in self.filter_nonpst_files():
             matches: list[PAN] = pan_file.check_regexs(excluded_pans_list=PANHuntConfigSingleton.instance().excluded_pans,
                                                        search_extensions=PANHuntConfigSingleton.instance().search_extensions)
             matches_found += len(matches)
             files_completed += 1
             yield matches_found, files_completed
 
-    def find_all_regexs_in_psts(self, pst_files: list[PANFile], hunt_type: str) -> tuple[int, int]:
-        """ Searches psts in pst_files list for regular expressions in messages and attachments"""
+    def filter_nonpst_files(self) -> list[PANFile]:
+        return [pan_file for pan_file in self.__all_files__ if not pan_file.errors and pan_file.filetype in (
+            'TEXT', 'ZIP', 'SPECIAL')]
 
-        total_psts: int = len(pst_files)
-        psts_completed = 0
-        matches_found = 0
-
-        for file in pst_files:
-
-            with PstProgressbar(hunt_type, file.filename) as sub_pbar:
-                for completed, total_items in file.check_pst_regexs(
-                        excluded_pans_list=PANHuntConfigSingleton.instance().excluded_pans,
-                        search_extensions=PANHuntConfigSingleton.instance().search_extensions):
-
-                    sub_pbar.update(items_found=len(file.matches),
-                                    items_total=total_items, items_completed=completed)
-                matches_found += len(file.matches)
-                psts_completed += 1
-        return total_psts, matches_found
+    def filter_pst_files(self) -> list[PANFile]:
+        return [
+            pan_file for pan_file in self.__all_files__ if not pan_file.errors and pan_file.filetype == 'MAIL']
 
     def append_hash(self, text_file: str) -> None:
 
