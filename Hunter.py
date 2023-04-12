@@ -6,7 +6,7 @@ import platform
 import sys
 import time
 from dataclasses import dataclass
-from typing import Final, Optional
+from typing import Final, Generator, Optional
 
 import panutils
 from config import PANHuntConfigSingleton
@@ -48,17 +48,27 @@ class Hunter:
 
         logging.debug("Started searching in files.")
 
-        # check each file
-        total_docs, doc_pans_found = self.find_all_regexs_in_files([pan_file for pan_file in all_files if not pan_file.errors and pan_file.filetype in (
-            'TEXT', 'ZIP', 'SPECIAL')], 'PAN')
-        logging.debug("Finished searching in files.")
+        # Create the bar
+        hunt_type = 'PAN'
+        self.pbar.create(hunt_type=hunt_type)
+
+        # check each non-PST file
+        doc_pans_found: int = 0
+        nonpst_files: list[PANFile] = [pan_file for pan_file in all_files if not pan_file.errors and pan_file.filetype in (
+            'TEXT', 'ZIP', 'SPECIAL')]
+        for doc_pans_found, files_completed in self.find_all_regexs_in_files(nonpst_files):
+            self.pbar.update(hunt_type=hunt_type, items_found=doc_pans_found,
+                             items_total=len(nonpst_files), items_completed=files_completed)
+
+        self.pbar.finish()
+        logging.debug("Finished searching in on-PST files.")
 
         # check each pst message and attachment
         total_psts, pst_pans_found = self.find_all_regexs_in_psts(
             [pan_file for pan_file in all_files if not pan_file.errors and pan_file.filetype == 'MAIL'], 'PAN')
         logging.debug("Finished searching in PST files.")
 
-        total_files_searched: int = total_docs + total_psts
+        total_files_searched: int = len(nonpst_files) + total_psts
         pans_found: int = doc_pans_found + pst_pans_found
 
         logging.debug("Finished searching.")
@@ -212,27 +222,18 @@ class Hunter:
 
         return doc_files
 
-    def find_all_regexs_in_files(self, text_or_zip_files: list[PANFile], hunt_type: str) -> tuple[int, int]:
+    def find_all_regexs_in_files(self, text_or_zip_files: list[PANFile]) -> Generator[tuple[int, int], None, None]:
         """ Searches files in doc_files list for regular expressions"""
 
-        # TODO: Create a separate FileProgressbar here
-        self.pbar.create(hunt_type=hunt_type)
-
-        total_files: int = len(text_or_zip_files)
-        files_completed = 0
-        matches_found = 0
+        files_completed: int = 0
+        matches_found: int = 0
 
         for pan_file in text_or_zip_files:
             matches: list[PAN] = pan_file.check_regexs(excluded_pans_list=PANHuntConfigSingleton.instance().excluded_pans,
                                                        search_extensions=PANHuntConfigSingleton.instance().search_extensions)
             matches_found += len(matches)
             files_completed += 1
-            self.pbar.update(
-                hunt_type=hunt_type, items_found=matches_found, items_total=total_files, items_completed=files_completed)
-
-        self.pbar.finish()
-
-        return total_files, matches_found
+            yield matches_found, files_completed
 
     def find_all_regexs_in_psts(self, pst_files: list[PANFile], hunt_type: str) -> tuple[int, int]:
         """ Searches psts in pst_files list for regular expressions in messages and attachments"""
