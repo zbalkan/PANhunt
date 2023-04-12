@@ -17,8 +17,8 @@ from typing import Literal, Optional, TypeAlias, Union
 
 import panutils
 from exceptions import PANHuntException
-from PropIdEnum import PropIdEnum
-from PTypeEnum import PTypeEnum
+from propidenum import PropIdEnum
+from ptypenum import PTypeEnum
 
 _FilePathOrFileObject: TypeAlias = BufferedReader | int | str | bytes | os.PathLike[
     str] | os.PathLike[bytes]
