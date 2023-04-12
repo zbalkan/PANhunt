@@ -29,7 +29,7 @@ class Hunter:
 
         # find all files to check
         with DocProgressbar('Doc') as pbar:
-            for docs_found, root_total_items, root_items_completed in self.find_all_files_in_search_directory():
+            for docs_found, root_total_items, root_items_completed in self.get_scannable_files():
                 pbar.update(items_found=docs_found,
                             items_total=root_total_items, items_completed=root_items_completed)
 
@@ -42,7 +42,7 @@ class Hunter:
             doc_pans_found: int = 0
             nonpst_files: list[PANFile] = [pan_file for pan_file in self.__all_files__ if not pan_file.errors and pan_file.filetype in (
                 'TEXT', 'ZIP', 'SPECIAL')]
-            for doc_pans_found, files_completed in self.find_all_regexs_in_files():
+            for doc_pans_found, files_completed in self.scan_files():
                 pbar.update(items_found=doc_pans_found,
                             items_total=len(nonpst_files), items_completed=files_completed)
 
@@ -52,7 +52,6 @@ class Hunter:
 
         pst_files: list[PANFile] = self.filter_pst_files()
         total_psts: int = len(pst_files)
-        psts_completed = 0
         pst_pans_found: int = 0
 
         for pst_file in pst_files:
@@ -64,7 +63,6 @@ class Hunter:
                     pst_pans_found += len(pst_file.matches)
                     pbar.update(items_found=len(pst_file.matches),
                                 items_total=total_items, items_completed=completed)
-                psts_completed += 1
 
         logging.debug("Finished searching in PST files.")
 
@@ -80,7 +78,7 @@ class Hunter:
         return Stats(files_total=total_files_searched,
                      pans_found=pans_found, all_files=self.__all_files__, start=start, end=end)
 
-    def find_all_files_in_search_directory(self) -> Generator[tuple[int, int, int], None, None]:
+    def get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
 
         all_extensions: list[str] = [ext for ext_list in list(
@@ -130,7 +128,7 @@ class Hunter:
 
         self.__all_files__ += doc_files
 
-    def find_all_regexs_in_files(self) -> Generator[tuple[int, int], None, None]:
+    def scan_files(self) -> Generator[tuple[int, int], None, None]:
         """ Searches files in doc_files list for regular expressions"""
 
         files_completed: int = 0
