@@ -8,16 +8,16 @@
 #
 # Contributors: Zafer Balkan, 2023
 
+import logging
 import os
 import struct
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BufferedReader
-from typing import Optional, TypeAlias, Union
+from typing import Literal, Optional, TypeAlias, Union
 
 import panutils
-from exceptions import MSGException
+from exceptions import PANHuntException
 from PropIdEnum import PropIdEnum
-from PType import PType
 from PTypeEnum import PTypeEnum
 
 _FilePathOrFileObject: TypeAlias = BufferedReader | int | str | bytes | os.PathLike[
@@ -71,7 +71,7 @@ class FAT:
             sector = self.entries[sector]
         # if size != 0:
         if size > len(stream_bytes) or size < len(stream_bytes) - self.mscfb.SectorSize:
-            raise MSGException(
+            raise PANHuntException(
                 'FAT stream size does not match number of sectors')
         return stream_bytes[:size]
         # else:
@@ -117,7 +117,7 @@ class MiniFAT:
                                                    MiniFAT.SECTORSIZE: sector * MiniFAT.SECTORSIZE + MiniFAT.SECTORSIZE]
             sector = self.entries[sector]
         if size > len(stream_bytes) or size < len(stream_bytes) - MiniFAT.SECTORSIZE:
-            raise MSGException(
+            raise PANHuntException(
                 'Mini FAT mini stream size does not match number of mini sectors')
         return stream_bytes[:size]
 
@@ -157,7 +157,7 @@ class Directory:
                 child_entry: DirectoryEntry = self.entries[child_ids_queue.pop(
                 )]
                 if child_entry.Name in list(dir_entry.children.keys()):
-                    raise MSGException(
+                    raise PANHuntException(
                         'Directory Entry Name already in children dictionary')
                 dir_entry.children[child_entry.Name] = child_entry
                 if child_entry.SiblingID != DirectoryEntry.NOSTREAM:
@@ -252,7 +252,7 @@ class DirectoryEntry:
     def get_data(self) -> bytes:
 
         if self.ObjectType != DirectoryEntry.OBJECT_STREAM:
-            raise MSGException('Directory Entry is not a stream object')
+            raise PANHuntException('Directory Entry is not a stream object')
         if self.StreamSize < self.mscfb.MiniStreamCutoffSize:  # Mini FAT stream
             self.stream_data = self.mscfb.minifat.get_stream(
                 self.StartingSectorLocation, self.StreamSize)
@@ -319,9 +319,7 @@ class MSCFB:
         self.read_header(self.fd)
         if not self.validCFB:
             # DevSkim: ignore DS187371
-            # TODO: Instead of raising exceptions and exiting, log these errors.
-            # raise MSGException('MSG file is not a valid CFB')
-            print(f'MSG file is not a valid CFB: {self.fd.name}')
+            logging.debug(f'Invalid MSG file: {cfb_file!r}')
             return
         if self.MajorVersion == 3:
             self.SectorSize = 512
@@ -357,7 +355,7 @@ class MSCFB:
         self.validCFB = True
 
         if self.FirstDIFATSectorLocation != FAT.ENDOFCHAIN:
-            raise MSGException('More than 109 DIFAT entries not supported')
+            raise PANHuntException('More than 109 DIFAT entries not supported')
 
     def get_sector_offset(self, sector: int) -> int:
 
@@ -409,7 +407,7 @@ class PropertyStream:
                 _, self.NextRecipientID, self.NextAttachmentID, self.RecipientCount, self.AttachmentCount = struct.unpack(
                     '8sIIII', property_bytes[:24])
             if (len(property_bytes) - header_size) % 16 != 0:
-                raise MSGException(
+                raise PANHuntException(
                     'Property Stream size less header is not exactly divisible by 16')
             property_entries_count: int = int(
                 (len(property_bytes) - header_size) / 16)
@@ -417,7 +415,7 @@ class PropertyStream:
                 prop_entry: PropertyEntry = PropertyEntry(
                     self.msmsg, parent_dir_entry, property_bytes[header_size + i * 16: header_size + i * 16 + 16])
                 if prop_entry in self.properties.values():
-                    raise MSGException(
+                    raise PANHuntException(
                         'PropertyID already in properties dictionary')
                 self.properties[prop_entry.PropertyID] = prop_entry
 
@@ -452,7 +450,8 @@ class PropertyEntry:
         self.Flags = Flags
         self.PropertyID = self.PropertyTag >> 16
         self.PropertyType = self.PropertyTag & 0xFFFF
-        ptype: PType = msmsg.ptype_mapping[PTypeEnum(self.PropertyType)]
+        ptype: MsgPTypeWrapper = msmsg.ptype_mapping[PTypeEnum(
+            self.PropertyType)]
         if ptype.is_variable or ptype.is_multi:
             self.size = panutils.unpack_integer(
                 'I', property_entry_bytes[8:12])
@@ -463,7 +462,7 @@ class PropertyEntry:
 
             if len(property_bytes) != self.size:
                 if (ptype.ptype == PTypeEnum.PtypString and len(property_bytes) + 2 != self.size) or (ptype.ptype == PTypeEnum.PtypString8 and len(property_bytes) + 1 != self.size):
-                    raise MSGException(
+                    raise PANHuntException(
                         'Property Entry size and byte length mismatch')
 
             if ptype.is_multi and ptype.is_variable:
@@ -479,21 +478,148 @@ class PropertyEntry:
 
                 property_byte_list: list[bytes] = []
                 for i in range(len(value_lengths)):
-                    index_stream_name: str = f"{stream_name}-{i}"
+                    index_stream_name: str = f"{stream_name}-{panutils.to_zeropaddedhex(i, 8)}"
                     property_byte_list.append(
                         parent_dir_entry.children[index_stream_name].get_data())
 
-                self.value = ptype.value(
+                self.value = ptype.get_value(
                     b''.join(property_byte_list))
             else:
-                self.value = ptype.value(property_bytes)
+                self.value = ptype.get_value(property_bytes)
 
         else:  # fixed size
             self.size = ptype.byte_count
-            self.value = ptype.value(property_entry_bytes[8:8 + self.size])
+            self.value = ptype.get_value(property_entry_bytes[8:8 + self.size])
 
     def __str__(self) -> str:
         return f"{hex(self.PropertyTag)}-{str(self.value)}"
+
+
+class MsgPTypeWrapper:
+
+    ptype: PTypeEnum
+    byte_count: int
+    is_variable: bool
+    is_multi: bool
+
+    def __init__(self, ptype: PTypeEnum, byte_count: int, is_variable: bool, is_multi: bool) -> None:
+
+        self.ptype, self.byte_count, self.is_variable, self.is_multi = ptype, byte_count, is_variable, is_multi
+
+    def get_value(self, value_bytes: bytes) -> _ValueType:
+        """value_bytes is normally a string of bytes, but if multi and variable, bytes is a list of bytes"""
+
+        if self.ptype == PTypeEnum.PtypInteger16:
+            return panutils.unpack_integer('h', value_bytes)
+        if self.ptype == PTypeEnum.PtypInteger32:
+            return panutils.unpack_integer('i', value_bytes)
+        if self.ptype == PTypeEnum.PtypFloating32:
+            return panutils.unpack_float('f', value_bytes)
+        if self.ptype == PTypeEnum.PtypFloating64:
+            return panutils.unpack_float('d', value_bytes)
+        if self.ptype == PTypeEnum.PtypCurrency:
+            raise NotImplementedError('PtypCurrency')
+        if self.ptype == PTypeEnum.PtypFloatingTime:
+            return self.get_floating_time(value_bytes)
+        if self.ptype == PTypeEnum.PtypErrorCode:
+            return panutils.unpack_integer('I', value_bytes)
+        if self.ptype == PTypeEnum.PtypBoolean:
+            return panutils.unpack_integer('B', value_bytes) != 0
+        if self.ptype == PTypeEnum.PtypInteger64:
+            return panutils.unpack_integer('q', value_bytes)
+        if self.ptype == PTypeEnum.PtypString:
+            # Preventing the error:
+            # UnicodeDecodeError: 'utf16' codec can't decode bytes in position 0 - 1:
+            # illegal UTF - 16 surrogate
+            try:
+                return value_bytes.decode('utf-16-le')  # unicode
+            except UnicodeDecodeError:
+                PANHuntException(
+                    'String property not correctly utf-16-le encoded, ignoring errors')
+                # unicode
+                return value_bytes.decode('utf-16-le', errors='ignore')
+        if self.ptype == PTypeEnum.PtypString8:
+            if value_bytes[-1:] == b'\x00':
+                return value_bytes[:-1]
+            else:
+                return value_bytes
+        if self.ptype == PTypeEnum.PtypTime:
+            return self.get_time(value_bytes)
+        if self.ptype == PTypeEnum.PtypGuid:
+            return value_bytes
+        if self.ptype == PTypeEnum.PtypServerId:
+            raise NotImplementedError('PtypServerId')
+        if self.ptype == PTypeEnum.PtypRestriction:
+            raise NotImplementedError('PtypRestriction')
+        if self.ptype == PTypeEnum.PtypRuleAction:
+            raise NotImplementedError('PtypRuleAction')
+        if self.ptype == PTypeEnum.PtypBinary:
+            return value_bytes
+        if self.ptype == PTypeEnum.PtypMultipleInteger16:
+            return self.unpack_list_int(value_bytes, 16)
+        if self.ptype == PTypeEnum.PtypMultipleInteger32:
+            return self.unpack_list_int(value_bytes, 32)
+        if self.ptype == PTypeEnum.PtypMultipleFloating32:
+            return self.unpack_list_float(value_bytes, 32)
+        if self.ptype == PTypeEnum.PtypMultipleFloating64:
+            return self.unpack_list_float(value_bytes, 64)
+        if self.ptype == PTypeEnum.PtypMultipleCurrency:
+            raise NotImplementedError('PtypMultipleCurrency')
+        if self.ptype == PTypeEnum.PtypMultipleFloatingTime:
+            count: int = len(value_bytes) // 8
+            return [self.get_floating_time(value_bytes[i * 8:(i + 1) * 8]) for i in range(count)]
+        if self.ptype == PTypeEnum.PtypMultipleInteger64:
+            self.unpack_list_int(value_bytes=value_bytes, bit_size=64)
+        if self.ptype == PTypeEnum.PtypMultipleString:
+            return ''.join([item_bytes.to_bytes(2, 'little').decode('utf-16-le') for item_bytes in value_bytes])
+        if self.ptype == PTypeEnum.PtypMultipleString8:
+            return value_bytes  # list
+        if self.ptype == PTypeEnum.PtypMultipleTime:
+            count = len(value_bytes) // 8
+            return [self.get_time(value_bytes[i * 8:(i + 1) * 8]) for i in range(count)]
+        if self.ptype == PTypeEnum.PtypMultipleGuid:
+            count = len(value_bytes) // 16
+            return [value_bytes[i * 16:(i + 1) * 16] for i in range(count)]
+        if self.ptype == PTypeEnum.PtypMultipleBinary:
+            return value_bytes
+        if self.ptype == PTypeEnum.PtypUnspecified:
+            return value_bytes
+        if self.ptype == PTypeEnum.PtypNull:
+            return None
+        if self.ptype == PTypeEnum.PtypObject:
+            return value_bytes
+        raise PANHuntException(f"Invalid PTypeEnum for value {self.ptype}")
+
+    def unpack_list_int(self, value_bytes: bytes, bit_size: Literal[16, 32, 64]) -> list[int]:
+        format_dict: dict[int, str] = {16: 'h', 32: 'i', 64: 'q'}
+        buffer_size = (bit_size // 8)
+        count: int = len(value_bytes) // buffer_size
+        return [panutils.unpack_integer(
+            format_dict[bit_size], value_bytes[i * buffer_size:(i + 1) * buffer_size]) for i in range(count)]
+
+    def unpack_list_float(self, value_bytes: bytes, bit_size: Literal[32, 64]) -> list[float]:
+        format_dict: dict[int, str] = {32: 'f', 64: 'd'}
+        buffer_size = (bit_size // 8)
+        count: int = len(value_bytes) // buffer_size
+        return [panutils.unpack_float(
+            format_dict[bit_size], value_bytes[i * buffer_size:(i + 1) * buffer_size]) for i in range(count)]
+
+    def get_floating_time(self, time_bytes: bytes) -> datetime:
+
+        return datetime(year=1899, month=12, day=30) + timedelta(days=panutils.unpack_float('d', time_bytes))
+
+    def get_time(self, time_bytes: bytes) -> datetime:
+
+        return datetime(year=1601, month=1, day=1) + timedelta(microseconds=panutils.unpack_integer('q', time_bytes) / 10.0)
+
+    def get_multi_value_offsets(self, value_bytes: bytes) -> tuple[int, list[int]]:
+
+        ul_count: int = panutils.unpack_integer('I', value_bytes[:4])
+        rgul_data_offsets: list[int] = [panutils.unpack_integer(
+            'I', value_bytes[(i + 1) * 4:(i + 2) * 4]) for i in range(ul_count)]
+
+        rgul_data_offsets.append(len(value_bytes))
+        return ul_count, rgul_data_offsets
 
 
 class Recipient:
@@ -583,7 +709,7 @@ class MSMSG:
     prop_stream: PropertyStream
     recipients: list[Recipient]
     attachments: list[Attachment]
-    ptype_mapping: dict[PTypeEnum, PType]
+    ptype_mapping: dict[PTypeEnum, MsgPTypeWrapper]
     Subject: str
     ClientSubmitTime: Optional[datetime]
     SentRepresentingName: str
@@ -715,38 +841,39 @@ class MSMSG:
     def set_property_types(self) -> None:
 
         self.ptype_mapping = {
-            PTypeEnum.PtypInteger16: PType(PTypeEnum.PtypInteger16, 2, False, False),
-            PTypeEnum.PtypInteger32: PType(PTypeEnum.PtypInteger32, 4, False, False),
-            PTypeEnum.PtypFloating32: PType(PTypeEnum.PtypFloating32, 4, False, False),
-            PTypeEnum.PtypFloating64: PType(PTypeEnum.PtypFloating64, 8, False, False),
-            PTypeEnum.PtypCurrency: PType(PTypeEnum.PtypCurrency, 8, False, False),
-            PTypeEnum.PtypFloatingTime: PType(PTypeEnum.PtypFloatingTime, 8, False, False),
-            PTypeEnum.PtypErrorCode: PType(PTypeEnum.PtypErrorCode, 4, False, False),
-            PTypeEnum.PtypBoolean: PType(PTypeEnum.PtypBoolean, 1, False, False),
-            PTypeEnum.PtypInteger64: PType(PTypeEnum.PtypInteger64, 8, False, False),
-            PTypeEnum.PtypString: PType(PTypeEnum.PtypString, 0, True, False),
-            PTypeEnum.PtypString8: PType(PTypeEnum.PtypString8, 0, True, False),
-            PTypeEnum.PtypTime: PType(PTypeEnum.PtypTime, 8, False, False),
-            PTypeEnum.PtypGuid: PType(PTypeEnum.PtypGuid, 16, False, False),
-            PTypeEnum.PtypServerId: PType(PTypeEnum.PtypServerId, 2, False, True),
-            PTypeEnum.PtypRestriction: PType(PTypeEnum.PtypRestriction, 0, True, False),
-            PTypeEnum.PtypRuleAction: PType(PTypeEnum.PtypRuleAction, 2, False, True),
-            PTypeEnum.PtypBinary: PType(PTypeEnum.PtypBinary, 2, False, True),
-            PTypeEnum.PtypMultipleInteger16: PType(PTypeEnum.PtypMultipleInteger16, 2, False, True),
-            PTypeEnum.PtypMultipleInteger32: PType(PTypeEnum.PtypMultipleInteger32, 2, False, True),
-            PTypeEnum.PtypMultipleFloating32: PType(PTypeEnum.PtypMultipleFloating32, 2, False, True),
-            PTypeEnum.PtypMultipleFloating64: PType(PTypeEnum.PtypMultipleFloating64, 2, False, True),
-            PTypeEnum.PtypMultipleCurrency: PType(PTypeEnum.PtypMultipleCurrency, 2, False, True),
-            PTypeEnum.PtypMultipleFloatingTime: PType(PTypeEnum.PtypMultipleFloatingTime, 2, False, True),
-            PTypeEnum.PtypMultipleInteger64: PType(PTypeEnum.PtypMultipleInteger64, 2, False, True),
-            PTypeEnum.PtypMultipleString: PType(PTypeEnum.PtypMultipleString, 2, True, True),
-            PTypeEnum.PtypMultipleString8: PType(PTypeEnum.PtypMultipleString8, 2, True, True),
-            PTypeEnum.PtypMultipleTime: PType(PTypeEnum.PtypMultipleTime, 2, False, True),
-            PTypeEnum.PtypMultipleGuid: PType(PTypeEnum.PtypMultipleGuid, 2, False, True),
-            PTypeEnum.PtypMultipleBinary: PType(PTypeEnum.PtypMultipleBinary, 2, False, True),
-            PTypeEnum.PtypUnspecified: PType(PTypeEnum.PtypUnspecified, 0, False, False),
-            PTypeEnum.PtypNull: PType(PTypeEnum.PtypNull, 0, False, False),
-            PTypeEnum.PtypObject: PType(PTypeEnum.PtypObject, 0, False, False)
+            PTypeEnum.PtypInteger16: MsgPTypeWrapper(PTypeEnum.PtypInteger16, 2, False, False),
+            PTypeEnum.PtypInteger32: MsgPTypeWrapper(PTypeEnum.PtypInteger32, 4, False, False),
+            PTypeEnum.PtypFloating32: MsgPTypeWrapper(PTypeEnum.PtypFloating32, 4, False, False),
+            PTypeEnum.PtypFloating64: MsgPTypeWrapper(PTypeEnum.PtypFloating64, 8, False, False),
+            PTypeEnum.PtypCurrency: MsgPTypeWrapper(PTypeEnum.PtypCurrency, 8, False, False),
+            PTypeEnum.PtypFloatingTime: MsgPTypeWrapper(PTypeEnum.PtypFloatingTime, 8, False, False),
+            PTypeEnum.PtypErrorCode: MsgPTypeWrapper(PTypeEnum.PtypErrorCode, 4, False, False),
+            PTypeEnum.PtypBoolean: MsgPTypeWrapper(PTypeEnum.PtypBoolean, 1, False, False),
+            PTypeEnum.PtypInteger64: MsgPTypeWrapper(PTypeEnum.PtypInteger64, 8, False, False),
+            PTypeEnum.PtypString: MsgPTypeWrapper(PTypeEnum.PtypString, 0, True, False),
+            PTypeEnum.PtypString8: MsgPTypeWrapper(PTypeEnum.PtypString8, 0, True, False),
+            PTypeEnum.PtypTime: MsgPTypeWrapper(PTypeEnum.PtypTime, 8, False, False),
+            PTypeEnum.PtypGuid: MsgPTypeWrapper(PTypeEnum.PtypGuid, 16, False, False),
+            PTypeEnum.PtypServerId: MsgPTypeWrapper(PTypeEnum.PtypServerId, 2, False, True),
+            PTypeEnum.PtypRestriction: MsgPTypeWrapper(PTypeEnum.PtypRestriction, 0, True, False),
+            PTypeEnum.PtypRuleAction: MsgPTypeWrapper(PTypeEnum.PtypRuleAction, 2, False, True),
+            PTypeEnum.PtypBinary: MsgPTypeWrapper(PTypeEnum.PtypBinary, 2, False, True),
+            PTypeEnum.PtypMultipleInteger16: MsgPTypeWrapper(PTypeEnum.PtypMultipleInteger16, 2, False, True),
+            PTypeEnum.PtypMultipleInteger32: MsgPTypeWrapper(PTypeEnum.PtypMultipleInteger32, 2, False, True),
+            PTypeEnum.PtypMultipleFloating32: MsgPTypeWrapper(PTypeEnum.PtypMultipleFloating32, 2, False, True),
+            PTypeEnum.PtypMultipleFloating64: MsgPTypeWrapper(PTypeEnum.PtypMultipleFloating64, 2, False, True),
+            PTypeEnum.PtypMultipleCurrency: MsgPTypeWrapper(PTypeEnum.PtypMultipleCurrency, 2, False, True),
+            PTypeEnum.PtypMultipleFloatingTime: MsgPTypeWrapper(PTypeEnum.PtypMultipleFloatingTime, 2, False, True),
+            PTypeEnum.PtypMultipleInteger64: MsgPTypeWrapper(PTypeEnum.PtypMultipleInteger64, 2, False, True),
+            PTypeEnum.PtypMultipleString: MsgPTypeWrapper(PTypeEnum.PtypMultipleString, 2, True, True),
+            PTypeEnum.PtypMultipleString8: MsgPTypeWrapper(PTypeEnum.PtypMultipleString8, 2, True, True),
+            PTypeEnum.PtypMultipleTime: MsgPTypeWrapper(PTypeEnum.PtypMultipleTime, 2, False, True),
+            PTypeEnum.PtypMultipleGuid: MsgPTypeWrapper(PTypeEnum.PtypMultipleGuid, 2, False, True),
+            PTypeEnum.PtypMultipleBinary: MsgPTypeWrapper(PTypeEnum.PtypMultipleBinary, 2, False, True),
+            PTypeEnum.PtypUnspecified: MsgPTypeWrapper(PTypeEnum.PtypUnspecified, 0, False, False),
+            PTypeEnum.PtypNull: MsgPTypeWrapper(PTypeEnum.PtypNull, 0, False, False),
+            PTypeEnum.PtypObject: MsgPTypeWrapper(
+                PTypeEnum.PtypObject, 0, False, False)
         }
 
 ###############################################################################################################################

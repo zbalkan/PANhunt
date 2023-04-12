@@ -10,7 +10,10 @@
 
 
 import argparse
+import datetime
 import hashlib
+import json
+import logging
 import os
 import platform
 import sys
@@ -42,25 +45,46 @@ app_version = '1.3'
 class Hunter:
 
     pbar: MainProgressbar
+    start: datetime.datetime
+    end: datetime.datetime
 
     def hunt_pans(self) -> tuple[int, int, list[PANFile]]:
 
+        # Start timer
+        self.start = datetime.datetime.now()
+
+        logging.debug("Started searching directories.")
+
         # find all files to check
-        all_files: list[PANFile] = self.__find_all_files_in_search_directory()
+        all_files: list[PANFile] = self.find_all_files_in_search_directory()
+
+        logging.debug("Finished searching directories.")
+
+        logging.debug("Started searching in files.")
 
         # check each file
-        total_docs, doc_pans_found = self.__find_all_regexs_in_files([pan_file for pan_file in all_files if not pan_file.errors and pan_file.filetype in (
+        total_docs, doc_pans_found = self.find_all_regexs_in_files([pan_file for pan_file in all_files if not pan_file.errors and pan_file.filetype in (
             'TEXT', 'ZIP', 'SPECIAL')], 'PAN')
+        logging.debug("Finished searching in files.")
+
         # check each pst message and attachment
-        total_psts, pst_pans_found = self.__find_all_regexs_in_psts(
+        total_psts, pst_pans_found = self.find_all_regexs_in_psts(
             [pan_file for pan_file in all_files if not pan_file.errors and pan_file.filetype == 'MAIL'], 'PAN')
+        logging.debug("Finished searching in PST files.")
 
         total_files_searched: int = total_docs + total_psts
         pans_found: int = doc_pans_found + pst_pans_found
 
+        logging.debug("Finished searching.")
+
+        # Finish timer
+        self.end = datetime.datetime.now()
+
         return total_files_searched, pans_found, all_files
 
-    def output_report(self, all_files: list[PANFile], total_files_searched: int, pans_found: int) -> None:
+    def create_report(self, all_files: list[PANFile], total_files_searched: int, pans_found: int) -> None:
+
+        logging.debug("Creating TXT report.")
 
         pan_sep: str = '\n\t'
         pan_report: str = 'PAN Hunt Report - %s\n%s\n' % (
@@ -69,6 +93,7 @@ class Hunter:
             PANHuntConfigSingleton.instance().search_dir, ','.join(PANHuntConfigSingleton.instance().excluded_directories))
         pan_report += 'Command: %s\n' % (' '.join(sys.argv))
         pan_report += 'Uname: %s\n' % (' | '.join(platform.uname()))
+        pan_report += f'Elapsed time: {self.end - self.start}\n'
         pan_report += 'Searched %s files. Found %s possible PANs.\n%s\n\n' % (
             total_files_searched, pans_found, '=' * 100)
 
@@ -98,23 +123,49 @@ class Hunter:
         with open(PANHuntConfigSingleton.instance().output_file, encoding='utf-8', mode='w') as f:
             f.write(pan_report)
 
-        self.__append_hash(PANHuntConfigSingleton.instance().output_file)
+        self.append_hash(PANHuntConfigSingleton.instance().output_file)
 
-    def check_file_hash(self, text_file: str) -> None:
+        logging.debug("Created TXT report.")
 
-        with open(text_file, encoding='utf-8', mode='r') as f:
-            text_output: str = f.read()
+    def create_json_report(self, all_files: list[PANFile], total_files_searched: int, pans_found: int) -> None:
 
-        hash_pos: int = text_output.rfind(os.linesep)
-        hash_in_file: str = text_output[hash_pos + len(os.linesep):]
-        hash_check: str = self.__get_text_hash(text_output[:hash_pos])
-        if hash_in_file == hash_check:
-            print(colorama.Fore.GREEN + 'Hashes OK')
-        else:
-            print(colorama.Fore.RED + 'Hashes Not OK')
-        print(colorama.Fore.WHITE + hash_in_file + '\n' + hash_check)
+        if PANHuntConfigSingleton.instance().json_path is None:
+            return
 
-    def __find_all_files_in_search_directory(self) -> list[PANFile]:
+        logging.debug("Creating JSON report.")
+
+        report: dict = {}
+        report['timestamp'] = time.strftime("%H:%M:%S %d/%m/%Y")
+        report['searched'] = PANHuntConfigSingleton.instance().search_dir
+        report['excluded'] = ','.join(
+            PANHuntConfigSingleton.instance().excluded_directories)
+        report['command'] = ' '.join(sys.argv)
+        report['elapsed'] = str(self.end - self.start)
+        report['total_files'] = total_files_searched
+        report['pans_found'] = pans_found
+        report['pans_found_results'] = []
+        for pan_file in sorted([pan_file for pan_file in all_files if pan_file.matches], key=lambda x: x.filename):
+            report['pans_found_results'].append(
+                (pan_file.filename, [pan.get_masked_pan() for pan in pan_file.matches]))
+
+        interesting_files: list[PANFile] = sorted([
+            pan_file for pan_file in all_files if pan_file.filetype == 'OTHER'], key=lambda x: x.filename)
+        if len(interesting_files) != 0:
+            report['interesting_files']['total'] = len(interesting_files)
+
+            report['interesting_files']['files'] = [
+                f.filename for f in interesting_files]
+
+        text: str = json.dumps(report, sort_keys=True)
+        hash_check: str = self.get_text_hash(text)
+        report['hash'] = hash_check
+        json_report: str = json.dumps(report)
+        with open(PANHuntConfigSingleton.instance().json_path, "w") as f:  # type: ignore
+            f.write(json_report)
+
+        logging.debug("Created JSON report.")
+
+    def find_all_files_in_search_directory(self) -> list[PANFile]:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
 
         all_extensions: list[str] = [ext for ext_list in list(
@@ -126,7 +177,7 @@ class Hunter:
                 extension_types[ext] = ext_type
 
         self.pbar = MainProgressbar()
-        # TODO: move progressbarr update methods here
+        # TODO: move progressbar update methods here
         self.pbar.create('Doc')
 
         doc_files: list[PANFile] = []
@@ -160,8 +211,8 @@ class Hunter:
                     pan_file.filetype = extension_types[pan_file.ext.lower()]
                     if pan_file.filetype in ('TEXT', 'SPECIAL') and pan_file.size > TEXT_FILE_SIZE_LIMIT:
                         pan_file.filetype = 'OTHER'
-                        pan_file.set_error(ValueError(
-                            f'File size {panutils.size_friendly(pan_file.size)} over limit of {panutils.size_friendly(TEXT_FILE_SIZE_LIMIT)} for checking'))
+                        pan_file.set_error(
+                            f'File size {panutils.size_friendly(pan_file.size)} over limit of {panutils.size_friendly(TEXT_FILE_SIZE_LIMIT)} for checking')
                     doc_files.append(pan_file)
                     if not pan_file.errors:
                         docs_found += 1
@@ -175,7 +226,7 @@ class Hunter:
 
         return doc_files
 
-    def __find_all_regexs_in_files(self, text_or_zip_files: list[PANFile], hunt_type: str) -> tuple[int, int]:
+    def find_all_regexs_in_files(self, text_or_zip_files: list[PANFile], hunt_type: str) -> tuple[int, int]:
         """ Searches files in doc_files list for regular expressions"""
 
         # TODO: Create a separate FileProgressbar here
@@ -197,7 +248,7 @@ class Hunter:
 
         return total_files, matches_found
 
-    def __find_all_regexs_in_psts(self, pst_files: list[PANFile], hunt_type: str) -> tuple[int, int]:
+    def find_all_regexs_in_psts(self, pst_files: list[PANFile], hunt_type: str) -> tuple[int, int]:
         """ Searches psts in pst_files list for regular expressions in messages and attachments"""
 
         total_psts: int = len(pst_files)
@@ -217,19 +268,33 @@ class Hunter:
                 psts_completed += 1
         return total_psts, matches_found
 
-    def __append_hash(self, text_file: str) -> None:
+    def check_file_hash(self, text_file: str) -> None:
+
+        with open(text_file, encoding='utf-8', mode='r') as f:
+            text_output: str = f.read()
+
+        hash_pos: int = text_output.rfind(os.linesep)
+        hash_in_file: str = text_output[hash_pos + len(os.linesep):]
+        hash_check: str = self.get_text_hash(text_output[:hash_pos])
+        if hash_in_file == hash_check:
+            print(colorama.Fore.GREEN + 'Hashes OK')
+        else:
+            print(colorama.Fore.RED + 'Hashes Not OK')
+        print(colorama.Fore.WHITE + hash_in_file + '\n' + hash_check)
+
+    def append_hash(self, text_file: str) -> None:
 
         with open(text_file, encoding='utf-8', mode='r') as f:
             text: str = f.read()
 
-        hash_check: str = self.__get_text_hash(text)
+        hash_check: str = self.get_text_hash(text)
 
         text += os.linesep + hash_check
 
         with open(text_file, encoding='utf-8', mode='w') as f:
             f.write(text)
 
-    def __get_text_hash(self, text: str | bytes) -> str:
+    def get_text_hash(self, text: str | bytes) -> str:
         encoded_text: bytes
 
         if isinstance(text, str):
@@ -249,7 +314,20 @@ class Hunter:
 #
 ###################################################################################################################################
 
+
 def main() -> None:
+    application_path: str = '.'
+    if getattr(sys, 'frozen', False):
+        application_path = os.path.dirname(sys.executable)
+    elif __file__:
+        application_path = os.path.dirname(__file__)
+    logging.basicConfig(filename=os.path.join(application_path, 'PANhunt.log'),
+                        encoding='utf-8',
+                        format='%(asctime)s %(message)s',
+                        level=logging.DEBUG)
+
+    excepthook = logging.error
+    logging.info('Starting')
 
     colorama.init()
 
@@ -278,6 +356,9 @@ def main() -> None:
         '-C', dest='config', help='configuration file to use')
     arg_parser.add_argument(
         '-X', dest='exclude_pan', help='PAN to exclude from search')
+    arg_parser.add_argument(
+        '-j', dest='json_path', help='Create JSON formatted report')
+
     arg_parser.add_argument('-c', dest='check_file_hash',
                             help=argparse.SUPPRESS)  # hidden argument
 
@@ -298,11 +379,12 @@ def main() -> None:
     other_extensions_string = str(args.other_files)
     mask_pans: bool = not args.unmask
     excluded_pans_string = str(args.exclude_pan)
-    config_file = str(args.config)
+    json_path: Optional[str] = args.json_path
+    config_file: Optional[str] = args.config
 
     # The singleton is initiated at the first call with the hardcoded default values.
     # If exists, read the config file
-    if config_file != 'None':
+    if config_file:
         PANHuntConfigSingleton.instance().from_file(
             config_file=config_file)
 
@@ -316,26 +398,34 @@ def main() -> None:
                                                 special_extensions_string=special_extensions_string,
                                                 mail_extensions_string=mail_extensions_string,
                                                 other_extensions_string=other_extensions_string,
-                                                excluded_pans_string=excluded_pans_string)
+                                                excluded_pans_string=excluded_pans_string,
+                                                json_path=json_path)
 
     total_files_searched, pans_found, all_files = hunter.hunt_pans()
 
     # report findings
-    hunter.output_report(all_files,
+    hunter.create_report(all_files,
                          total_files_searched, pans_found)
+
+    if json_path:
+        hunter.create_json_report(all_files, total_files_searched, pans_found)
 
 
 if __name__ == "__main__":
     try:
         main()
+        logging.info('Exiting')
     except KeyboardInterrupt:
         print('Cancelled by user.')
+        logging.error("Cancelled by user.")
+        logging.info('Exiting')
         try:
             sys.exit(0)
         except SystemExit:
             os._exit(0)
     except Exception as ex:
         print('ERROR: ' + str(ex))
+        logging.info('Exiting')
         try:
             sys.exit(1)
         except SystemExit:
