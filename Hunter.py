@@ -12,7 +12,7 @@ import panutils
 from config import PANHuntConfigSingleton
 from PAN import PAN
 from PANFile import PANFile
-from pbar import FileProgressbar, MainProgressbar
+from pbar import PstProgressbar, DocProgressbar
 
 TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
 
@@ -29,8 +29,6 @@ class Stats:
 class Hunter:
 
     stats: Stats
-
-    pbar: MainProgressbar
     start: datetime.datetime
     end: datetime.datetime
 
@@ -50,18 +48,17 @@ class Hunter:
 
         # Create the bar
         hunt_type = 'PAN'
-        self.pbar.create(hunt_type=hunt_type)
 
         # check each non-PST file
-        doc_pans_found: int = 0
-        nonpst_files: list[PANFile] = [pan_file for pan_file in all_files if not pan_file.errors and pan_file.filetype in (
-            'TEXT', 'ZIP', 'SPECIAL')]
-        for doc_pans_found, files_completed in self.find_all_regexs_in_files(nonpst_files):
-            self.pbar.update(hunt_type=hunt_type, items_found=doc_pans_found,
-                             items_total=len(nonpst_files), items_completed=files_completed)
+        with DocProgressbar(hunt_type=hunt_type) as pbar:
+            doc_pans_found: int = 0
+            nonpst_files: list[PANFile] = [pan_file for pan_file in all_files if not pan_file.errors and pan_file.filetype in (
+                'TEXT', 'ZIP', 'SPECIAL')]
+            for doc_pans_found, files_completed in self.find_all_regexs_in_files(nonpst_files):
+                pbar.update(items_found=doc_pans_found,
+                            items_total=len(nonpst_files), items_completed=files_completed)
 
-        self.pbar.finish()
-        logging.debug("Finished searching in on-PST files.")
+        logging.debug("Finished searching in non-PST files.")
 
         # check each pst message and attachment
         total_psts, pst_pans_found = self.find_all_regexs_in_psts(
@@ -173,7 +170,7 @@ class Hunter:
             for ext in ext_list:
                 extension_types[ext] = ext_type
 
-        self.pbar = MainProgressbar()
+        self.pbar = DocProgressbar()
         self.pbar.create('Doc')
 
         doc_files: list[PANFile] = []
@@ -244,7 +241,7 @@ class Hunter:
 
         for file in pst_files:
 
-            with FileProgressbar(hunt_type, file.filename) as sub_pbar:
+            with PstProgressbar(hunt_type, file.filename) as sub_pbar:
                 for completed, total_items in file.check_pst_regexs(
                         excluded_pans_list=PANHuntConfigSingleton.instance().excluded_pans,
                         search_extensions=PANHuntConfigSingleton.instance().search_extensions):
