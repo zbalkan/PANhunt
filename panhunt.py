@@ -16,11 +16,13 @@ import sys
 from typing import Final, Optional
 
 import colorama
+from stats import Stats
 
 import panutils
 from config import PANHuntConfigSingleton
-from Hunter import Hunter, Stats
+from hunter import Hunter
 from PANFile import PANFile
+from report import Report
 
 APP_VERSION: Final[str] = '1.3'
 
@@ -144,14 +146,15 @@ def main() -> None:
                                                 json_path=json_path)
 
     hunter = Hunter()
-    hunter.hunt_pans()
+    stats: Stats = hunter.hunt_pans()
 
     # report findings
-    hunter.create_report()
+    report = Report(stats=stats)
+    report.create_report()
     if json_path:
-        hunter.create_json_report()
+        report.create_json_report()
 
-    print_report(all_files=hunter.stats.all_files)
+    print_report(all_files=stats.all_files)
 
 
 if __name__ == "__main__":
