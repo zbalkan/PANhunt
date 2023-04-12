@@ -5,6 +5,7 @@ import os
 import platform
 import sys
 import time
+from dataclasses import dataclass
 from typing import Final, Optional
 
 import panutils
@@ -18,13 +19,22 @@ TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
 # TODO: Move progressbar related stuff to CLI
 
 
+@dataclass
+class Stats:
+    files_total: int
+    pans_found: int
+    all_files: list[PANFile]
+
+
 class Hunter:
+
+    stats: Stats
 
     pbar: MainProgressbar
     start: datetime.datetime
     end: datetime.datetime
 
-    def hunt_pans(self) -> tuple[int, int, list[PANFile]]:
+    def hunt_pans(self) -> None:
 
         # Start timer
         self.start = datetime.datetime.now()
@@ -56,9 +66,14 @@ class Hunter:
         # Finish timer
         self.end = datetime.datetime.now()
 
-        return total_files_searched, pans_found, all_files
+        # return total_files_searched, pans_found, all_files
+        self.stats = Stats(files_total=total_files_searched,
+                           pans_found=pans_found, all_files=all_files)
 
-    def create_report(self, all_files: list[PANFile], total_files_searched: int, pans_found: int) -> None:
+    def create_report(self) -> None:
+
+        if self.stats is None:
+            return
 
         logging.debug("Creating TXT report.")
 
@@ -71,9 +86,9 @@ class Hunter:
         pan_report += 'Uname: %s\n' % (' | '.join(platform.uname()))
         pan_report += f'Elapsed time: {self.end - self.start}\n'
         pan_report += 'Searched %s files. Found %s possible PANs.\n%s\n\n' % (
-            total_files_searched, pans_found, '=' * 100)
+            self.stats.files_total, self.stats.pans_found, '=' * 100)
 
-        for pan_file in sorted([pan_file for pan_file in all_files if pan_file.matches], key=lambda x: x.filename):
+        for pan_file in sorted([pan_file for pan_file in self.stats.all_files if pan_file.matches], key=lambda x: x.filename):
             pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
 
             pan_report += pan_header + '\n'
@@ -82,9 +97,11 @@ class Hunter:
                               for pan in pan_file.matches])
             pan_report += pan_list + '\n\n'
 
-        if len([pan_file for pan_file in all_files if pan_file.filetype == 'OTHER']) != 0:
+        interesting_files = [
+            pan_file for pan_file in self.stats.all_files if pan_file.filetype == 'OTHER']
+        if len(interesting_files) != 0:
             pan_report += 'Interesting Files to check separately:\n'
-        for pan_file in sorted([afile for afile in all_files if afile.filetype == 'OTHER'], key=lambda x: x.filename):
+        for pan_file in sorted(interesting_files, key=lambda x: x.filename):
             pan_report += '%s (%s %s)\n' % (pan_file.path,
                                             panutils.size_friendly(pan_file.size), pan_file.modified.strftime('%d/%m/%Y'))
 
@@ -97,7 +114,7 @@ class Hunter:
 
         logging.debug("Created TXT report.")
 
-    def create_json_report(self, all_files: list[PANFile], total_files_searched: int, pans_found: int) -> None:
+    def create_json_report(self) -> None:
 
         if PANHuntConfigSingleton.instance().json_path is None:
             return
@@ -111,15 +128,15 @@ class Hunter:
             PANHuntConfigSingleton.instance().excluded_directories)
         report['command'] = ' '.join(sys.argv)
         report['elapsed'] = str(self.end - self.start)
-        report['total_files'] = total_files_searched
-        report['pans_found'] = pans_found
+        report['total_files'] = self.stats.files_total
+        report['pans_found'] = self.stats.pans_found
         report['pans_found_results'] = []
-        for pan_file in sorted([pan_file for pan_file in all_files if pan_file.matches], key=lambda x: x.filename):
+        for pan_file in sorted([pan_file for pan_file in self.stats.all_files if pan_file.matches], key=lambda x: x.filename):
             report['pans_found_results'].append(
                 (pan_file.filename, [pan.get_masked_pan() for pan in pan_file.matches]))
 
         interesting_files: list[PANFile] = sorted([
-            pan_file for pan_file in all_files if pan_file.filetype == 'OTHER'], key=lambda x: x.filename)
+            pan_file for pan_file in self.stats.all_files if pan_file.filetype == 'OTHER'], key=lambda x: x.filename)
         if len(interesting_files) != 0:
             report['interesting_files']['total'] = len(interesting_files)
 
