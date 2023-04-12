@@ -21,16 +21,18 @@ TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
 
 @dataclass
 class Stats:
+    """A basic value object to store statistics
+    """
     files_total: int
     pans_found: int
     all_files: list[PANFile]
+    start: datetime.datetime
+    end: datetime.datetime
 
 
 class Hunter:
 
     stats: Stats
-    start: datetime.datetime
-    end: datetime.datetime
 
     __all_files__: list[PANFile]
 
@@ -40,7 +42,7 @@ class Hunter:
     def hunt_pans(self) -> None:
 
         # Start timer
-        self.start = datetime.datetime.now()
+        start = datetime.datetime.now()
 
         logging.debug("Started searching directories.")
 
@@ -91,11 +93,11 @@ class Hunter:
         logging.debug("Finished searching.")
 
         # Finish timer
-        self.end = datetime.datetime.now()
+        end = datetime.datetime.now()
 
         # return total_files_searched, pans_found, all_files
         self.stats = Stats(files_total=total_files_searched,
-                           pans_found=pans_found, all_files=self.__all_files__)
+                           pans_found=pans_found, all_files=self.__all_files__, start=start, end=end)
 
     def create_report(self) -> None:
 
@@ -111,7 +113,7 @@ class Hunter:
             PANHuntConfigSingleton.instance().search_dir, ','.join(PANHuntConfigSingleton.instance().excluded_directories))
         pan_report += 'Command: %s\n' % (' '.join(sys.argv))
         pan_report += 'Uname: %s\n' % (' | '.join(platform.uname()))
-        pan_report += f'Elapsed time: {self.end - self.start}\n'
+        pan_report += f'Elapsed time: {self.stats.end - self.stats.start}\n'
         pan_report += 'Searched %s files. Found %s possible PANs.\n%s\n\n' % (
             self.stats.files_total, self.stats.pans_found, '=' * 100)
 
@@ -154,7 +156,7 @@ class Hunter:
         report['excluded'] = ','.join(
             PANHuntConfigSingleton.instance().excluded_directories)
         report['command'] = ' '.join(sys.argv)
-        report['elapsed'] = str(self.end - self.start)
+        report['elapsed'] = str(self.stats.end - self.stats.start)
         report['total_files'] = self.stats.files_total
         report['pans_found'] = self.stats.pans_found
         report['pans_found_results'] = []
