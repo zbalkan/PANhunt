@@ -79,17 +79,17 @@ class Report:
         report['total_files'] = self.stats.files_total
         report['pans_found'] = self.stats.pans_found
         report['pans_found_results'] = []
-        for pan_file in sorted([pan_file for pan_file in self.stats.all_files if pan_file.matches], key=lambda x: x.filename):
+        for pan_file in sorted([pan_file for pan_file in self.stats.all_files if pan_file.matches], key=lambda x: x.path):
             report['pans_found_results'].append(
-                (pan_file.filename, [pan.get_masked_pan() for pan in pan_file.matches]))
+                (pan_file.path, [pan.get_masked_pan() for pan in pan_file.matches]))
 
         interesting_files: list[PANFile] = sorted([
-            pan_file for pan_file in self.stats.all_files if pan_file.filetype == 'OTHER'], key=lambda x: x.filename)
+            pan_file for pan_file in self.stats.all_files if pan_file.filetype == 'OTHER'], key=lambda x: x.path)
         if len(interesting_files) != 0:
             report['interesting_files']['total'] = len(interesting_files)
 
             report['interesting_files']['files'] = [
-                f.filename for f in interesting_files]
+                f.path for f in interesting_files]
 
         initial_report: str = json.dumps(report, sort_keys=True)
         digest: str = panutils.get_text_hash(initial_report)

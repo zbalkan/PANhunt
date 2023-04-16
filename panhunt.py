@@ -80,15 +80,15 @@ def main() -> None:
     arg_parser.add_argument('-x', dest='exclude',
                             help='directories to exclude from the search')
     arg_parser.add_argument(
-        '-t', dest='text_files', help='text file extensions to search', default='.doc, .xls, .ppt, .xml, .txt, .csv, .log, .rtf, .tmp, .bak, .rtf, .csv, .htm, .html, .js, .css, .md, .json')
+        '-t', dest='text_files', help='text file extensions to search', default='.doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json')
     arg_parser.add_argument(
-        '-z', dest='zip_files', help='zip file extensions to search', default='.docx, .xlsx, .pptx, .zip')
+        '-z', dest='zip_files', help='zip file extensions to search', default='.docx,.xlsx,.pptx,.zip')
     arg_parser.add_argument('-e', dest='special_files',
                             help='special file extensions to search', default='.msg')
     arg_parser.add_argument(
         '-m', dest='mail_files', help='email file extensions to search', default='.pst')
     arg_parser.add_argument(
-        '-l', dest='other_files', help='other file extensions to list', default='.ost, .accdb, .mdb')
+        '-l', dest='other_files', help='other file extensions to list', default='.ost,.accdb,.mdb')
     arg_parser.add_argument(
         '-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
     arg_parser.add_argument(

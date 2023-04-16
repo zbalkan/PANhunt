@@ -159,16 +159,19 @@ class PANHuntConfigSingleton:
 
         conf: PANHuntConfigSingleton = PANHuntConfigSingleton.instance()
         if search_dir and search_dir != 'None':
-            conf.search_dir = search_dir
+            conf.search_dir = os.path.abspath(search_dir)
 
         if report_dir and report_dir != 'None':
-            conf.report_dir = report_dir
+            if report_dir == './':
+                conf.report_dir = panutils.get_root_dir()
+            else:
+                conf.report_dir = os.path.abspath(report_dir)
 
         if mask_pans:
             conf.mask_pans = mask_pans
 
         if excluded_directories_string and excluded_directories_string != 'None':
-            conf.excluded_directories = [exc_dir.lower()
+            conf.excluded_directories = [os.path.abspath(exc_dir.lower())
                                          for exc_dir in excluded_directories_string.split(',')]
         if text_extensions_string and text_extensions_string != 'None':
             conf.search_extensions['TEXT'] = text_extensions_string.split(',')
@@ -189,4 +192,4 @@ class PANHuntConfigSingleton:
             if json_dir != "./":
                 conf.json_dir = panutils.get_root_dir()
             else:
-                conf.json_dir = json_dir
+                conf.json_dir = os.path.abspath(json_dir)
