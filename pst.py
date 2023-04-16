@@ -17,13 +17,13 @@ import os
 import string
 import struct
 import sys
-from enum import Flag
+from enum import Enum, Flag
 from io import BufferedReader, BytesIO
 from typing import Generator, Literal, Optional, Type, Union
 
 import panutils
+from enums import PropIdEnum, PTypeEnum
 from exceptions import PANHuntException
-from enums import PTypeEnum, CryptMethodEnum, PropIdEnum
 
 _ValueType = Optional[Union[int, float, dt.datetime, bool, str,
                             bytes, list[int], list[float], list[dt.datetime], list[bytes], list[str]]]
@@ -37,6 +37,11 @@ _ValueType = Optional[Union[int, float, dt.datetime, bool, str,
 # |_| \_|\___/ \__,_|\___| |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___| | ||_| \_|____/|____/| | |_____\__,_|\__, |\___|_|
 #                                                                       \_\                /_/              |___/
 ##############################################################################################################################
+
+class CryptMethodEnum(Enum):
+    Unsupported = -1
+    Unencoded = 0
+    NDB_CRYPT_PERMUTE = 1
 
 
 class NID:
@@ -2558,7 +2563,7 @@ class PST:
         return status
 
     @staticmethod
-    def bruteforce(charset:str, maxlength: int) -> Generator[str, None, None]:
+    def bruteforce(charset: str, maxlength: int) -> Generator[str, None, None]:
 
         return (''.join(candidate) for candidate in itertools.chain.from_iterable(itertools.product(charset, repeat=i) for i in range(1, maxlength + 1)))
 

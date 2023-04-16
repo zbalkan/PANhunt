@@ -36,10 +36,6 @@ class PTypeEnum(Enum):
     PtypNull = 0x01
     PtypObject = 0x0D
 
-class CryptMethodEnum(Enum):
-    Unsupported = -1
-    Unencoded = 0
-    NDB_CRYPT_PERMUTE = 1
 
 class PropIdEnum(Enum):
 
