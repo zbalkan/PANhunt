@@ -55,16 +55,16 @@ class Report:
 
         pan_report = pan_report.replace('\n', os.linesep)
 
-        with open(PANHuntConfigSingleton.instance().output_file, encoding='utf-8', mode='w') as f:
+        with open(PANHuntConfigSingleton.instance().get_report_path(), encoding='utf-8', mode='w') as f:
             f.write(pan_report)
 
-        self.append_hash(PANHuntConfigSingleton.instance().output_file)
+        self.append_hash(PANHuntConfigSingleton.instance().get_report_path())
 
         logging.debug("Created TXT report.")
 
     def create_json_report(self) -> None:
 
-        if PANHuntConfigSingleton.instance().json_path is None:
+        if PANHuntConfigSingleton.instance().get_json_path() is None:
             return
 
         logging.debug("Creating JSON report.")
@@ -95,7 +95,7 @@ class Report:
         digest: str = panutils.get_text_hash(initial_report)
         report['hash'] = digest
         final_report: str = json.dumps(report)
-        with open(PANHuntConfigSingleton.instance().json_path, "w") as f:  # type: ignore
+        with open(PANHuntConfigSingleton.instance().get_json_path(), "w") as f:  # type: ignore
             f.write(final_report)
 
         logging.debug("Created JSON report.")

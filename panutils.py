@@ -3,9 +3,19 @@ import hashlib
 import os
 import re
 import struct
+import sys
 import unicodedata
 from ctypes import ArgumentError
 from typing import Any
+
+
+def get_root_dir() -> str:
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    elif __file__:
+        return os.path.dirname(__file__)
+    else:
+        return './'
 
 
 def unicode_to_ascii(unicode_str: str) -> str:
