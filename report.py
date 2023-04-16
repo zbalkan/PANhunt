@@ -79,9 +79,13 @@ class Report:
         report['total_files'] = self.stats.files_total
         report['pans_found'] = self.stats.pans_found
         report['pans_found_results'] = []
+
+        match_dict = {}
         for pan_file in sorted([pan_file for pan_file in self.stats.all_files if pan_file.matches], key=lambda x: x.path):
-            report['pans_found_results'].append(
-                (pan_file.path, [pan.get_masked_pan() for pan in pan_file.matches]))
+            match_dict[pan_file.path] = [pan.get_masked_pan()
+                                         for pan in pan_file.matches]
+
+        report['pans_found_results'].append(match_dict)
 
         interesting_files: list[PANFile] = sorted([
             pan_file for pan_file in self.stats.all_files if pan_file.filetype == 'OTHER'], key=lambda x: x.path)
@@ -94,7 +98,7 @@ class Report:
         initial_report: str = json.dumps(report, sort_keys=True)
         digest: str = panutils.get_text_hash(initial_report)
         report['hash'] = digest
-        final_report: str = json.dumps(report)
+        final_report: str = json.dumps(report, indent=4)
         with open(PANHuntConfigSingleton.instance().get_json_path(), "w") as f:  # type: ignore
             f.write(final_report)
 
