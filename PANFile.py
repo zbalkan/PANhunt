@@ -1,7 +1,6 @@
 import io
 import logging
 import os
-import sys
 import zipfile
 from datetime import datetime
 from typing import Generator, Optional

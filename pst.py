@@ -22,9 +22,8 @@ from io import BufferedReader, BytesIO
 from typing import Generator, Literal, Optional, Type, Union
 
 import panutils
+from enums import PropIdEnum, PTypeEnum
 from exceptions import PANHuntException
-from propidenum import PropIdEnum
-from ptypenum import PTypeEnum
 
 _ValueType = Optional[Union[int, float, dt.datetime, bool, str,
                             bytes, list[int], list[float], list[dt.datetime], list[bytes], list[str]]]

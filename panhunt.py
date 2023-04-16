@@ -16,13 +16,13 @@ import sys
 from typing import Final, Optional
 
 import colorama
-from stats import Stats
 
 import panutils
 from config import PANHuntConfigSingleton
 from hunter import Hunter
 from PANFile import PANFile
 from report import Report
+from stats import Stats
 
 APP_VERSION: Final[str] = '1.3'
 
