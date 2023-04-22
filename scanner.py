@@ -15,12 +15,12 @@ from pst import Attachment as pstAttachment
 
 class _ScannerBase(ABC):
 
-    path: str
+    filename: str
     sub_path: str = ''  # Only if it is a nested object
     patterns: CardPatternSingleton
 
     def __init__(self, path: str = '') -> None:
-        self.path = path
+        self.filename = path
         self.patterns = CardPatternSingleton()
 
     @abstractmethod
@@ -39,14 +39,14 @@ class _InFileScanner(_ScannerBase):
                 for pan in pans:
                     if PAN.is_valid_luhn_checksum(pan) and not PAN.is_excluded(pan, excluded_pans_list):
                         matches.append(
-                            PAN(os.path.basename(self.path), self.sub_path, brand, pan))
+                            PAN(os.path.basename(self.filename), self.sub_path, brand, pan))
         return matches
 
 
 class _BasicScanner(_ScannerBase):
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
-        with open(self.path, 'r', encoding='utf-8', errors='backslashreplace') as f:
+        with open(self.filename, 'r', encoding='utf-8', errors='backslashreplace') as f:
             text: str = f.read()
 
         ifs = _InFileScanner()
@@ -68,7 +68,7 @@ class _AttachmentScanner(_ScannerBase):
                 text_scanner = _InFileScanner()
                 text_scanner.text = self.attachment.BinaryData.decode(
                     'utf-8', errors='backslashreplace')
-                text_scanner.path = self.path
+                text_scanner.filename = self.filename
                 text_scanner.sub_path = self.attachment.Filename
                 text_matches: list[PAN] = text_scanner.scan(
                     excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
@@ -80,8 +80,12 @@ class _AttachmentScanner(_ScannerBase):
                 zip_scanner = _ZipScanner(path=self.attachment.Filename)
                 zip_scanner.zip_file = zipfile.ZipFile(
                     io.BytesIO(self.attachment.BinaryData))
+                zip_scanner.filename = self.attachment.Filename
+                zip_scanner.sub_path = os.path.join(
+                    os.path.basename(self.filename), self.attachment.Filename)
                 zip_matches: list[PAN] = zip_scanner.scan(
                     excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+
                 if len(zip_matches) > 0:
                     match_list.extend(zip_matches)
         return match_list
@@ -95,19 +99,19 @@ class _MsgScanner(_ScannerBase):
         match_list: list[PAN] = []
 
         if self.msg is None:
-            self.msg = MSMSG(self.path)
+            self.msg = MSMSG(self.filename)
 
         if self.msg.Body:
             text_scanner = _InFileScanner()
             text_scanner.text = self.msg.Body
-            text_scanner.path = self.path
+            text_scanner.filename = self.filename
             body_matches: list[PAN] = text_scanner.scan(
                 excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
             if len(body_matches) > 0:
                 match_list.extend(body_matches)
         if self.msg.attachments:
             for _, att in enumerate(self.msg.attachments):
-                att_scanner = _AttachmentScanner(path=self.path)
+                att_scanner = _AttachmentScanner(path=self.filename)
                 att_scanner.attachment = att
                 att_matches: list[PAN] = att_scanner.scan(
                     excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
@@ -123,7 +127,7 @@ class _ZipScanner(_ScannerBase):
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
 
         if self.zip_file is None:
-            self.zip_file = zipfile.ZipFile(self.path)
+            self.zip_file = zipfile.ZipFile(self.filename)
 
         match_list: list[PAN] = []
 
@@ -135,25 +139,29 @@ class _ZipScanner(_ScannerBase):
         ) if panutils.get_ext(file_in_zip) in all_extensions]
 
         for file_in_zip in files_in_zip:
+            ext: str = panutils.get_ext(file_in_zip)
             # nested zip file
-            if panutils.get_ext(file_in_zip) in search_extensions[FileTypeEnum.Zip]:
+            if ext in search_extensions[FileTypeEnum.Zip]:
                 with io.BytesIO(self.zip_file.open(file_in_zip).read()) as memory_zip:
                     nested_zf = zipfile.ZipFile(memory_zip)
-                    zip_scanner = _ZipScanner(
-                        path=file_in_zip)
+                    zip_scanner = _ZipScanner(path=file_in_zip)
                     zip_scanner.zip_file = nested_zf
+                    zip_scanner.filename = file_in_zip
+                    zip_scanner.sub_path = os.path.join(
+                        os.path.basename(self.filename), file_in_zip)
                     zip_matches: list[PAN] = zip_scanner.scan(
                         excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
                     if len(zip_matches) > 0:
                         match_list.extend(zip_matches)
 
             # normal doc
-            elif panutils.get_ext(file_in_zip) in search_extensions[FileTypeEnum.Text]:
+            elif ext in search_extensions[FileTypeEnum.Text]:
                 file_text: str = panutils.decode_zip_text(
                     self.zip_file.open(file_in_zip).read())
                 text_scanner = _InFileScanner()
-                text_scanner.path = self.path
-                text_scanner.sub_path = file_in_zip
+                text_scanner.filename = self.filename
+                text_scanner.sub_path = os.path.join(
+                    os.path.basename(self.filename), file_in_zip)
                 text_scanner.text = file_text
                 text_matches: list[PAN] = text_scanner.scan(
                     excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)

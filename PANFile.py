@@ -28,7 +28,7 @@ class PANFile:
     def __init__(self, filename: str, file_dir: str) -> None:
         self.filename = filename
         self.dir = file_dir
-        self.path = os.path.abspath(os.path.join(self.dir, self.filename))
+        self.path = os.path.join(self.dir, self.filename)
         self.root, self.ext = os.path.splitext(self.filename)
         self.filetype = None
         self.matches = []
