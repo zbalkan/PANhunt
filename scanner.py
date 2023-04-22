@@ -75,19 +75,31 @@ class _AttachmentScanner(_ScannerBase):
                 if len(text_matches) > 0:
                     match_list.extend(text_matches)
 
-        if attachment_ext in search_extensions[FileTypeEnum.Zip]:
+        elif attachment_ext in search_extensions[FileTypeEnum.Zip]:
             if self.attachment.BinaryData:
                 zip_scanner = _ZipScanner(path=self.attachment.Filename)
                 zip_scanner.zip_file = zipfile.ZipFile(
                     io.BytesIO(self.attachment.BinaryData))
                 zip_scanner.filename = self.attachment.Filename
-                zip_scanner.sub_path = os.path.join(
-                    os.path.basename(self.filename), self.attachment.Filename)
+                zip_scanner.sub_path = self.attachment.Filename
                 zip_matches: list[PAN] = zip_scanner.scan(
                     excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
 
                 if len(zip_matches) > 0:
                     match_list.extend(zip_matches)
+
+        elif attachment_ext in search_extensions[FileTypeEnum.Special]:
+            if self.attachment.BinaryData:
+                msg_scanner = _MsgScanner(path=self.attachment.Filename)
+                msg_scanner.msg = MSMSG(self.attachment.Filename)
+                msg_scanner.sub_path = os.path.join(
+                    os.path.basename(self.filename), self.attachment.Filename)
+                msg_matches: list[PAN] = msg_scanner.scan(
+                    excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+
+                if len(msg_matches) > 0:
+                    match_list.extend(msg_matches)
+
         return match_list
 
 
@@ -146,9 +158,9 @@ class _ZipScanner(_ScannerBase):
                     nested_zf = zipfile.ZipFile(memory_zip)
                     zip_scanner = _ZipScanner(path=file_in_zip)
                     zip_scanner.zip_file = nested_zf
-                    zip_scanner.filename = file_in_zip
+                    zip_scanner.filename = self.filename
                     zip_scanner.sub_path = os.path.join(
-                        os.path.basename(self.filename), file_in_zip)
+                        os.path.basename(self.sub_path), file_in_zip)
                     zip_matches: list[PAN] = zip_scanner.scan(
                         excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
                     if len(zip_matches) > 0:
@@ -161,7 +173,7 @@ class _ZipScanner(_ScannerBase):
                 text_scanner = _InFileScanner()
                 text_scanner.filename = self.filename
                 text_scanner.sub_path = os.path.join(
-                    os.path.basename(self.filename), file_in_zip)
+                    self.sub_path, file_in_zip)
                 text_scanner.text = file_text
                 text_matches: list[PAN] = text_scanner.scan(
                     excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
