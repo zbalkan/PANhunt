@@ -4,6 +4,7 @@ import time
 from typing import Optional
 
 import panutils
+from enums import FileTypeEnum
 
 
 class PANHuntConfigSingleton:
@@ -15,7 +16,7 @@ class PANHuntConfigSingleton:
     json_dir: Optional[str]
     mask_pans: bool
     excluded_directories: list[str]
-    search_extensions: dict[str, list[str]]
+    search_extensions: dict[FileTypeEnum, list[str]]
     excluded_pans: list[str]
 
     # Here is the core of the singleton
@@ -39,11 +40,11 @@ class PANHuntConfigSingleton:
         self.excluded_directories = ['C:\\Windows',
                                      'C:\\Program Files', 'C:\\Program Files(x86)', '/mnt', '/dev', '/proc']
         self.search_extensions = {
-            'TEXT': ['.doc', '.xls', '.ppt', '.xml', '.txt', '.csv', '.log', '.rtf', '.tmp', '.bak', '.rtf', '.csv', '.htm', '.html', '.js', '.css', '.md', '.json'],
-            'ZIP': ['.docx', '.xlsx', '.pptx', '.zip'],
-            'SPECIAL': ['.msg'],
-            'MAIL': ['.pst'],
-            'OTHER': ['.ost', '.accdb', '.mdb']
+            FileTypeEnum.Text: ['.doc', '.xls', '.ppt', '.xml', '.txt', '.csv', '.log', '.rtf', '.tmp', '.bak', '.rtf', '.csv', '.htm', '.html', '.js', '.css', '.md', '.json'],
+            FileTypeEnum.Zip: ['.docx', '.xlsx', '.pptx', '.zip'],
+            FileTypeEnum.Special: ['.msg'],
+            FileTypeEnum.Mail: ['.pst'],
+            FileTypeEnum.Other: ['.ost', '.accdb', '.mdb']
         }
         self.excluded_pans = []
 
@@ -174,16 +175,19 @@ class PANHuntConfigSingleton:
             conf.excluded_directories = [os.path.abspath(exc_dir.lower())
                                          for exc_dir in excluded_directories_string.split(',')]
         if text_extensions_string and text_extensions_string != 'None':
-            conf.search_extensions['TEXT'] = text_extensions_string.split(',')
+            conf.search_extensions[FileTypeEnum.Text] = text_extensions_string.split(
+                ',')
         if zip_extensions_string and zip_extensions_string != 'None':
-            conf.search_extensions['ZIP'] = zip_extensions_string.split(',')
+            conf.search_extensions[FileTypeEnum.Zip] = zip_extensions_string.split(
+                ',')
         if special_extensions_string and special_extensions_string != 'None':
-            conf.search_extensions['SPECIAL'] = special_extensions_string.split(
+            conf.search_extensions[FileTypeEnum.Special] = special_extensions_string.split(
                 ',')
         if mail_extensions_string and mail_extensions_string != 'None':
-            conf.search_extensions['MAIL'] = mail_extensions_string.split(',')
+            conf.search_extensions[FileTypeEnum.Mail] = mail_extensions_string.split(
+                ',')
         if other_extensions_string and other_extensions_string != 'None':
-            conf.search_extensions['OTHER'] = other_extensions_string.split(
+            conf.search_extensions[FileTypeEnum.Other] = other_extensions_string.split(
                 ',')
         if excluded_pans_string and excluded_pans_string != excluded_pans_string and len(excluded_pans_string) > 0:
             conf.excluded_pans = excluded_pans_string.split(',')

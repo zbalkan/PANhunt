@@ -4,6 +4,7 @@ import os
 import platform
 import sys
 import time
+from enums import FileTypeEnum
 
 import panutils
 from config import PANHuntConfigSingleton
@@ -40,13 +41,15 @@ class Report:
             pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
 
             pan_report += pan_header + '\n'
-            pan_list: str = '\t' + \
-                pan_sep.join([pan.get_masked_pan()
-                              for pan in pan_file.matches])
-            pan_report += pan_list + '\n\n'
+            pan_list: str = '\t'
+            for pan in pan_file.matches:
+                if pan.sub_path != '':
+                    pan_list += f'{pan.sub_path} '
+                pan_list += f"{pan.get_masked_pan()}{pan_sep}"
+            pan_report += pan_list.rstrip(pan_sep) + '\n\n'
 
         interesting_files: list[PANFile] = [
-            pan_file for pan_file in self.stats.all_files if pan_file.filetype == 'OTHER']
+            pan_file for pan_file in self.stats.all_files if pan_file.filetype == FileTypeEnum.Other]
         if len(interesting_files) != 0:
             pan_report += 'Interesting Files to check separately:\n'
         for pan_file in sorted(interesting_files, key=lambda x: x.filename):
@@ -82,13 +85,19 @@ class Report:
 
         match_dict = {}
         for pan_file in sorted([pan_file for pan_file in self.stats.all_files if pan_file.matches], key=lambda x: x.path):
-            match_dict[pan_file.path] = [pan.get_masked_pan()
-                                         for pan in pan_file.matches]
+            items: list[str] = []
+            for pan in pan_file.matches:
+                item: str = ''
+                if pan.filename != '':
+                    item += f"{pan.filename}\\{pan.sub_path} "
+                item += f"{pan.get_masked_pan()}"
+                items.append(item)
+            match_dict[pan_file.path] = items
 
         report['pans_found_results'].append(match_dict)
 
         interesting_files: list[PANFile] = sorted([
-            pan_file for pan_file in self.stats.all_files if pan_file.filetype == 'OTHER'], key=lambda x: x.path)
+            pan_file for pan_file in self.stats.all_files if pan_file.filetype == FileTypeEnum.Other], key=lambda x: x.path)
         if len(interesting_files) != 0:
             report['interesting_files']['total'] = len(interesting_files)
 
