@@ -22,6 +22,9 @@ With v1.3, breaking changes are implemented:
 - An optional JSON formatted report generation capability is added for integration with 3rd parties
 - JSON report filename template: `panhunt_<timestamp>.json`
 
+
+NB! There is around 20-25% performance impact after refactoring. There are no performance improvements tried yet.
+
 ## Build
 
 PANhunt is a Python script that can be easily converted to a standalone Windows executable using PyInstaller.
