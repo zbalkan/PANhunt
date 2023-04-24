@@ -102,6 +102,8 @@ def main() -> None:
         '-C', dest='config', help='configuration file to use')
     arg_parser.add_argument(
         '-X', dest='exclude_pan', help='PAN to exclude from search')
+    arg_parser.add_argument('-q', dest='quiet', action='store_true',
+                            default=False, help='No terminal output')
     arg_parser.add_argument('-c', dest='check_file_hash',
                             help=argparse.SUPPRESS)  # hidden argument
 
@@ -123,6 +125,7 @@ def main() -> None:
     excluded_pans_string = str(args.exclude_pan)
     json_dir: Optional[str] = args.json_dir
     config_file: Optional[str] = args.config
+    quiet: bool = args.quiet
 
     # The singleton is initiated at the first call with the hardcoded default values.
     # If exists, read the config file
@@ -144,7 +147,7 @@ def main() -> None:
                                                 excluded_pans_string=excluded_pans_string)
 
     hunter = Hunter()
-    stats: Stats = hunter.hunt_pans()
+    stats: Stats = hunter.hunt_pans(quiet=quiet)
 
     # report findings
     report = Report(stats=stats)
@@ -152,7 +155,8 @@ def main() -> None:
     if json_dir:
         report.create_json_report()
 
-    print_report(all_files=stats.all_files)
+    if not quiet:
+        print_report(all_files=stats.all_files)
 
 
 if __name__ == "__main__":
