@@ -18,10 +18,10 @@ With v1.3, breaking changes are implemented:
 - Migrated to Python 3
 - A default text log appended for the sake of accountability
 - Text report now accepts only directory as an argument while the name is fixed.
-- Text report filename template: `panhunt_<timestamp>.report`
-- An optional JSON formatted report generation capability is added for integration with 3rd parties
-- JSON report filename template: `panhunt_<timestamp>.json`
-
+  - Text report filename template: `panhunt_<timestamp>.report`
+- An optional JSON formatted report generation capability is added for integration with 3rd parties.
+  - JSON report filename template: `panhunt_<timestamp>.json`
+- A flag `-q` (quiet) is added to disable terminal output be used when it is integrated with other tools.
 
 NB! There is around 20-25% performance impact after refactoring. There are no performance improvements tried yet.
 
@@ -57,7 +57,7 @@ pyinstaller.exe panhunt.py -F --clean -i .\dionach.ico --paths="<path to virtual
 
 ```
 usage: panhunt [-h] [-s SEARCH] [-x EXCLUDE] [-t TEXT_FILES] [-z ZIP_FILES] [-e SPECIAL_FILES] [-m MAIL_FILES] [-l OTHER_FILES]
-               [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG] [-X EXCLUDE_PAN]
+               [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
 
 PAN Hunt v1.3: search directories and sub directories for documents containing PANs.
 
@@ -65,17 +65,18 @@ options:
   -h, --help        show this help message and exit
   -s SEARCH         base directory to search in (default: /)
   -x EXCLUDE        directories to exclude from the search (default: None)
-  -t TEXT_FILES     text file extensions to search (default: .doc, .xls, .ppt, .xml, .txt, .csv, .log, .rtf, .tmp, .bak, .rtf, 
-                    .csv, .htm, .html, .js, .css, .md, .json)
-  -z ZIP_FILES      zip file extensions to search (default: .docx, .xlsx, .pptx, .zip)
+  -t TEXT_FILES     text file extensions to search (default:
+                    .doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json)
+  -z ZIP_FILES      zip file extensions to search (default: .docx,.xlsx,.pptx,.zip)
   -e SPECIAL_FILES  special file extensions to search (default: .msg)
   -m MAIL_FILES     email file extensions to search (default: .pst)
-  -l OTHER_FILES    other file extensions to list (default: .ost, .accdb, .mdb)
+  -l OTHER_FILES    other file extensions to list (default: .ost,.accdb,.mdb)
   -o REPORT_DIR     Report file directory for TXT formatted PAN report (default: ./)
   -j JSON_DIR       Report file directory for JSON formatted PAN report (default: None)
   -u                unmask PANs in output (default: False)
   -C CONFIG         configuration file to use (default: None)
   -X EXCLUDE_PAN    PAN to exclude from search (default: None)
+  -q                No terminal output (default: False)
 ```
 
 Simply running it with no arguments will search the C:\ drive for documents containing PANs, and output to panhunt_<timestamp>.txt.
