@@ -22,7 +22,7 @@ class Hunter:
     def __init__(self) -> None:
         self.__all_files__ = []
 
-    def hunt_pans(self) -> Stats:
+    def hunt_pans(self, quiet: bool) -> Stats:
 
         # Start timer
         start: datetime = datetime.now()
@@ -30,23 +30,31 @@ class Hunter:
         logging.debug("Started searching directories.")
 
         # find all files to check
-        with DocProgressbar('Doc') as pbar:
-            for docs_found, root_total_items, root_items_completed in self.__get_scannable_files():
-                pbar.update(items_found=docs_found,
-                            items_total=root_total_items, items_completed=root_items_completed)
+        if quiet:
+            self.__get_scannable_files()
+        else:
+            with DocProgressbar('Doc') as pbar:
+                for docs_found, root_total_items, root_items_completed in self.__get_scannable_files():
+                    pbar.update(items_found=docs_found,
+                                items_total=root_total_items, items_completed=root_items_completed)
 
         logging.debug("Finished searching directories.")
 
         logging.debug("Started searching in files.")
 
-        # check each non-PST file
-        with DocProgressbar(hunt_type='PAN') as pbar:
-            doc_pans_found: int = 0
-            files: list[PANFile] = [pan_file for pan_file in self.__all_files__ if not pan_file.errors and pan_file.filetype in (
-                FileTypeEnum.Text, FileTypeEnum.Zip, FileTypeEnum.Special, FileTypeEnum.Mail)]
+        # check each file
+        doc_pans_found: int = 0
+        files: list[PANFile] = [pan_file for pan_file in self.__all_files__ if not pan_file.errors and pan_file.filetype in (
+            FileTypeEnum.Text, FileTypeEnum.Zip, FileTypeEnum.Special, FileTypeEnum.Mail)]
+
+        if quiet:
             for doc_pans_found, files_completed in self.__scan_files():
-                pbar.update(items_found=doc_pans_found,
-                            items_total=len(files), items_completed=files_completed)
+                ...
+        else:
+            with DocProgressbar(hunt_type='PAN') as pbar:
+                for doc_pans_found, files_completed in self.__scan_files():
+                    pbar.update(items_found=doc_pans_found,
+                                items_total=len(files), items_completed=files_completed)
 
         logging.debug("Finished searching in files.")
 
