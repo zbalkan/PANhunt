@@ -7,11 +7,15 @@ name: DevSkim
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
+    paths-ignore:
+      - "**.md"
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
+    paths-ignore:
+      - "**.md"
   schedule:
-    - cron: '34 19 * * 5'
+    - cron: "34 19 * * 5"
 
 jobs:
   lint:
