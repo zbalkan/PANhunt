@@ -10,6 +10,7 @@ from msmsg import MSMSG
 from msmsg import Attachment as msgAttachment
 from PAN import PAN
 from patterns import CardPatternSingleton
+from pst import PST
 from pst import Attachment as pstAttachment
 
 
@@ -131,6 +132,52 @@ class _MsgScanner(_ScannerBase):
                     match_list.extend(att_matches)
         return match_list
 
+class _PstScanner(_ScannerBase):
+    sub_path: str = ''
+    pst: Optional[PST] = None
+
+    def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
+        match_list: list[PAN] = []
+
+        if self.pst is None:
+            self.pst = PST(self.filename)
+
+        if self.pst.header.validPST:
+            for folder in self.pst.folder_generator():
+                for message in self.pst.message_generator(folder):
+                    if message.Subject:
+                        message_path: str = os.path.join(
+                                folder.path, message.Subject)
+                    else:
+                        message_path = os.path.join(
+                                folder.path, '[NoSubject]')
+
+                    if message.Body:
+                        text_scanner = _InFileScanner()
+                        text_scanner.text = message.Body
+                        text_scanner.filename = self.filename
+                        text_scanner.sub_path = message_path
+                        body_matches: list[PAN] = text_scanner.scan(
+                            excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+                        if len(body_matches) > 0:
+                            match_list.extend(body_matches)
+
+                    if message.HasAttachments:
+                        for _, subattachment in enumerate(message.subattachments):
+                            if subattachment.Filename and panutils.get_ext(subattachment.Filename) in search_extensions[FileTypeEnum.Text] + search_extensions[FileTypeEnum.Zip]:
+                                att: Optional[pstAttachment] = message.get_attachment(
+                                    subattachment=subattachment)
+                                if att:
+                                    att_scanner = _AttachmentScanner(path=self.filename)
+                                    att_scanner.attachment = att
+                                    att_matches: list[PAN] = att_scanner.scan(
+                                        excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+                                    if len(att_matches) > 0:
+                                        match_list.extend(att_matches)
+            self.pst.close()
+
+        return match_list
+
 
 class _ZipScanner(_ScannerBase):
 
@@ -212,7 +259,8 @@ class Dispatcher:
         self.scanner_mapping = {
             FileTypeEnum.Text: _BasicScanner,
             FileTypeEnum.Zip: _ZipScanner,
-            FileTypeEnum.Special: _MsgScanner
+            FileTypeEnum.Special: _MsgScanner,
+            FileTypeEnum.Mail: _PstScanner
         }
 
     def dispatch(self, file_type: FileTypeEnum, path: str) -> list[PAN]:
