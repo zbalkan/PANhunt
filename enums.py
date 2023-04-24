@@ -133,3 +133,11 @@ class PropIdEnum(Enum):
     PidTagAttachExtension = 0x3703
     PidTagAttachLongFilename = 0x3707
     PidTagXOriginatingIp = 0x8028  # Non-standard X-Originating-IP
+
+
+class FileTypeEnum(Enum):
+    Text = 0
+    Zip = 1
+    Special = 2
+    Mail = 3
+    Other = 4

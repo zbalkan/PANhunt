@@ -35,9 +35,12 @@ def print_report(all_files: list[PANFile]) -> None:
         pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
 
         print(colorama.Fore.RED + panutils.unicode_to_ascii(pan_header))
-        pan_list: str = '\t' + \
-            pan_sep.join([pan.get_masked_pan()
-                          for pan in pan_file.matches])
+        pan_list: str = '\t'
+        for pan in pan_file.matches:
+            if pan.sub_path != '':
+                pan_list += f'{pan.sub_path} '
+            pan_list += f"{pan.get_masked_pan()}{pan_sep}"
+
         print(colorama.Fore.YELLOW +
               panutils.unicode_to_ascii(pan_list))
 
