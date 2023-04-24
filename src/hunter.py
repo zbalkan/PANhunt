@@ -17,34 +17,54 @@ TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
 
 class Hunter:
 
-    __all_files__: list[PANFile]
+    __all_files: list[PANFile]
+    __all_extensions: list[str]
+    __extension_types: dict[str, FileTypeEnum]
 
     def __init__(self) -> None:
-        self.__all_files__ = []
+        self.__all_files = []
+        self.__all_extensions: list[str] = [ext for ext_list in list(
+            PANHuntConfigSingleton.instance().search_extensions.values()) for ext in ext_list]
+
+        self.__extension_types: dict[str, FileTypeEnum] = {}
+        for ext_type, ext_list in PANHuntConfigSingleton.instance().search_extensions.items():
+            for ext in ext_list:
+                self.__extension_types[ext] = ext_type
 
     def hunt_pans(self, quiet: bool) -> Stats:
 
         # Start timer
         start: datetime = datetime.now()
 
-        logging.debug("Started searching directories.")
+        # Check if it is a single-file scan
+        path: Optional[str] = PANHuntConfigSingleton.instance().file_path
+        if path:
+            pan_file: PANFile = self.__try_init_PANfile(
+                os.path.basename(path), os.path.dirname(path))
 
-        # find all files to check
-        if quiet:
-            self.__get_scannable_files()
+            self.__all_files.append(pan_file)
+
         else:
-            with DocProgressbar('Doc') as pbar:
-                for docs_found, root_total_items, root_items_completed in self.__get_scannable_files():
-                    pbar.update(items_found=docs_found,
-                                items_total=root_total_items, items_completed=root_items_completed)
+            logging.debug("Started searching directories.")
 
-        logging.debug("Finished searching directories.")
+            # find all files to check
+            if quiet:
+                # Wait until generator finishes
+                for _ in self.__get_scannable_files():
+                    ...
+            else:
+                with DocProgressbar('Doc') as pbar:
+                    for docs_found, root_total_items, root_items_completed in self.__get_scannable_files():
+                        pbar.update(items_found=docs_found,
+                                    items_total=root_total_items, items_completed=root_items_completed)
 
-        logging.debug("Started searching in files.")
+            logging.debug("Finished searching directories.")
+
+        logging.debug("Started searching in file(s).")
 
         # check each file
         doc_pans_found: int = 0
-        files: list[PANFile] = [pan_file for pan_file in self.__all_files__ if not pan_file.errors and pan_file.filetype in (
+        files: list[PANFile] = [pan_file for pan_file in self.__all_files if not pan_file.errors and pan_file.filetype in (
             FileTypeEnum.Text, FileTypeEnum.Zip, FileTypeEnum.Special, FileTypeEnum.Mail)]
 
         if quiet:
@@ -68,18 +88,10 @@ class Hunter:
 
         # return total_files_searched, pans_found, all_files
         return Stats(files_total=total_files_searched,
-                     pans_found=pans_found, all_files=self.__all_files__, start=start, end=end)
+                     pans_found=pans_found, all_files=self.__all_files, start=start, end=end)
 
     def __get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
-
-        all_extensions: list[str] = [ext for ext_list in list(
-            PANHuntConfigSingleton.instance().search_extensions.values()) for ext in ext_list]
-
-        extension_types: dict[str, FileTypeEnum] = {}
-        for ext_type, ext_list in PANHuntConfigSingleton.instance().search_extensions.items():
-            for ext in ext_list:
-                extension_types[ext] = ext_type
 
         doc_files: list[PANFile] = []
         root_dir_dirs: Optional[list[str]] = None
@@ -103,22 +115,15 @@ class Hunter:
             for filename in files:
                 if root == PANHuntConfigSingleton.instance().search_dir:
                     root_items_completed += 1
-                pan_file = PANFile(filename, root)
-                if pan_file.ext.lower() in all_extensions:
-                    pan_file.set_file_stats()
-                    pan_file.filetype = extension_types[pan_file.ext.lower(
-                    )]
-                    if pan_file.filetype in (FileTypeEnum.Text, FileTypeEnum.Special) and pan_file.size > TEXT_FILE_SIZE_LIMIT:
-                        pan_file.filetype = FileTypeEnum.Other
-                        pan_file.set_error(
-                            f'File size {panutils.size_friendly(pan_file.size)} over limit of {panutils.size_friendly(TEXT_FILE_SIZE_LIMIT)} for checking')
-                    doc_files.append(pan_file)
-                    if not pan_file.errors:
-                        docs_found += 1
+                pan_file: PANFile = self.__try_init_PANfile(
+                    filename=filename, dir=root)
+                doc_files.append(pan_file)
+                if not pan_file.errors:
+                    docs_found += 1
 
-                    yield docs_found, root_total_items, root_items_completed
+                yield docs_found, root_total_items, root_items_completed
 
-        self.__all_files__ += doc_files
+        self.__all_files += doc_files
 
     def __scan_files(self) -> Generator[tuple[int, int], None, None]:
         """ Searches files in doc_files list for regular expressions"""
@@ -126,10 +131,23 @@ class Hunter:
         files_completed: int = 0
         matches_found: int = 0
 
-        for pan_file in self.__all_files__:
+        for pan_file in self.__all_files:
             dispatcher = Dispatcher(
                 excluded_pans_list=PANHuntConfigSingleton.instance().excluded_pans, search_extensions=PANHuntConfigSingleton.instance().search_extensions)
             matches: list[PAN] = pan_file.check_regexs(dispatcher=dispatcher)
             matches_found += len(matches)
             files_completed += 1
             yield matches_found, files_completed
+
+    def __try_init_PANfile(self, filename: str, dir: str) -> PANFile:
+        pan_file = PANFile(filename=filename, file_dir=dir)
+        if pan_file.ext.lower() in self.__all_extensions:
+            pan_file.set_file_stats()
+            pan_file.filetype = self.__extension_types[pan_file.ext.lower(
+            )]
+            if pan_file.filetype in (FileTypeEnum.Text, FileTypeEnum.Special) and pan_file.size > TEXT_FILE_SIZE_LIMIT:
+                pan_file.filetype = FileTypeEnum.Other
+                pan_file.set_error(
+                    f'File size {panutils.size_friendly(pan_file.size)} over limit of {panutils.size_friendly(TEXT_FILE_SIZE_LIMIT)} for checking')
+
+        return pan_file

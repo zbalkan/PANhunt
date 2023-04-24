@@ -9,6 +9,7 @@ from enums import FileTypeEnum
 
 class PANHuntConfigSingleton:
     search_dir: str
+    file_path: Optional[str]
     config_file: Optional[str]
     report_file: str
     report_dir: str
@@ -31,6 +32,7 @@ class PANHuntConfigSingleton:
 
     def __init__(self) -> None:
         self.search_dir = '/'
+        self.file_path = None
         self.config_file = None
         self.report_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.report'
         self.report_dir = panutils.get_root_dir()
@@ -50,6 +52,7 @@ class PANHuntConfigSingleton:
 
     @staticmethod
     def from_args(search_dir: Optional[str] = None,
+                  file_path: Optional[str] = None,
                   report_dir: Optional[str] = None,
                   mask_pans: bool = False,
                   excluded_directories_string: Optional[str] = None,
@@ -64,6 +67,7 @@ class PANHuntConfigSingleton:
         """
 
         PANHuntConfigSingleton.instance().update(search_dir=search_dir,
+                                                 file_path=file_path,
                                                  report_dir=report_dir,
                                                  json_dir=json_dir,
                                                  mask_pans=mask_pans,
@@ -99,6 +103,8 @@ class PANHuntConfigSingleton:
 
         search_dir: Optional[str] = PANHuntConfigSingleton.try_parse(
             config_from_file=config_from_file, property='search')
+        file_path: Optional[str] = PANHuntConfigSingleton.try_parse(
+            config_from_file=config_from_file, property='file')
         excluded_directories_string: Optional[str] = PANHuntConfigSingleton.try_parse(
             config_from_file=config_from_file, property='exclude')
         text_extensions_string: Optional[str] = PANHuntConfigSingleton.try_parse(
@@ -121,6 +127,7 @@ class PANHuntConfigSingleton:
             config_from_file=config_from_file, property='excludepans')
 
         PANHuntConfigSingleton.instance().update(search_dir=search_dir,
+                                                 file_path=file_path,
                                                  report_dir=report_dir,
                                                  json_dir=json_dir,
                                                  mask_pans=mask_pans,
@@ -156,11 +163,14 @@ class PANHuntConfigSingleton:
         return None
 
     @staticmethod
-    def update(search_dir: Optional[str], report_dir: Optional[str], json_dir: Optional[str], mask_pans: Optional[bool], excluded_directories_string: Optional[str], text_extensions_string: Optional[str], zip_extensions_string: Optional[str], special_extensions_string: Optional[str], mail_extensions_string: Optional[str], other_extensions_string: Optional[str], excluded_pans_string: Optional[str]) -> None:
+    def update(search_dir: Optional[str], file_path: Optional[str], report_dir: Optional[str], json_dir: Optional[str], mask_pans: Optional[bool], excluded_directories_string: Optional[str], text_extensions_string: Optional[str], zip_extensions_string: Optional[str], special_extensions_string: Optional[str], mail_extensions_string: Optional[str], other_extensions_string: Optional[str], excluded_pans_string: Optional[str]) -> None:
 
         conf: PANHuntConfigSingleton = PANHuntConfigSingleton.instance()
         if search_dir and search_dir != 'None':
             conf.search_dir = os.path.abspath(search_dir)
+
+        if file_path and file_path != "None":
+            conf.file_path = os.path.abspath(file_path)
 
         if report_dir and report_dir != 'None':
             if report_dir == './':
