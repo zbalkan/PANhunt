@@ -20,18 +20,17 @@ import colorama
 import panutils
 from config import PANHuntConfigSingleton
 from hunter import Hunter
-from PANFile import PANFile
 from report import Report
-from stats import Stats
 
 APP_VERSION: Final[str] = '1.3'
 
 
-def print_report(all_files: list[PANFile]) -> None:
+def print_report(report:Report) -> None:
+
 
     logging.debug("Creating TXT report.")
     pan_sep: str = '\n\t'
-    for pan_file in sorted([pan_file for pan_file in all_files if pan_file.matches], key=lambda x: x.filename):
+    for pan_file in report.matched_files:
         pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
 
         print(colorama.Fore.RED + panutils.unicode_to_ascii(pan_header))
@@ -151,16 +150,15 @@ def main() -> None:
                                                 excluded_pans_string=excluded_pans_string)
 
     hunter = Hunter()
-    stats: Stats = hunter.hunt_pans(quiet=quiet)
+    report: Report = hunter.hunt_pans(quiet=quiet)
 
     # report findings
-    report = Report(stats=stats)
-    report.create_report()
+    report.create_text_report()
     if json_dir:
         report.create_json_report()
 
     if not quiet:
-        print_report(all_files=stats.all_files)
+        print_report(report=report)
 
 
 if __name__ == "__main__":
