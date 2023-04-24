@@ -79,8 +79,10 @@ def main() -> None:
     arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog='panhunt', description=f'PAN Hunt v{APP_VERSION}: search directories and sub directories for documents containing PANs.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
-        '-s', dest='search', help='base directory to search in', default='/')
-    arg_parser.add_argument('-x', dest='exclude',
+        '-s', dest='search_dir', help='base directory to search in', default='/')
+    arg_parser.add_argument(
+        '-f', dest='file_path', help='File path for single file scan')
+    arg_parser.add_argument('-x', dest='exclude_dirs',
                             help='directories to exclude from the search')
     arg_parser.add_argument(
         '-t', dest='text_files', help='text file extensions to search', default='.doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json')
@@ -113,9 +115,10 @@ def main() -> None:
         check_file_hash(args.check_file_hash)
         sys.exit()
 
-    search_dir = str(args.search)
+    search_dir = str(args.search_dir)
+    file_path = str(args.file_path)
     report_dir = str(args.report_dir)
-    excluded_directories_string = str(args.exclude)
+    excluded_directories_string = str(args.exclude_dirs)
     text_extensions_string = str(args.text_files)
     zip_extensions_string = str(args.zip_files)
     special_extensions_string = str(args.special_files)
@@ -135,6 +138,7 @@ def main() -> None:
 
     # Finally, read the CLI parameters as they override the default and config file values
     PANHuntConfigSingleton.instance().from_args(search_dir=search_dir,
+                                                file_path=file_path,
                                                 report_dir=report_dir,
                                                 json_dir=json_dir,
                                                 mask_pans=mask_pans,

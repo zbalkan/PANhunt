@@ -51,6 +51,8 @@ class _BasicScanner(_ScannerBase):
             text: str = f.read()
 
         ifs = _InFileScanner()
+        ifs.filename = self.filename
+        ifs.sub_path = self.sub_path
         ifs.text = text
         matches: list[PAN] = ifs.scan(
             excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
@@ -132,6 +134,7 @@ class _MsgScanner(_ScannerBase):
                     match_list.extend(att_matches)
         return match_list
 
+
 class _PstScanner(_ScannerBase):
     sub_path: str = ''
     pst: Optional[PST] = None
@@ -147,10 +150,10 @@ class _PstScanner(_ScannerBase):
                 for message in self.pst.message_generator(folder):
                     if message.Subject:
                         message_path: str = os.path.join(
-                                folder.path, message.Subject)
+                            folder.path, message.Subject)
                     else:
                         message_path = os.path.join(
-                                folder.path, '[NoSubject]')
+                            folder.path, '[NoSubject]')
 
                     if message.Body:
                         text_scanner = _InFileScanner()
@@ -168,7 +171,8 @@ class _PstScanner(_ScannerBase):
                                 att: Optional[pstAttachment] = message.get_attachment(
                                     subattachment=subattachment)
                                 if att:
-                                    att_scanner = _AttachmentScanner(path=self.filename)
+                                    att_scanner = _AttachmentScanner(
+                                        path=self.filename)
                                     att_scanner.attachment = att
                                     att_matches: list[PAN] = att_scanner.scan(
                                         excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)

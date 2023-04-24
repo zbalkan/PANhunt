@@ -22,6 +22,7 @@ With v1.3, breaking changes are implemented:
 - An optional JSON formatted report generation capability is added for integration with 3rd parties.
   - JSON report filename template: `panhunt_<timestamp>.json`
 - A flag `-q` (quiet) is added to disable terminal output be used when it is integrated with other tools.
+- A flag `-f` (filepath) is added to enable sigle-file scans. Great for FIM integration.
 
 NB! There is around 20-25% performance impact after refactoring. There are no performance improvements tried yet.
 
@@ -56,15 +57,17 @@ pyinstaller.exe panhunt.py -F --clean -i .\dionach.ico --paths="<path to virtual
 ## Usage
 
 ```
-usage: panhunt [-h] [-s SEARCH] [-x EXCLUDE] [-t TEXT_FILES] [-z ZIP_FILES] [-e SPECIAL_FILES] [-m MAIL_FILES] [-l OTHER_FILES]
-               [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
+usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-t TEXT_FILES] [-z ZIP_FILES]
+               [-e SPECIAL_FILES] [-m MAIL_FILES] [-l OTHER_FILES] [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG]
+               [-X EXCLUDE_PAN] [-q]
 
 PAN Hunt v1.3: search directories and sub directories for documents containing PANs.
 
 options:
   -h, --help        show this help message and exit
-  -s SEARCH         base directory to search in (default: /)
-  -x EXCLUDE        directories to exclude from the search (default: None)
+  -s SEARCH_DIR     base directory to search in (default: /)
+  -f FILE_PATH      File path for single file scan (default: None)
+  -x EXCLUDE_DIRS   directories to exclude from the search (default: None)
   -t TEXT_FILES     text file extensions to search (default:
                     .doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json)
   -z ZIP_FILES      zip file extensions to search (default: .docx,.xlsx,.pptx,.zip)
