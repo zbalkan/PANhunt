@@ -9,7 +9,7 @@ from enums import FileTypeEnum
 from msmsg import MSMSG
 from msmsg import Attachment as msgAttachment
 from PAN import PAN
-from patterns import CardPatternSingleton
+from patterns import CardPatterns
 from pst import PST
 from pst import Attachment as pstAttachment
 
@@ -18,11 +18,11 @@ class _ScannerBase(ABC):
 
     filename: str
     sub_path: str = ''  # Only if it is a nested object
-    patterns: CardPatternSingleton
+    patterns: CardPatterns
 
     def __init__(self, path: str = '') -> None:
         self.filename = path
-        self.patterns = CardPatternSingleton()
+        self.patterns = CardPatterns()
 
     @abstractmethod
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
