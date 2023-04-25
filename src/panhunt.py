@@ -18,15 +18,14 @@ from typing import Final, Optional
 import colorama
 
 import panutils
-from config import PANHuntConfigSingleton
+from config import PANHuntConfiguration
 from hunter import Hunter
 from report import Report
 
 APP_VERSION: Final[str] = '1.3'
 
 
-def print_report(report:Report) -> None:
-
+def print_report(report: Report, configuration: PANHuntConfiguration) -> None:
 
     logging.debug("Creating TXT report.")
     pan_sep: str = '\n\t'
@@ -44,7 +43,7 @@ def print_report(report:Report) -> None:
               panutils.unicode_to_ascii(pan_list))
 
     print(colorama.Fore.WHITE +
-          f'Report written to {panutils.unicode_to_ascii(PANHuntConfigSingleton.instance().get_report_path())}')
+          f'Report written to {panutils.unicode_to_ascii(configuration.get_report_path())}')
 
 
 def check_file_hash(text_file: str) -> None:
@@ -129,36 +128,37 @@ def main() -> None:
     config_file: Optional[str] = args.config
     quiet: bool = args.quiet
 
-    # The singleton is initiated at the first call with the hardcoded default values.
+    config: PANHuntConfiguration = PANHuntConfiguration()
     # If exists, read the config file
     if config_file:
-        PANHuntConfigSingleton.instance().from_file(
+        config.with_file(
             config_file=config_file)
 
     # Finally, read the CLI parameters as they override the default and config file values
-    PANHuntConfigSingleton.instance().from_args(search_dir=search_dir,
-                                                file_path=file_path,
-                                                report_dir=report_dir,
-                                                json_dir=json_dir,
-                                                mask_pans=mask_pans,
-                                                excluded_directories_string=excluded_directories_string,
-                                                text_extensions_string=text_extensions_string,
-                                                zip_extensions_string=zip_extensions_string,
-                                                special_extensions_string=special_extensions_string,
-                                                mail_extensions_string=mail_extensions_string,
-                                                other_extensions_string=other_extensions_string,
-                                                excluded_pans_string=excluded_pans_string)
+    config.with_args(search_dir=search_dir,
+                     file_path=file_path,
+                     report_dir=report_dir,
+                     json_dir=json_dir,
+                     mask_pans=mask_pans,
+                     excluded_directories_string=excluded_directories_string,
+                     text_extensions_string=text_extensions_string,
+                     zip_extensions_string=zip_extensions_string,
+                     special_extensions_string=special_extensions_string,
+                     mail_extensions_string=mail_extensions_string,
+                     other_extensions_string=other_extensions_string,
+                     excluded_pans_string=excluded_pans_string)
 
-    hunter = Hunter()
+    hunter = Hunter(configuration=config)
     report: Report = hunter.hunt_pans(quiet=quiet)
 
     # report findings
-    report.create_text_report()
+    report.create_text_report(path=config.get_report_path())
+
     if json_dir:
-        report.create_json_report()
+        report.create_json_report(path=config.get_json_path())
 
     if not quiet:
-        print_report(report=report)
+        print_report(report=report, configuration=config)
 
 
 if __name__ == "__main__":

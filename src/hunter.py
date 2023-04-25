@@ -4,13 +4,13 @@ from datetime import datetime
 from typing import Final, Generator, Optional
 
 import panutils
-from config import PANHuntConfigSingleton
+from config import PANHuntConfiguration
 from enums import FileTypeEnum
 from PAN import PAN
 from PANFile import PANFile
 from pbar import DocProgressbar
-from scanner import Dispatcher
 from report import Report
+from scanner import Dispatcher
 
 TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
 
@@ -20,14 +20,16 @@ class Hunter:
     __all_files: list[PANFile]
     __all_extensions: list[str]
     __extension_types: dict[str, FileTypeEnum]
+    __conf: PANHuntConfiguration
 
-    def __init__(self) -> None:
+    def __init__(self, configuration: PANHuntConfiguration) -> None:
+        self.__conf = configuration
         self.__all_files = []
         self.__all_extensions: list[str] = [ext for ext_list in list(
-            PANHuntConfigSingleton.instance().search_extensions.values()) for ext in ext_list]
+            self.__conf.search_extensions.values()) for ext in ext_list]
 
         self.__extension_types: dict[str, FileTypeEnum] = {}
-        for ext_type, ext_list in PANHuntConfigSingleton.instance().search_extensions.items():
+        for ext_type, ext_list in self.__conf.search_extensions.items():
             for ext in ext_list:
                 self.__extension_types[ext] = ext_type
 
@@ -37,7 +39,7 @@ class Hunter:
         start: datetime = datetime.now()
 
         # Check if it is a single-file scan
-        path: Optional[str] = PANHuntConfigSingleton.instance().file_path
+        path: Optional[str] = self.__conf.file_path
         if path:
             pan_file: PANFile = self.__try_init_PANfile(
                 os.path.basename(path), os.path.dirname(path))
@@ -76,13 +78,12 @@ class Hunter:
 
         logging.debug("Finished searching in files.")
 
-
         logging.debug("Finished searching.")
 
         # Stop timer
         end: datetime = datetime.now()
 
-        return Report(pans_found=pans_found, all_files=self.__all_files, start=start, end=end)
+        return Report(search_dir=self.__conf.search_dir, excluded_dirs=self.__conf.excluded_directories, pans_found=pans_found, all_files=self.__all_files, start=start, end=end)
 
     def __get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
@@ -93,10 +94,10 @@ class Hunter:
         docs_found = 0
         root_total_items: int = 0
 
-        for root, sub_ds, files in os.walk(PANHuntConfigSingleton.instance().search_dir):
+        for root, sub_ds, files in os.walk(self.__conf.search_dir):
             sub_dirs: list[str] = [check_dir for check_dir in sub_ds if os.path.join(
                 root, check_dir)
-                .lower() not in PANHuntConfigSingleton.instance().excluded_directories]
+                .lower() not in self.__conf.excluded_directories]
             if not root_dir_dirs:
                 root_dir_dirs = [os.path.join(root, sub_dir)
                                  for sub_dir in sub_dirs]
@@ -107,7 +108,7 @@ class Hunter:
                 yield docs_found, root_total_items, root_items_completed
 
             for filename in files:
-                if root == PANHuntConfigSingleton.instance().search_dir:
+                if root == self.__conf.search_dir:
                     root_items_completed += 1
                 pan_file: PANFile = self.__try_init_PANfile(
                     filename=filename, dir=root)
@@ -127,7 +128,7 @@ class Hunter:
 
         for pan_file in self.__all_files:
             dispatcher = Dispatcher(
-                excluded_pans_list=PANHuntConfigSingleton.instance().excluded_pans, search_extensions=PANHuntConfigSingleton.instance().search_extensions)
+                excluded_pans_list=self.__conf.excluded_pans, search_extensions=self.__conf.search_extensions)
             matches: list[PAN] = pan_file.check_regexs(dispatcher=dispatcher)
             matches_found += len(matches)
             files_completed += 1
