@@ -10,7 +10,7 @@ from PAN import PAN
 from PANFile import PANFile
 from pbar import DocProgressbar
 from scanner import Dispatcher
-from stats import Stats
+from report import Report
 
 TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
 
@@ -31,7 +31,7 @@ class Hunter:
             for ext in ext_list:
                 self.__extension_types[ext] = ext_type
 
-    def hunt_pans(self, quiet: bool) -> Stats:
+    def hunt_pans(self, quiet: bool) -> Report:
 
         # Start timer
         start: datetime = datetime.now()
@@ -63,32 +63,26 @@ class Hunter:
         logging.debug("Started searching in file(s).")
 
         # check each file
-        doc_pans_found: int = 0
-        files: list[PANFile] = [pan_file for pan_file in self.__all_files if not pan_file.errors and pan_file.filetype in (
-            FileTypeEnum.Text, FileTypeEnum.Zip, FileTypeEnum.Special, FileTypeEnum.Mail)]
+        pans_found: int = 0
 
         if quiet:
-            for doc_pans_found, files_completed in self.__scan_files():
+            for pans_found, files_completed in self.__scan_files():
                 ...
         else:
             with DocProgressbar(hunt_type='PAN') as pbar:
-                for doc_pans_found, files_completed in self.__scan_files():
-                    pbar.update(items_found=doc_pans_found,
-                                items_total=len(files), items_completed=files_completed)
+                for pans_found, files_completed in self.__scan_files():
+                    pbar.update(items_found=pans_found,
+                                items_total=len(self.__all_files), items_completed=files_completed)
 
         logging.debug("Finished searching in files.")
 
-        total_files_searched: int = len(files)
-        pans_found: int = doc_pans_found
 
         logging.debug("Finished searching.")
 
-        # Finish timer
+        # Stop timer
         end: datetime = datetime.now()
 
-        # return total_files_searched, pans_found, all_files
-        return Stats(files_total=total_files_searched,
-                     pans_found=pans_found, all_files=self.__all_files, start=start, end=end)
+        return Report(pans_found=pans_found, all_files=self.__all_files, start=start, end=end)
 
     def __get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""

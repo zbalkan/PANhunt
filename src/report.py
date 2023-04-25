@@ -4,25 +4,49 @@ import os
 import platform
 import sys
 import time
-from enums import FileTypeEnum
+from datetime import datetime, timedelta
 
 import panutils
 from config import PANHuntConfigSingleton
+from enums import FileTypeEnum
 from PANFile import PANFile
-from stats import Stats
 
 
 class Report:
 
-    stats: Stats
+    total_files: int
+    start: datetime
+    end: datetime
+    searched: str
+    excluded: str
+    pans_found: int
+    matched_files: list[PANFile]
+    interesting_files: list[PANFile]
 
-    def __init__(self, stats: Stats) -> None:
-        self.stats = stats
+    __command: str
+    __timestamp: str
+    __elapsed: timedelta
 
-    def create_report(self) -> None:
+    def __init__(self,
+                 pans_found:int,
+                 all_files: list[PANFile],
+                 start: datetime,
+                 end: datetime) -> None:
+        self.total_files = len(all_files)
+        self.start = start
+        self.end = end
+        self.searched = PANHuntConfigSingleton.instance().search_dir
+        self.excluded = ','.join(PANHuntConfigSingleton.instance().excluded_directories)
+        self.pans_found = pans_found
+        self.__command = ' '.join(sys.argv)
+        self.__timestamp = time.strftime("%H:%M:%S %d/%m/%Y")
+        self.__elapsed = self.end - self.start
+        self.matched_files = sorted([pan_file for pan_file in all_files if pan_file.matches], key=lambda x: x.filename)
+        self.interesting_files = sorted([
+            pan_file for pan_file in all_files if pan_file.filetype == FileTypeEnum.Other], key=lambda x: x.path)
 
-        if self.stats is None:
-            return
+
+    def create_text_report(self) -> None:
 
         logging.debug("Creating TXT report.")
 
@@ -33,11 +57,11 @@ class Report:
             PANHuntConfigSingleton.instance().search_dir, ','.join(PANHuntConfigSingleton.instance().excluded_directories))
         pan_report += 'Command: %s\n' % (' '.join(sys.argv))
         pan_report += 'Uname: %s\n' % (' | '.join(platform.uname()))
-        pan_report += f'Elapsed time: {self.stats.end - self.stats.start}\n'
+        pan_report += f'Elapsed time: {self.__elapsed}\n'
         pan_report += 'Searched %s files. Found %s possible PANs.\n%s\n\n' % (
-            self.stats.files_total, self.stats.pans_found, '=' * 100)
+            self.total_files, self.pans_found, '=' * 100)
 
-        for pan_file in sorted([pan_file for pan_file in self.stats.all_files if pan_file.matches], key=lambda x: x.filename):
+        for pan_file in self.matched_files:
             pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
 
             pan_report += pan_header + '\n'
@@ -48,11 +72,10 @@ class Report:
                 pan_list += f"{pan.get_masked_pan()}{pan_sep}"
             pan_report += pan_list.rstrip(pan_sep) + '\n\n'
 
-        interesting_files: list[PANFile] = [
-            pan_file for pan_file in self.stats.all_files if pan_file.filetype == FileTypeEnum.Other]
-        if len(interesting_files) != 0:
+
+        if len(self.interesting_files) != 0:
             pan_report += 'Interesting Files to check separately:\n'
-        for pan_file in sorted(interesting_files, key=lambda x: x.filename):
+        for pan_file in sorted(self.interesting_files, key=lambda x: x.filename):
             pan_report += '%s (%s %s)\n' % (pan_file.path,
                                             panutils.size_friendly(pan_file.size), pan_file.modified.strftime('%d/%m/%Y'))
 
@@ -73,18 +96,16 @@ class Report:
         logging.debug("Creating JSON report.")
 
         report: dict = {}
-        report['timestamp'] = time.strftime("%H:%M:%S %d/%m/%Y")
-        report['searched'] = PANHuntConfigSingleton.instance().search_dir
-        report['excluded'] = ','.join(
-            PANHuntConfigSingleton.instance().excluded_directories)
-        report['command'] = ' '.join(sys.argv)
-        report['elapsed'] = str(self.stats.end - self.stats.start)
-        report['total_files'] = self.stats.files_total
-        report['pans_found'] = self.stats.pans_found
-        report['pans_found_results'] = []
+        report['timestamp'] = self.__timestamp
+        report['searched'] = self.searched
+        report['excluded'] = self.excluded
+        report['command'] = self.__command
+        report['elapsed'] = str(self.__elapsed)
+        report['total_files'] = self.total_files
+        report['pans_found'] = self.pans_found
 
-        match_dict = {}
-        for pan_file in sorted([pan_file for pan_file in self.stats.all_files if pan_file.matches], key=lambda x: x.path):
+        matched_items:dict[str,list[str]]= {}
+        for pan_file in self.matched_files:
             items: list[str] = []
             for pan in pan_file.matches:
                 item: str = ''
@@ -92,17 +113,16 @@ class Report:
                     item += f"{pan.filename}\\{pan.sub_path} "
                 item += f"{pan.get_masked_pan()}"
                 items.append(item)
-            match_dict[pan_file.path] = items
+            matched_items[pan_file.path] = items
 
-        report['pans_found_results'].append(match_dict)
 
-        interesting_files: list[PANFile] = sorted([
-            pan_file for pan_file in self.stats.all_files if pan_file.filetype == FileTypeEnum.Other], key=lambda x: x.path)
-        if len(interesting_files) != 0:
-            report['interesting_files']['total'] = len(interesting_files)
+        report['pans_found_results'] = matched_items
+
+        if len(self.interesting_files) != 0:
+            report['interesting_files']['total'] = len(self.interesting_files)
 
             report['interesting_files']['files'] = [
-                f.path for f in interesting_files]
+                f.path for f in self.interesting_files]
 
         initial_report: str = json.dumps(report, sort_keys=True)
         digest: str = panutils.get_text_hash(initial_report)
