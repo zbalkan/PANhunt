@@ -40,20 +40,20 @@ panhunt.py requires:
 
 You can use `pip install -r requirements.txt` for usage and `pip install -r requirements.dev.txt` for development.
 
-To compile as an executable:
+To compile as an executable, it requires:
 
 	- PyInstaller (https://pypi.python.org/pypi/PyInstaller)
 
-To create panhunt.exe as a standalone executable run:
+In order to create panhunt as a standalone executable run (works in both Linux and Windows):
 
 ```bash
-pyinstaller.exe panhunt.py -F
+pyinstaller panhunt.py -F
 ```
 
-or you can use this to include the icon and your virtual environment
+Preferably, you can clean the cache, include the original icon and the dependencies (works in both Linux and Windows). The example uses a virtual environment:
 
 ```bash
-pyinstaller.exe panhunt.py -F --clean -i .\dionach.ico --paths="<path to virtual env>\Lib\site-packages"
+pyinstaller src/panhunt.py -F --clean -i dionach.ico --paths="<path to virtual env>/Lib/site-packages"
 ```
 
 ## Usage
@@ -115,11 +115,3 @@ The script uses regular expressions to look for Visa, MasterCard or AMEX credit 
 
 The script allows for a configuration to be written that will default the application with settings such that you don't need to
 repeatedly specify exclude/include paths or the test PANs to exclude.
-
-## TODO
-
-- Automate pyinstaller releases with Github actions
-- Use generics
-- Proper logging
-- Multithreading
-- Unit tests
