@@ -87,7 +87,7 @@ def main() -> None:
     arg_parser.add_argument(
         '-z', dest='zip_files', help='zip file extensions to search', default='.docx,.xlsx,.pptx,.zip')
     arg_parser.add_argument('-e', dest='special_files',
-                            help='special file extensions to search', default='.msg')
+                            help='special file extensions to search', default='.msg,.eml')
     arg_parser.add_argument(
         '-m', dest='mail_files', help='email file extensions to search', default='.pst')
     arg_parser.add_argument(
