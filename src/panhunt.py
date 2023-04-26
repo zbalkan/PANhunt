@@ -13,6 +13,7 @@ import argparse
 import logging
 import os
 import sys
+from datetime import datetime
 from typing import Final, Optional
 
 import colorama
@@ -20,9 +21,63 @@ import colorama
 import panutils
 from config import PANHuntConfiguration
 from hunter import Hunter
+from pbar import DocProgressbar
 from report import Report
 
 APP_VERSION: Final[str] = '1.3'
+
+
+def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
+
+    hunter = Hunter(configuration=configuration)
+    # Start timer
+    start: datetime = datetime.now()
+
+    # Check if it is a single-file scan
+    path: Optional[str] = configuration.file_path
+    if path:
+
+        hunter.all_files.append(hunter.__try_init_PANfile(
+            os.path.basename(path), os.path.dirname(path)))
+
+    else:
+        logging.debug("Started searching directories.")
+
+        # find all files to check
+        if quiet:
+            # Wait until generator finishes
+            for _ in hunter.get_scannable_files():
+                ...
+        else:
+            with DocProgressbar('Doc') as pbar:
+                for docs_found, root_total_items, root_items_completed in hunter.get_scannable_files():
+                    pbar.update(items_found=docs_found,
+                                items_total=root_total_items, items_completed=root_items_completed)
+
+        logging.debug("Finished searching directories.")
+
+    logging.debug("Started searching in file(s).")
+
+    # check each file
+    pans_found: int = 0
+
+    if quiet:
+        for pans_found, files_completed in hunter.scan_files():
+            ...
+    else:
+        with DocProgressbar(hunt_type='PAN') as pbar:
+            for pans_found, files_completed in hunter.scan_files():
+                pbar.update(items_found=pans_found,
+                            items_total=len(hunter.all_files), items_completed=files_completed)
+
+    logging.debug("Finished searching in files.")
+
+    logging.debug("Finished searching.")
+
+    # Stop timer
+    end: datetime = datetime.now()
+
+    return Report(search_dir=configuration.search_dir, excluded_dirs=configuration.excluded_directories, pans_found=pans_found, all_files=hunter.all_files, start=start, end=end)
 
 
 def print_report(report: Report, configuration: PANHuntConfiguration) -> None:
@@ -148,8 +203,7 @@ def main() -> None:
                      other_extensions_string=other_extensions_string,
                      excluded_pans_string=excluded_pans_string)
 
-    hunter = Hunter(configuration=config)
-    report: Report = hunter.hunt_pans(quiet=quiet)
+    report: Report = hunt_pans(quiet=quiet, configuration=config)
 
     # report findings
     report.create_text_report(path=config.get_report_path())
