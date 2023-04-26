@@ -23,6 +23,8 @@ With v1.3, breaking changes are implemented:
   - JSON report filename template: `panhunt_<timestamp>.json`
 - A flag `-q` (quiet) is added to disable terminal output be used when it is integrated with other tools.
 - A flag `-f` (filepath) is added to enable sigle-file scans. Great for FIM integration.
+- `.eml` file scanning capability is added.
+
 
 NB! There is around 20-25% performance impact after refactoring. There are no performance improvements tried yet.
 
@@ -68,10 +70,9 @@ options:
   -s SEARCH_DIR     base directory to search in (default: /)
   -f FILE_PATH      File path for single file scan (default: None)
   -x EXCLUDE_DIRS   directories to exclude from the search (default: None)
-  -t TEXT_FILES     text file extensions to search (default:
-                    .doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json)
+  -t TEXT_FILES     text file extensions to search (default: .doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json)
   -z ZIP_FILES      zip file extensions to search (default: .docx,.xlsx,.pptx,.zip)
-  -e SPECIAL_FILES  special file extensions to search (default: .msg)
+  -e SPECIAL_FILES  special file extensions to search (default: .msg,.eml)
   -m MAIL_FILES     email file extensions to search (default: .pst)
   -l OTHER_FILES    other file extensions to list (default: .ost,.accdb,.mdb)
   -o REPORT_DIR     Report file directory for TXT formatted PAN report (default: ./)

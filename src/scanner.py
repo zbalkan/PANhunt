@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 from typing import Optional, Type
 
 import panutils
+from eml import Eml
+from eml import Attachment as emlAttachment
 from enums import FileTypeEnum
 from msmsg import MSMSG
 from msmsg import Attachment as msgAttachment
@@ -60,7 +62,7 @@ class _BasicScanner(_ScannerBase):
 
 
 class _AttachmentScanner(_ScannerBase):
-    attachment: msgAttachment | pstAttachment
+    attachment: msgAttachment | pstAttachment | emlAttachment
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
         match_list: list[PAN] = []
@@ -93,8 +95,7 @@ class _AttachmentScanner(_ScannerBase):
 
         elif attachment_ext in search_extensions[FileTypeEnum.Special]:
             if self.attachment.BinaryData:
-                msg_scanner = _MsgScanner(path=self.attachment.Filename)
-                msg_scanner.msg = MSMSG(self.attachment.Filename)
+                msg_scanner = _MessageScanner(path=self.attachment.Filename)
                 msg_scanner.sub_path = os.path.join(
                     os.path.basename(self.filename), self.attachment.Filename)
                 msg_matches: list[PAN] = msg_scanner.scan(
@@ -106,8 +107,16 @@ class _AttachmentScanner(_ScannerBase):
         return match_list
 
 
+class _MessageScanner(_ScannerBase):
+    def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
+        _, extension = os.path.splitext(self.filename.lower())
+        if extension == '.msg':
+            return _MsgScanner(path=self.filename).scan(excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+        else:
+            return _EmlScanner(path=self.filename).scan(excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+
+
 class _MsgScanner(_ScannerBase):
-    sub_path: str = ''
     msg: Optional[MSMSG] = None
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
@@ -135,8 +144,35 @@ class _MsgScanner(_ScannerBase):
         return match_list
 
 
+class _EmlScanner(_ScannerBase):
+    eml: Optional[Eml] = None
+
+    def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
+        match_list: list[PAN] = []
+
+        if self.eml is None:
+            self.eml = Eml(self.filename)
+
+        if self.eml.body:
+            text_scanner = _InFileScanner()
+            text_scanner.text = self.eml.body
+            text_scanner.filename = self.filename
+            body_matches: list[PAN] = text_scanner.scan(
+                excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+            if len(body_matches) > 0:
+                match_list.extend(body_matches)
+        if self.eml.attachments:
+            for _, att in enumerate(self.eml.attachments):
+                att_scanner = _AttachmentScanner(path=self.filename)
+                att_scanner.attachment = att
+                att_matches: list[PAN] = att_scanner.scan(
+                    excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+                if len(att_matches) > 0:
+                    match_list.extend(att_matches)
+        return match_list
+
+
 class _PstScanner(_ScannerBase):
-    sub_path: str = ''
     pst: Optional[PST] = None
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
@@ -263,7 +299,7 @@ class Dispatcher:
         self.scanner_mapping = {
             FileTypeEnum.Text: _BasicScanner,
             FileTypeEnum.Zip: _ZipScanner,
-            FileTypeEnum.Special: _MsgScanner,
+            FileTypeEnum.Special: _MessageScanner,
             FileTypeEnum.Mail: _PstScanner
         }
 
