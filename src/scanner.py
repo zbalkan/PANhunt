@@ -5,9 +5,11 @@ from abc import ABC, abstractmethod
 from typing import Optional, Type
 
 import panutils
-from eml import Eml
 from eml import Attachment as emlAttachment
+from eml import Eml
 from enums import FileTypeEnum
+from mbox import Attachment as mboxAttachment
+from mbox import Mbox
 from msmsg import MSMSG
 from msmsg import Attachment as msgAttachment
 from PAN import PAN
@@ -62,7 +64,7 @@ class _BasicScanner(_ScannerBase):
 
 
 class _AttachmentScanner(_ScannerBase):
-    attachment: msgAttachment | pstAttachment | emlAttachment
+    attachment: msgAttachment | pstAttachment | emlAttachment | mboxAttachment
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
         match_list: list[PAN] = []
@@ -93,7 +95,7 @@ class _AttachmentScanner(_ScannerBase):
                 if len(zip_matches) > 0:
                     match_list.extend(zip_matches)
 
-        elif attachment_ext in search_extensions[FileTypeEnum.Special]:
+        elif attachment_ext in search_extensions[FileTypeEnum.Mail]:
             if self.attachment.BinaryData:
                 msg_scanner = _MessageScanner(path=self.attachment.Filename)
                 msg_scanner.sub_path = os.path.join(
@@ -172,6 +174,35 @@ class _EmlScanner(_ScannerBase):
         return match_list
 
 
+class _MboxScanner(_ScannerBase):
+    mbox: Optional[Mbox] = None
+
+    def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
+        match_list: list[PAN] = []
+
+        if self.mbox is None:
+            self.mbox = Mbox(self.filename)
+
+        for mail in self.mbox.mails:
+            if mail.body:
+                text_scanner = _InFileScanner()
+                text_scanner.text = mail.body
+                body_matches: list[PAN] = text_scanner.scan(
+                    excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+                if len(body_matches) > 0:
+                    match_list.extend(body_matches)
+            if mail.attachments:
+                for _, att in enumerate(mail.attachments):
+                    att_scanner = _AttachmentScanner(path=self.filename)
+                    att_scanner.attachment = att
+                    att_matches: list[PAN] = att_scanner.scan(
+                        excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+                    if len(att_matches) > 0:
+                        match_list.extend(att_matches)
+
+        return match_list
+
+
 class _PstScanner(_ScannerBase):
     pst: Optional[PST] = None
 
@@ -219,6 +250,15 @@ class _PstScanner(_ScannerBase):
         return match_list
 
 
+class _MailArchiveScanner(_ScannerBase):
+    def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
+        _, extension = os.path.splitext(self.filename.lower())
+        if extension == '.pst':
+            return _PstScanner(path=self.filename).scan(excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+        else:
+            return _MboxScanner(path=self.filename).scan(excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+
+
 class _ZipScanner(_ScannerBase):
 
     zip_file: Optional[zipfile.ZipFile] = None
@@ -232,7 +272,7 @@ class _ZipScanner(_ScannerBase):
 
         all_extensions: list[str] = search_extensions[FileTypeEnum.Text] + \
             search_extensions[FileTypeEnum.Zip] + \
-            search_extensions[FileTypeEnum.Special]
+            search_extensions[FileTypeEnum.Mail]
 
         files_in_zip: list[str] = [file_in_zip for file_in_zip in self.zip_file.namelist(
         ) if panutils.get_ext(file_in_zip) in all_extensions]
@@ -267,8 +307,8 @@ class _ZipScanner(_ScannerBase):
                 if len(text_matches) > 0:
                     match_list.extend(text_matches)
 
-            else:  # SPECIAL
-                if panutils.get_ext(file_in_zip) in search_extensions[FileTypeEnum.Special]:
+            else:  # Mail message
+                if panutils.get_ext(file_in_zip) in search_extensions[FileTypeEnum.Mail]:
                     memory_msg = io.StringIO()
                     memory_msg.write(panutils.decode_zip_text(
                         self.zip_file.open(file_in_zip).read()))
@@ -299,8 +339,8 @@ class Dispatcher:
         self.scanner_mapping = {
             FileTypeEnum.Text: _BasicScanner,
             FileTypeEnum.Zip: _ZipScanner,
-            FileTypeEnum.Special: _MessageScanner,
-            FileTypeEnum.Mail: _PstScanner
+            FileTypeEnum.Mail: _MessageScanner,
+            FileTypeEnum.MailArchive: _MailArchiveScanner
         }
 
     def dispatch(self, file_type: FileTypeEnum, path: str) -> list[PAN]:

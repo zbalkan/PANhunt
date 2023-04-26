@@ -16,14 +16,14 @@ PANhunt is a tool that can be used to search drives for credit card numbers (PAN
 With v1.3, breaking changes are implemented:
 
 - Migrated to Python 3
-- A default text log appended for the sake of accountability
+- A default text log capability is added for the sake of accountability.
 - Text report now accepts only directory as an argument while the name is fixed.
   - Text report filename template: `panhunt_<timestamp>.report`
-- An optional JSON formatted report generation capability is added for integration with 3rd parties.
+- An optional JSON formatted report generation capability is added for integration with 3rd parties. Parameter accepts the target directory.
   - JSON report filename template: `panhunt_<timestamp>.json`
 - A flag `-q` (quiet) is added to disable terminal output be used when it is integrated with other tools.
 - A flag `-f` (filepath) is added to enable sigle-file scans. Great for FIM integration.
-- `.eml` file scanning capability is added.
+- `.eml` and `.mbox` file scanning capability is added.
 
 
 NB! There is around 20-25% performance impact after refactoring. There are no performance improvements tried yet.
@@ -72,8 +72,8 @@ options:
   -x EXCLUDE_DIRS   directories to exclude from the search (default: None)
   -t TEXT_FILES     text file extensions to search (default: .doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json)
   -z ZIP_FILES      zip file extensions to search (default: .docx,.xlsx,.pptx,.zip)
-  -e SPECIAL_FILES  special file extensions to search (default: .msg,.eml)
-  -m MAIL_FILES     email file extensions to search (default: .pst)
+  -m MAIL_MESSAGES  email message file extensions to search (default: .msg,.eml)
+  -a MAIL_ARCHIVES  email archive file extensions to search (default: .pst,.mbox)
   -l OTHER_FILES    other file extensions to list (default: .ost,.accdb,.mdb)
   -o REPORT_DIR     Report file directory for TXT formatted PAN report (default: ./)
   -j JSON_DIR       Report file directory for JSON formatted PAN report (default: None)
@@ -88,22 +88,182 @@ Simply running it with no arguments will search the C:\ drive for documents cont
 ## Example Output
 
 ```
-Doc Hunt: 100% ||||||||||||||||||||||||||||||||||||||||| Time: 0:00:01 Docs:299
-PAN Hunt: 100% |||||||||||||||||||||||||||||||||||||||||| Time: 0:00:02 PANs:99
-FOUND PANs: D:\lab\Archive Test Cards.zip (21KB 19/02/2014)
-        Archived Test Cards Excel 97-2003.xls AMEX:***********0005
-        Archived Test Cards Excel 97-2003.xls AMEX:***********8431
-		...
-FOUND PANs: D:\lab\Archived Test Cards Word 2010.docx (19KB 18/02/2014)
-        word/document.xml Visa:************1111
-        word/document.xml Visa:************1881
-        word/document.xml Visa:************1111
-        word/document.xml Visa:************0000
-		...
-FOUND PANs: D:\lab\test card text file.txt (47B 26/02/2014)
-         Visa:************1111
-         Visa:****-****-****-1111
-		...
+Doc Hunt: 100% |||||||||||||||||||||||||||||||||||||||||| Time: 0:00:00 Docs:11
+PAN Hunt: 100% ||||||||||||||||||||||||||||||||||||||||| Time: 0:00:00 PANs:592
+FOUND PANs: c:\TEST\PANhunt_Test_File.docx (37.1640625KB 06/04/2023)
+        word/document.xml Mastercard:541111******1115
+        word/document.xml Mastercard:551111******1114
+        word/document.xml Visa:453211******1112
+        word/document.xml Visa:475127******1118
+        word/document.xml AMEX:371111*****1114
+        word/document.xml AMEX:340000*****0108
+
+FOUND PANs: c:\TEST\PANhunt_Test_File.eml (287.6552734375KB 11/04/2023)
+        PAN TEST.txt Mastercard:541111******1115
+        PAN TEST.txt Mastercard:551111******1114
+        PAN TEST.txt Visa:453211******1112
+        PAN TEST.txt Visa:475127******1118
+        PAN TEST.txt AMEX:371111*****1114
+        PAN TEST.txt AMEX:340000*****0108
+        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:541111******1115
+        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:551111******1114
+        PAN TEST.xlsx\xl/sharedStrings.xml Visa:453211******1112
+        PAN TEST.xlsx\xl/sharedStrings.xml Visa:475127******1118
+        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:371111*****1114
+        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:340000*****0108
+        TEST.zip\PAN TEST.docx\word/document.xml Mastercard:541111******1115
+        TEST.zip\PAN TEST.docx\word/document.xml Mastercard:551111******1114
+        TEST.zip\PAN TEST.docx\word/document.xml Visa:453211******1112
+        TEST.zip\PAN TEST.docx\word/document.xml Visa:475127******1118
+        TEST.zip\PAN TEST.docx\word/document.xml AMEX:371111*****1114
+        TEST.zip\PAN TEST.docx\word/document.xml AMEX:340000*****0108
+        TEST.zip\PAN TEST.rtf Mastercard:541111******1115
+        TEST.zip\PAN TEST.rtf Mastercard:551111******1114
+        TEST.zip\PAN TEST.rtf Visa:453211******1112
+        TEST.zip\PAN TEST.rtf Visa:475127******1118
+        TEST.zip\PAN TEST.rtf AMEX:371111*****1114
+        TEST.zip\PAN TEST.rtf AMEX:340000*****0108
+        TEST.zip\PAN TEST.txt Mastercard:541111******1115
+        TEST.zip\PAN TEST.txt Mastercard:551111******1114
+        TEST.zip\PAN TEST.txt Visa:453211******1112
+        TEST.zip\PAN TEST.txt Visa:475127******1118
+        TEST.zip\PAN TEST.txt AMEX:371111*****1114
+        TEST.zip\PAN TEST.txt AMEX:340000*****0108
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:541111******1115
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:551111******1114
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Visa:453211******1112
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Visa:475127******1118
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml AMEX:371111*****1114
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml AMEX:340000*****0108
+        PAN TEST.docx\word/document.xml Mastercard:541111******1115
+        PAN TEST.docx\word/document.xml Mastercard:551111******1114
+        PAN TEST.docx\word/document.xml Visa:453211******1112
+        PAN TEST.docx\word/document.xml Visa:475127******1118
+        PAN TEST.docx\word/document.xml AMEX:371111*****1114
+        PAN TEST.docx\word/document.xml AMEX:340000*****0108
+        PAN TEST.rtf Mastercard:541111******1115
+        PAN TEST.rtf Mastercard:551111******1114
+        PAN TEST.rtf Visa:453211******1112
+        PAN TEST.rtf Visa:475127******1118
+        PAN TEST.rtf AMEX:371111*****1114
+        PAN TEST.rtf AMEX:340000*****0108
+
+FOUND PANs: c:\TEST\PANhunt_Test_File.msg (207.0KB 06/04/2023)
+        PAN TEST.txt Mastercard:541111******1115
+        PAN TEST.txt Mastercard:551111******1114
+        PAN TEST.txt Visa:453211******1112
+        PAN TEST.txt Visa:475127******1118
+        PAN TEST.txt AMEX:371111*****1114
+        PAN TEST.txt AMEX:340000*****0108
+        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:541111******1115
+        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:551111******1114
+        PAN TEST.xlsx\xl/sharedStrings.xml Visa:453211******1112
+        PAN TEST.xlsx\xl/sharedStrings.xml Visa:475127******1118
+        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:371111*****1114
+        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:340000*****0108
+        TEST.zip\PAN TEST.docx\word/document.xml Mastercard:541111******1115
+        TEST.zip\PAN TEST.docx\word/document.xml Mastercard:551111******1114
+        TEST.zip\PAN TEST.docx\word/document.xml Visa:453211******1112
+        TEST.zip\PAN TEST.docx\word/document.xml Visa:475127******1118
+        TEST.zip\PAN TEST.docx\word/document.xml AMEX:371111*****1114
+        TEST.zip\PAN TEST.docx\word/document.xml AMEX:340000*****0108
+        TEST.zip\PAN TEST.rtf Mastercard:541111******1115
+        TEST.zip\PAN TEST.rtf Mastercard:551111******1114
+        TEST.zip\PAN TEST.rtf Visa:453211******1112
+        TEST.zip\PAN TEST.rtf Visa:475127******1118
+        TEST.zip\PAN TEST.rtf AMEX:371111*****1114
+        TEST.zip\PAN TEST.rtf AMEX:340000*****0108
+        TEST.zip\PAN TEST.txt Mastercard:541111******1115
+        TEST.zip\PAN TEST.txt Mastercard:551111******1114
+        TEST.zip\PAN TEST.txt Visa:453211******1112
+        TEST.zip\PAN TEST.txt Visa:475127******1118
+        TEST.zip\PAN TEST.txt AMEX:371111*****1114
+        TEST.zip\PAN TEST.txt AMEX:340000*****0108
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:541111******1115
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:551111******1114
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Visa:453211******1112
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Visa:475127******1118
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml AMEX:371111*****1114
+        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml AMEX:340000*****0108
+        PAN TEST.docx\word/document.xml Mastercard:541111******1115
+        PAN TEST.docx\word/document.xml Mastercard:551111******1114
+        PAN TEST.docx\word/document.xml Visa:453211******1112
+        PAN TEST.docx\word/document.xml Visa:475127******1118
+        PAN TEST.docx\word/document.xml AMEX:371111*****1114
+        PAN TEST.docx\word/document.xml AMEX:340000*****0108
+        PAN TEST.rtf Mastercard:541111******1115
+        PAN TEST.rtf Mastercard:551111******1114
+        PAN TEST.rtf Visa:453211******1112
+        PAN TEST.rtf Visa:475127******1118
+        PAN TEST.rtf AMEX:371111*****1114
+        PAN TEST.rtf AMEX:340000*****0108
+
+FOUND PANs: c:\TEST\PANhunt_Test_File.ppt (84.5KB 11/04/2023)
+        Mastercard:541111******1115
+        Mastercard:551111******1114
+        Visa:453211******1112
+        Visa:475127******1118
+        AMEX:371111*****1114
+        AMEX:340000*****0108
+
+FOUND PANs: c:\TEST\PANhunt_Test_File.pptx (36.0849609375KB 11/04/2023)
+        ppt/slides/slide1.xml Mastercard:541111******1115
+        ppt/slides/slide1.xml Mastercard:551111******1114
+        ppt/slides/slide1.xml Visa:453211******1112
+        ppt/slides/slide1.xml Visa:475127******1118
+        ppt/slides/slide1.xml AMEX:371111*****1114
+        ppt/slides/slide1.xml AMEX:340000*****0108
+
+FOUND PANs: c:\TEST\PANhunt_Test_File.rtf (42.98046875KB 06/04/2023)
+        Mastercard:541111******1115
+        Mastercard:551111******1114
+        Visa:453211******1112
+        Visa:475127******1118
+        AMEX:371111*****1114
+        AMEX:340000*****0108
+
+FOUND PANs: c:\TEST\PANhunt_Test_File.txt (685B 04/04/2023)
+        Mastercard:541111******1115
+        Mastercard:551111******1114
+        Visa:453211******1112
+        Visa:475127******1118
+        AMEX:371111*****1114
+        AMEX:340000*****0108
+
+FOUND PANs: c:\TEST\PANhunt_Test_File.xlsx (9.708984375KB 06/04/2023)
+        xl/sharedStrings.xml Mastercard:541111******1115
+        xl/sharedStrings.xml Mastercard:551111******1114
+        xl/sharedStrings.xml Visa:453211******1112
+        xl/sharedStrings.xml Visa:475127******1118
+        xl/sharedStrings.xml AMEX:371111*****1114
+        xl/sharedStrings.xml AMEX:340000*****0108
+
+FOUND PANs: c:\TEST\PANhunt_Test_File.zip (49.619140625KB 06/04/2023)
+        PAN TEST.docx\word/document.xml Mastercard:541111******1115
+        PAN TEST.docx\word/document.xml Mastercard:551111******1114
+        PAN TEST.docx\word/document.xml Visa:453211******1112
+        PAN TEST.docx\word/document.xml Visa:475127******1118
+        PAN TEST.docx\word/document.xml AMEX:371111*****1114
+        PAN TEST.docx\word/document.xml AMEX:340000*****0108
+        PAN TEST.rtf Mastercard:541111******1115
+        PAN TEST.rtf Mastercard:551111******1114
+        PAN TEST.rtf Visa:453211******1112
+        PAN TEST.rtf Visa:475127******1118
+        PAN TEST.rtf AMEX:371111*****1114
+        PAN TEST.rtf AMEX:340000*****0108
+        PAN TEST.txt Mastercard:541111******1115
+        PAN TEST.txt Mastercard:551111******1114
+        PAN TEST.txt Visa:453211******1112
+        PAN TEST.txt Visa:475127******1118
+        PAN TEST.txt AMEX:371111*****1114
+        PAN TEST.txt AMEX:340000*****0108
+        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:541111******1115
+        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:551111******1114
+        PAN TEST.xlsx\xl/sharedStrings.xml Visa:453211******1112
+        PAN TEST.xlsx\xl/sharedStrings.xml Visa:475127******1118
+        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:371111*****1114
+        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:340000*****0108
+
 Report written to panhunt_YYYY-MM-DD-HHMMSS.txt
 ```
 

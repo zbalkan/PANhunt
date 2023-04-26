@@ -34,8 +34,8 @@ class PANHuntConfiguration:
         self.search_extensions = {
             FileTypeEnum.Text: ['.doc', '.xls', '.ppt', '.xml', '.txt', '.csv', '.log', '.rtf', '.tmp', '.bak', '.rtf', '.csv', '.htm', '.html', '.js', '.css', '.md', '.json'],
             FileTypeEnum.Zip: ['.docx', '.xlsx', '.pptx', '.zip'],
-            FileTypeEnum.Special: ['.msg'],
-            FileTypeEnum.Mail: ['.pst'],
+            FileTypeEnum.Mail: ['.msg'],
+            FileTypeEnum.MailArchive: ['.pst'],
             FileTypeEnum.Other: ['.ost', '.accdb', '.mdb']
         }
         self.excluded_pans = []
@@ -48,8 +48,8 @@ class PANHuntConfiguration:
                   excluded_directories_string: Optional[str] = None,
                   text_extensions_string: Optional[str] = None,
                   zip_extensions_string: Optional[str] = None,
-                  special_extensions_string: Optional[str] = None,
-                  mail_extensions_string: Optional[str] = None,
+                  mail_message_extensions_string: Optional[str] = None,
+                  mail_archive_extensions_string: Optional[str] = None,
                   other_extensions_string: Optional[str] = None,
                   excluded_pans_string: Optional[str] = None,
                   json_dir: Optional[str] = None) -> None:
@@ -64,8 +64,8 @@ class PANHuntConfiguration:
                       excluded_directories_string=excluded_directories_string,
                       text_extensions_string=text_extensions_string,
                       zip_extensions_string=zip_extensions_string,
-                      special_extensions_string=special_extensions_string,
-                      mail_extensions_string=mail_extensions_string,
+                      mail_message_extensions_string=mail_message_extensions_string,
+                      mail_archive_extensions_string=mail_archive_extensions_string,
                       other_extensions_string=other_extensions_string,
                       excluded_pans_string=excluded_pans_string)
 
@@ -91,10 +91,10 @@ class PANHuntConfiguration:
             config_from_file=config_from_file, property='textfiles')
         zip_extensions_string: Optional[str] = PANHuntConfiguration.__try_parse(
             config_from_file=config_from_file, property='zipfiles')
-        special_extensions_string: Optional[str] = PANHuntConfiguration.__try_parse(
-            config_from_file=config_from_file, property='specialfiles')
-        mail_extensions_string: Optional[str] = PANHuntConfiguration.__try_parse(
-            config_from_file=config_from_file, property='mailfiles')
+        mail_message_extensions_string: Optional[str] = PANHuntConfiguration.__try_parse(
+            config_from_file=config_from_file, property='mailmessagefiles')
+        mail_archive_extensions_string: Optional[str] = PANHuntConfiguration.__try_parse(
+            config_from_file=config_from_file, property='mailarchivefiles')
         other_extensions_string: Optional[str] = PANHuntConfiguration.__try_parse(
             config_from_file=config_from_file, property='otherfiles')
         report_dir: Optional[str] = PANHuntConfiguration.__try_parse(
@@ -114,8 +114,8 @@ class PANHuntConfiguration:
                       excluded_directories_string=excluded_directories_string,
                       text_extensions_string=text_extensions_string,
                       zip_extensions_string=zip_extensions_string,
-                      special_extensions_string=special_extensions_string,
-                      mail_extensions_string=mail_extensions_string,
+                      mail_message_extensions_string=mail_message_extensions_string,
+                      mail_archive_extensions_string=mail_archive_extensions_string,
                       other_extensions_string=other_extensions_string,
                       excluded_pans_string=excluded_pans_string)
 
@@ -161,7 +161,7 @@ class PANHuntConfiguration:
             return str(config_from_file[property])
         return None
 
-    def __update(self, search_dir: Optional[str], file_path: Optional[str], report_dir: Optional[str], json_dir: Optional[str], mask_pans: Optional[bool], excluded_directories_string: Optional[str], text_extensions_string: Optional[str], zip_extensions_string: Optional[str], special_extensions_string: Optional[str], mail_extensions_string: Optional[str], other_extensions_string: Optional[str], excluded_pans_string: Optional[str]) -> None:
+    def __update(self, search_dir: Optional[str], file_path: Optional[str], report_dir: Optional[str], json_dir: Optional[str], mask_pans: Optional[bool], excluded_directories_string: Optional[str], text_extensions_string: Optional[str], zip_extensions_string: Optional[str], mail_message_extensions_string: Optional[str], mail_archive_extensions_string: Optional[str], other_extensions_string: Optional[str], excluded_pans_string: Optional[str]) -> None:
 
         if search_dir and search_dir != 'None':
             self.search_dir = os.path.abspath(search_dir)
@@ -187,11 +187,11 @@ class PANHuntConfiguration:
         if zip_extensions_string and zip_extensions_string != 'None':
             self.search_extensions[FileTypeEnum.Zip] = zip_extensions_string.split(
                 ',')
-        if special_extensions_string and special_extensions_string != 'None':
-            self.search_extensions[FileTypeEnum.Special] = special_extensions_string.split(
+        if mail_message_extensions_string and mail_message_extensions_string != 'None':
+            self.search_extensions[FileTypeEnum.Mail] = mail_message_extensions_string.split(
                 ',')
-        if mail_extensions_string and mail_extensions_string != 'None':
-            self.search_extensions[FileTypeEnum.Mail] = mail_extensions_string.split(
+        if mail_archive_extensions_string and mail_archive_extensions_string != 'None':
+            self.search_extensions[FileTypeEnum.MailArchive] = mail_archive_extensions_string.split(
                 ',')
         if other_extensions_string and other_extensions_string != 'None':
             self.search_extensions[FileTypeEnum.Other] = other_extensions_string.split(

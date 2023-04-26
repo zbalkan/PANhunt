@@ -141,10 +141,10 @@ def main() -> None:
         '-t', dest='text_files', help='text file extensions to search', default='.doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json')
     arg_parser.add_argument(
         '-z', dest='zip_files', help='zip file extensions to search', default='.docx,.xlsx,.pptx,.zip')
-    arg_parser.add_argument('-e', dest='special_files',
-                            help='special file extensions to search', default='.msg,.eml')
+    arg_parser.add_argument('-m', dest='mail_messages',
+                            help='email message file extensions to search', default='.msg,.eml')
     arg_parser.add_argument(
-        '-m', dest='mail_files', help='email file extensions to search', default='.pst')
+        '-a', dest='mail_archives', help='email archive file extensions to search', default='.pst,.mbox')
     arg_parser.add_argument(
         '-l', dest='other_files', help='other file extensions to list', default='.ost,.accdb,.mdb')
     arg_parser.add_argument(
@@ -174,8 +174,8 @@ def main() -> None:
     excluded_directories_string = str(args.exclude_dirs)
     text_extensions_string = str(args.text_files)
     zip_extensions_string = str(args.zip_files)
-    special_extensions_string = str(args.special_files)
-    mail_extensions_string = str(args.mail_files)
+    mail_message_extensions_string = str(args.mail_messages)
+    mail_archive_extensions_string = str(args.mail_archives)
     other_extensions_string = str(args.other_files)
     mask_pans: bool = not args.unmask
     excluded_pans_string = str(args.exclude_pan)
@@ -198,8 +198,8 @@ def main() -> None:
                      excluded_directories_string=excluded_directories_string,
                      text_extensions_string=text_extensions_string,
                      zip_extensions_string=zip_extensions_string,
-                     special_extensions_string=special_extensions_string,
-                     mail_extensions_string=mail_extensions_string,
+                     mail_message_extensions_string=mail_message_extensions_string,
+                     mail_archive_extensions_string=mail_archive_extensions_string,
                      other_extensions_string=other_extensions_string,
                      excluded_pans_string=excluded_pans_string)
 

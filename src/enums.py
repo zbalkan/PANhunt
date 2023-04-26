@@ -138,6 +138,6 @@ class PropIdEnum(Enum):
 class FileTypeEnum(Enum):
     Text = 0
     Zip = 1
-    Special = 2
-    Mail = 3
+    Mail = 2
+    MailArchive = 3
     Other = 4
