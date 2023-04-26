@@ -1,6 +1,4 @@
-import logging
 import os
-from datetime import datetime
 from typing import Final, Generator, Optional
 
 import panutils
@@ -8,8 +6,6 @@ from config import PANHuntConfiguration
 from enums import FileTypeEnum
 from PAN import PAN
 from PANFile import PANFile
-from pbar import DocProgressbar
-from report import Report
 from scanner import Dispatcher
 
 TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
@@ -33,59 +29,14 @@ class Hunter:
             for ext in ext_list:
                 self.__extension_types[ext] = ext_type
 
-    def hunt_pans(self, quiet: bool) -> Report:
+    def get_files(self) -> tuple[PANFile, ...]:
+        return tuple(self.__all_files)
 
-        # Start timer
-        start: datetime = datetime.now()
+    def add_single_file(self, filename: str, dir: str) -> None:
+        file: PANFile = self.__try_init_PANfile(filename=filename, dir=dir)
+        self.__all_files.append(file)
 
-        # Check if it is a single-file scan
-        path: Optional[str] = self.__conf.file_path
-        if path:
-            pan_file: PANFile = self.__try_init_PANfile(
-                os.path.basename(path), os.path.dirname(path))
-
-            self.__all_files.append(pan_file)
-
-        else:
-            logging.debug("Started searching directories.")
-
-            # find all files to check
-            if quiet:
-                # Wait until generator finishes
-                for _ in self.__get_scannable_files():
-                    ...
-            else:
-                with DocProgressbar('Doc') as pbar:
-                    for docs_found, root_total_items, root_items_completed in self.__get_scannable_files():
-                        pbar.update(items_found=docs_found,
-                                    items_total=root_total_items, items_completed=root_items_completed)
-
-            logging.debug("Finished searching directories.")
-
-        logging.debug("Started searching in file(s).")
-
-        # check each file
-        pans_found: int = 0
-
-        if quiet:
-            for pans_found, files_completed in self.__scan_files():
-                ...
-        else:
-            with DocProgressbar(hunt_type='PAN') as pbar:
-                for pans_found, files_completed in self.__scan_files():
-                    pbar.update(items_found=pans_found,
-                                items_total=len(self.__all_files), items_completed=files_completed)
-
-        logging.debug("Finished searching in files.")
-
-        logging.debug("Finished searching.")
-
-        # Stop timer
-        end: datetime = datetime.now()
-
-        return Report(search_dir=self.__conf.search_dir, excluded_dirs=self.__conf.excluded_directories, pans_found=pans_found, all_files=self.__all_files, start=start, end=end)
-
-    def __get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
+    def get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
 
         doc_files: list[PANFile] = []
@@ -120,7 +71,7 @@ class Hunter:
 
         self.__all_files += doc_files
 
-    def __scan_files(self) -> Generator[tuple[int, int], None, None]:
+    def scan_files(self) -> Generator[tuple[int, int], None, None]:
         """ Searches files in doc_files list for regular expressions"""
 
         files_completed: int = 0
