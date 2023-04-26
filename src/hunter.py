@@ -14,20 +14,11 @@ TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
 class Hunter:
 
     __all_files: list[PANFile]
-    __all_extensions: list[str]
-    __extension_types: dict[str, FileTypeEnum]
     __conf: PANHuntConfiguration
 
     def __init__(self, configuration: PANHuntConfiguration) -> None:
         self.__conf = configuration
         self.__all_files = []
-        self.__all_extensions: list[str] = [ext for ext_list in list(
-            self.__conf.search_extensions.values()) for ext in ext_list]
-
-        self.__extension_types: dict[str, FileTypeEnum] = {}
-        for ext_type, ext_list in self.__conf.search_extensions.items():
-            for ext in ext_list:
-                self.__extension_types[ext] = ext_type
 
     def get_files(self) -> tuple[PANFile, ...]:
         return tuple(self.__all_files)
@@ -87,9 +78,9 @@ class Hunter:
 
     def __try_init_PANfile(self, filename: str, dir: str) -> PANFile:
         pan_file = PANFile(filename=filename, file_dir=dir)
-        if pan_file.ext.lower() in self.__all_extensions:
+        if pan_file.ext.lower() in self.__conf.get_accepted_exts():
             pan_file.set_file_stats()
-            pan_file.filetype = self.__extension_types[pan_file.ext.lower(
+            pan_file.filetype = self.__conf.get_filetype_per_extension()[pan_file.ext.lower(
             )]
             if pan_file.filetype in (FileTypeEnum.Text, FileTypeEnum.Special) and pan_file.size > TEXT_FILE_SIZE_LIMIT:
                 pan_file.filetype = FileTypeEnum.Other
