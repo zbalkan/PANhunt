@@ -13,15 +13,14 @@ TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
 
 class Hunter:
 
-    all_files: list[PANFile]
-
+    __all_files: list[PANFile]
     __all_extensions: list[str]
     __extension_types: dict[str, FileTypeEnum]
     __conf: PANHuntConfiguration
 
     def __init__(self, configuration: PANHuntConfiguration) -> None:
         self.__conf = configuration
-        self.all_files = []
+        self.__all_files = []
         self.__all_extensions: list[str] = [ext for ext_list in list(
             self.__conf.search_extensions.values()) for ext in ext_list]
 
@@ -29,6 +28,13 @@ class Hunter:
         for ext_type, ext_list in self.__conf.search_extensions.items():
             for ext in ext_list:
                 self.__extension_types[ext] = ext_type
+
+    def get_files(self) -> tuple[PANFile, ...]:
+        return tuple(self.__all_files)
+
+    def add_single_file(self, filename: str, dir: str) -> None:
+        file: PANFile = self.__try_init_PANfile(filename=filename, dir=dir)
+        self.__all_files.append(file)
 
     def get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
@@ -63,7 +69,7 @@ class Hunter:
 
                 yield docs_found, root_total_items, root_items_completed
 
-        self.all_files += doc_files
+        self.__all_files += doc_files
 
     def scan_files(self) -> Generator[tuple[int, int], None, None]:
         """ Searches files in doc_files list for regular expressions"""
@@ -71,7 +77,7 @@ class Hunter:
         files_completed: int = 0
         matches_found: int = 0
 
-        for pan_file in self.all_files:
+        for pan_file in self.__all_files:
             dispatcher = Dispatcher(
                 excluded_pans_list=self.__conf.excluded_pans, search_extensions=self.__conf.search_extensions)
             matches: list[PAN] = pan_file.check_regexs(dispatcher=dispatcher)

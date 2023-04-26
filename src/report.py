@@ -5,7 +5,7 @@ import platform
 import sys
 import time
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Sequence
 
 import panutils
 from enums import FileTypeEnum
@@ -31,7 +31,7 @@ class Report:
                  search_dir: str,
                  excluded_dirs: list[str],
                  pans_found: int,
-                 all_files: list[PANFile],
+                 all_files: Sequence[PANFile],
                  start: datetime,
                  end: datetime) -> None:
         self.total_files = len(all_files)

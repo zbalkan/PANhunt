@@ -36,9 +36,9 @@ def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
     # Check if it is a single-file scan
     path: Optional[str] = configuration.file_path
     if path:
+        logging.debug(f"Added file to list: {path}")
 
-        hunter.all_files.append(hunter.__try_init_PANfile(
-            os.path.basename(path), os.path.dirname(path)))
+        hunter.add_single_file(os.path.basename(path), os.path.dirname(path))
 
     else:
         logging.debug("Started searching directories.")
@@ -68,7 +68,7 @@ def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
         with DocProgressbar(hunt_type='PAN') as pbar:
             for pans_found, files_completed in hunter.scan_files():
                 pbar.update(items_found=pans_found,
-                            items_total=len(hunter.all_files), items_completed=files_completed)
+                            items_total=len(hunter.get_files()), items_completed=files_completed)
 
     logging.debug("Finished searching in files.")
 
@@ -77,7 +77,7 @@ def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
     # Stop timer
     end: datetime = datetime.now()
 
-    return Report(search_dir=configuration.search_dir, excluded_dirs=configuration.excluded_directories, pans_found=pans_found, all_files=hunter.all_files, start=start, end=end)
+    return Report(search_dir=configuration.search_dir, excluded_dirs=configuration.excluded_directories, pans_found=pans_found, all_files=hunter.get_files(), start=start, end=end)
 
 
 def print_report(report: Report, configuration: PANHuntConfiguration) -> None:
