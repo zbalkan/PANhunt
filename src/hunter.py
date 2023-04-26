@@ -82,7 +82,7 @@ class Hunter:
             pan_file.set_file_stats()
             pan_file.filetype = self.__conf.get_filetype_per_extension()[pan_file.ext.lower(
             )]
-            if pan_file.filetype in (FileTypeEnum.Text, FileTypeEnum.Special) and pan_file.size > TEXT_FILE_SIZE_LIMIT:
+            if pan_file.filetype in (FileTypeEnum.Text, FileTypeEnum.Mail) and pan_file.size > TEXT_FILE_SIZE_LIMIT:
                 pan_file.filetype = FileTypeEnum.Other
                 pan_file.set_error(
                     f'File size {panutils.size_friendly(pan_file.size)} over limit of {panutils.size_friendly(TEXT_FILE_SIZE_LIMIT)} for checking')
