@@ -36,7 +36,7 @@ def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
     # Check if it is a single-file scan
     path: Optional[str] = configuration.file_path
     if path:
-        logging.debug(f"Added file to list: {path}")
+        logging.debug(f"Added file to list: \"{path}\"")
 
         hunter.add_single_file(os.path.basename(path), os.path.dirname(path))
 

@@ -82,5 +82,5 @@ class PANFile:
 
         if len(self.matches) > 0:
             logging.info(
-                f'Found {len(self.matches)} possible PANs in {self.path}')
+                f'Found {len(self.matches)} possible PANs in \"{self.path}\"')
         return self.matches

@@ -53,15 +53,12 @@ class Report:
         logging.debug("Creating TXT report.")
 
         pan_sep: str = '\n\t'
-        pan_report: str = 'PAN Hunt Report - %s\n%s\n' % (
-            time.strftime("%H:%M:%S %d/%m/%Y"), '=' * 100)
-        pan_report += 'Searched %s\nExcluded %s\n' % (
-            self.searched, self.excluded)
-        pan_report += 'Command: %s\n' % (self.__command)
-        pan_report += 'Uname: %s\n' % (' | '.join(platform.uname()))
+        pan_report: str = f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}\n{"=" * 100}\n'
+        pan_report += f'Searched {self.searched}\nExcluded {self.excluded}\n'
+        pan_report += f'Command: {self.__command}\n'
+        pan_report += f'Uname: {" | ".join(platform.uname())}\n'
         pan_report += f'Elapsed time: {self.__elapsed}\n'
-        pan_report += 'Searched %s files. Found %s possible PANs.\n%s\n\n' % (
-            self.total_files, self.pans_found, '=' * 100)
+        pan_report += f'Searched {self.total_files} files. Found {self.pans_found} possible PANs.\n{"=" * 100}\n\n'
 
         for pan_file in self.matched_files:
             pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
@@ -77,8 +74,7 @@ class Report:
         if len(self.interesting_files) != 0:
             pan_report += 'Interesting Files to check separately:\n'
         for pan_file in sorted(self.interesting_files, key=lambda x: x.filename):
-            pan_report += '%s (%s %s)\n' % (pan_file.path,
-                                            panutils.size_friendly(pan_file.size), pan_file.modified.strftime('%d/%m/%Y'))
+            pan_report += f'{pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime("%d/%m/%Y")})\n'
 
         pan_report = pan_report.replace('\n', os.linesep)
 
