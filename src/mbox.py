@@ -1,7 +1,7 @@
-
 import base64
 import json
 import mailbox
+import quopri
 from typing import Any, Optional
 
 
@@ -99,17 +99,30 @@ class Mail:
     def parse_attachment(self, attachment_payload: Any) -> None:
         headers = dict(attachment_payload._headers)
         filename: str = str(
-            headers.get('Content-Disposition')).removeprefix('attachment; filename="').removesuffix('"')
+            headers.get('Content-Disposition'))\
+                .removeprefix('attachment;')\
+                .removeprefix('\n')\
+                .removeprefix('\t')\
+                .removeprefix(' ')\
+                .removeprefix('filename=')\
+                .removeprefix('\"')\
+                .removesuffix('"')
+
         encoding: str = str(headers.get('Content-Transfer-Encoding'))
 
         if encoding == 'base64':
-            data = str(attachment_payload.get_payload())
-            binary_data: bytes = base64.b64decode(data)
+            raw = str(attachment_payload.get_payload())
+            binary_data: bytes = base64.b64decode(raw)
             self.attachments.append(Attachment(
                 filename=filename, value_bytes=binary_data))
-        if encoding == "7bit":
-            # Ignore signatures
-            ...
+        elif encoding == "7bit" or encoding == 'quoted-printable' or encoding == 'None':
+            if str(headers.get('Content-Type')).split(';')[0] == 'application/pgp-signature':
+                # Ignore signatures
+                return
+            else:
+                raw = str(attachment_payload.get_payload())
+                decoded: bytes = quopri.decodestring(raw)
+                self.attachments.append(Attachment(filename=filename, value_bytes=decoded))
         else:
             raise NotImplementedError(encoding)
 

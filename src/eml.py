@@ -1,5 +1,6 @@
 import base64
 import json
+import quopri
 from email import message, parser
 from typing import Any, Optional
 
@@ -62,7 +63,15 @@ class Eml:
     def parse_attachment(self, attachment_payload: Any) -> None:
         headers = dict(attachment_payload._headers)
         filename: str = str(
-            headers.get('Content-Disposition')).removeprefix('attachment; filename="').removesuffix('"')
+            headers.get('Content-Disposition'))\
+                .removeprefix('attachment;')\
+                .removeprefix('\n')\
+                .removeprefix('\t')\
+                .removeprefix(' ')\
+                .removeprefix('filename=')\
+                .removeprefix('\"')\
+                .removesuffix('"')
+
         encoding: str = str(headers.get('Content-Transfer-Encoding'))
 
         if encoding == 'base64':
@@ -70,6 +79,10 @@ class Eml:
             binary_data: bytes = base64.b64decode(data)
             self.attachments.append(Attachment(
                 filename=filename, value_bytes=binary_data))
+        elif encoding == "7bit" or encoding == 'quoted-printable' or encoding == 'None':
+            raw = str(attachment_payload.get_payload())
+            decoded: bytes = quopri.decodestring(raw)
+            self.attachments.append(Attachment(filename=filename, value_bytes=decoded))
         else:
             raise NotImplementedError(encoding)
 
