@@ -85,6 +85,6 @@ class Hunter:
             if pan_file.filetype in (FileTypeEnum.Text, FileTypeEnum.Mail) and pan_file.size > TEXT_FILE_SIZE_LIMIT:
                 pan_file.filetype = FileTypeEnum.Other
                 pan_file.set_error(
-                    f'File size {panutils.size_friendly(pan_file.size)} over limit of {panutils.size_friendly(TEXT_FILE_SIZE_LIMIT)} for checking')
+                    f'File size {panutils.size_friendly(pan_file.size)} over limit of {panutils.size_friendly(TEXT_FILE_SIZE_LIMIT)} for checking for file \"{filename}\"')
 
         return pan_file
