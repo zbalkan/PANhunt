@@ -49,7 +49,7 @@ def decode_zip_text(zip_text: str | bytes) -> str:
 
 def get_ext(file_name: str) -> str:
 
-    return os.path.splitext(file_name)[1].lower()
+    return os.path.splitext(file_name)[-1].lower()
 
 
 def get_safe_filename(filename: str) -> str:
