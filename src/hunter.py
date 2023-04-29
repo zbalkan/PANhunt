@@ -71,7 +71,7 @@ class Hunter:
         for pan_file in self.__all_files:
             dispatcher = Dispatcher(
                 excluded_pans_list=self.__conf.excluded_pans, search_extensions=self.__conf.search_extensions)
-            matches: list[PAN] = pan_file.check_regexs(dispatcher=dispatcher)
+            matches: list[PAN] = pan_file.scan_with(dispatcher=dispatcher)
             matches_found += len(matches)
             files_completed += 1
             yield matches_found, files_completed

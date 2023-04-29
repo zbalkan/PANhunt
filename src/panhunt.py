@@ -186,14 +186,16 @@ def main() -> None:
     config_file: Optional[str] = args.config
     quiet: bool = args.quiet
 
+    # Initiated with default values
     config: PANHuntConfiguration = PANHuntConfiguration()
+
     # If exists, read the config file
     if config_file:
         config.with_file(
             config_file=config_file)
-
-    # Finally, read the CLI parameters as they override the default and config file values
-    config.with_args(search_dir=search_dir,
+    else:
+        # Else, read the CLI parameters
+        config.with_args(search_dir=search_dir,
                      file_path=file_path,
                      report_dir=report_dir,
                      json_dir=json_dir,

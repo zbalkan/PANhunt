@@ -67,14 +67,15 @@ class PANFile:
             self.errors.append(error_msg)
         logging.error(error_msg)
 
-    def check_regexs(self, dispatcher: Dispatcher) -> list[PAN]:
+    def scan_with(self, dispatcher: Dispatcher) -> list[PAN]:
         """Checks the file for matching regular expressions: if a ZIP then each file in the ZIP (recursively) or the text in a document"""
 
         if self.filetype:
             try:
                 match_list: list[PAN] = dispatcher.dispatch(
                     file_type=self.filetype, path=self.path)
-                self.matches.extend(match_list)
+                if len(match_list) > 0:
+                    self.matches.extend(match_list)
             except IOError as ex:
                 self.set_error(str(ex))
             except Exception as ex:
