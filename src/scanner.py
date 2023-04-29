@@ -14,6 +14,7 @@ from msmsg import MSMSG
 from msmsg import Attachment as msgAttachment
 from PAN import PAN
 from patterns import CardPatterns
+from pdf import Pdf
 from pst import PST
 from pst import Attachment as pstAttachment
 
@@ -95,6 +96,17 @@ class _AttachmentScanner(_ScannerBase):
                 if len(zip_matches) > 0:
                     match_list.extend(zip_matches)
 
+        elif attachment_ext in search_extensions[FileTypeEnum.Pdf]:
+            if self.attachment.BinaryData:
+                pdf_scanner = _PdfScanner()
+                pdf_scanner.pdf = Pdf(value_bytes= self.attachment.BinaryData)
+                pdf_scanner.filename = self.attachment.Filename
+                pdf_scanner.sub_path = self.attachment.Filename
+                pdf_matches: list[PAN] = pdf_scanner.scan(
+                    excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+
+                if len(pdf_matches) > 0:
+                    match_list.extend(pdf_matches)
         elif attachment_ext in search_extensions[FileTypeEnum.Mail]:
             if self.attachment.BinaryData:
                 msg_scanner = _MessageScanner(path=self.attachment.Filename)
@@ -272,7 +284,9 @@ class _ZipScanner(_ScannerBase):
 
         all_extensions: list[str] = search_extensions[FileTypeEnum.Text] + \
             search_extensions[FileTypeEnum.Zip] + \
-            search_extensions[FileTypeEnum.Mail]
+            search_extensions[FileTypeEnum.Mail] + \
+            search_extensions[FileTypeEnum.Pdf]
+
 
         files_in_zip: list[str] = [file_in_zip for file_in_zip in self.zip_file.namelist(
         ) if panutils.get_ext(file_in_zip) in all_extensions]
@@ -307,6 +321,17 @@ class _ZipScanner(_ScannerBase):
                 if len(text_matches) > 0:
                     match_list.extend(text_matches)
 
+            if ext in search_extensions[FileTypeEnum.Pdf]:
+                file_bytes: bytes = self.zip_file.open(file_in_zip).read()
+                pdf_scanner = _PdfScanner()
+                pdf_scanner.pdf = Pdf(value_bytes=file_bytes)
+                pdf_scanner.sub_path = file_in_zip
+                pdf_matches: list[PAN] = pdf_scanner.scan(
+                    excluded_pans_list=excluded_pans_list,search_extensions=search_extensions)
+                if len(pdf_matches) > 0:
+                    match_list.extend(pdf_matches)
+
+
             else:  # Mail message
                 if panutils.get_ext(file_in_zip) in search_extensions[FileTypeEnum.Mail]:
                     memory_msg = io.StringIO()
@@ -325,6 +350,20 @@ class _ZipScanner(_ScannerBase):
                     memory_msg.close()
         return match_list
 
+class _PdfScanner(_ScannerBase):
+    pdf: Optional[Pdf] = None
+
+    def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
+        if self.pdf is None:
+            self.pdf = Pdf(self.filename)
+
+        ifs = _InFileScanner()
+        ifs.filename = self.filename
+        ifs.sub_path = self.sub_path
+        ifs.text = self.pdf.get_text()
+        matches: list[PAN] = ifs.scan(
+            excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+        return matches
 
 class Dispatcher:
 
@@ -340,7 +379,8 @@ class Dispatcher:
             FileTypeEnum.Text: _BasicScanner,
             FileTypeEnum.Zip: _ZipScanner,
             FileTypeEnum.Mail: _MessageScanner,
-            FileTypeEnum.MailArchive: _MailArchiveScanner
+            FileTypeEnum.MailArchive: _MailArchiveScanner,
+            FileTypeEnum.Pdf: _PdfScanner
         }
 
     def dispatch(self, file_type: FileTypeEnum, path: str) -> list[PAN]:

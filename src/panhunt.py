@@ -146,9 +146,11 @@ def main() -> None:
     arg_parser.add_argument(
         '-a', dest='mail_archives', help='email archive file extensions to search', default='.pst,.mbox')
     arg_parser.add_argument(
-        '-l', dest='other_files', help='other file extensions to list', default='.ost,.accdb,.mdb')
+        '-l', dest='other_files', help='other file extensions to list (NOT IMPLEMENTED)', default='.ost,.accdb,.mdb')
     arg_parser.add_argument(
         '-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
+    arg_parser.add_argument('-p', dest='search_pdf', action='store_true',
+                            default=False, help='Search PDF files including OCR (NB: longer search time)')
     arg_parser.add_argument(
         '-j', dest='json_dir', help='Report file directory for JSON formatted PAN report')
     arg_parser.add_argument('-u', dest='unmask', action='store_true',
@@ -177,6 +179,7 @@ def main() -> None:
     mail_message_extensions_string = str(args.mail_messages)
     mail_archive_extensions_string = str(args.mail_archives)
     other_extensions_string = str(args.other_files)
+    search_pdf : bool = args.search_pdf
     mask_pans: bool = not args.unmask
     excluded_pans_string = str(args.exclude_pan)
     json_dir: Optional[str] = args.json_dir
@@ -201,6 +204,7 @@ def main() -> None:
                      mail_message_extensions_string=mail_message_extensions_string,
                      mail_archive_extensions_string=mail_archive_extensions_string,
                      other_extensions_string=other_extensions_string,
+                     search_pdf=search_pdf,
                      excluded_pans_string=excluded_pans_string)
 
     report: Report = hunt_pans(quiet=quiet, configuration=config)

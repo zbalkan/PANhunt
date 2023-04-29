@@ -140,4 +140,5 @@ class FileTypeEnum(Enum):
     Zip = 1
     Mail = 2
     MailArchive = 3
-    Other = 4
+    Pdf = 4
+    Other = 5
