@@ -60,8 +60,8 @@ pyinstaller src/panhunt.py -F --clean -i dionach.ico --paths="<path to virtual e
 
 ```
 usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-t TEXT_FILES] [-z ZIP_FILES]
-               [-e SPECIAL_FILES] [-m MAIL_FILES] [-l OTHER_FILES] [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG]
-               [-X EXCLUDE_PAN] [-q]
+               [-m MAIL_MESSAGES] [-a MAIL_ARCHIVES] [-l OTHER_FILES] [-o REPORT_DIR] [-j JSON_DIR] [-u]
+               [-C CONFIG] [-X EXCLUDE_PAN] [-q]
 
 PAN Hunt v1.3: search directories and sub directories for documents containing PANs.
 
