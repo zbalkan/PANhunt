@@ -24,6 +24,7 @@ With v1.3, breaking changes are implemented:
 - A flag `-q` (quiet) is added to disable terminal output be used when it is integrated with other tools.
 - A flag `-f` (filepath) is added to enable sigle-file scans. Great for FIM integration.
 - `.eml` and `.mbox` file scanning capability is added.
+- PDF file scanning capability is added. OCR is not working as expected.
 
 
 NB! There is around 20-25% performance impact after refactoring. There are no performance improvements tried yet.
@@ -59,9 +60,7 @@ pyinstaller src/panhunt.py -F --clean -i dionach.ico --paths="<path to virtual e
 ## Usage
 
 ```
-usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-t TEXT_FILES] [-z ZIP_FILES]
-               [-m MAIL_MESSAGES] [-a MAIL_ARCHIVES] [-l OTHER_FILES] [-o REPORT_DIR] [-j JSON_DIR] [-u]
-               [-C CONFIG] [-X EXCLUDE_PAN] [-q]
+usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-t TEXT_FILES] [-z ZIP_FILES] [-m MAIL_MESSAGES] [-a MAIL_ARCHIVES] [-l OTHER_FILES] [-o REPORT_DIR] [-p] [-j JSON_DIR] [-u] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
 
 PAN Hunt v1.3: search directories and sub directories for documents containing PANs.
 
@@ -74,8 +73,9 @@ options:
   -z ZIP_FILES      zip file extensions to search (default: .docx,.xlsx,.pptx,.zip)
   -m MAIL_MESSAGES  email message file extensions to search (default: .msg,.eml)
   -a MAIL_ARCHIVES  email archive file extensions to search (default: .pst,.mbox)
-  -l OTHER_FILES    other file extensions to list (default: .ost,.accdb,.mdb)
+  -l OTHER_FILES    other file extensions to list (NOT IMPLEMENTED) (default: .ost,.accdb,.mdb)
   -o REPORT_DIR     Report file directory for TXT formatted PAN report (default: ./)
+  -p                Search PDF files including OCR (NB: longer search time) (default: False)
   -j JSON_DIR       Report file directory for JSON formatted PAN report (default: None)
   -u                unmask PANs in output (default: False)
   -C CONFIG         configuration file to use (default: None)
