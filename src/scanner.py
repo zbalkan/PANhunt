@@ -99,7 +99,7 @@ class _AttachmentScanner(_ScannerBase):
         elif attachment_ext in search_extensions[FileTypeEnum.Pdf]:
             if self.attachment.BinaryData:
                 pdf_scanner = _PdfScanner()
-                pdf_scanner.pdf = Pdf(value_bytes= self.attachment.BinaryData)
+                pdf_scanner.pdf = Pdf(file= io.BytesIO(self.attachment.BinaryData))
                 pdf_scanner.filename = self.attachment.Filename
                 pdf_scanner.sub_path = self.attachment.Filename
                 pdf_matches: list[PAN] = pdf_scanner.scan(
@@ -324,7 +324,7 @@ class _ZipScanner(_ScannerBase):
             if ext in search_extensions[FileTypeEnum.Pdf]:
                 file_bytes: bytes = self.zip_file.open(file_in_zip).read()
                 pdf_scanner = _PdfScanner()
-                pdf_scanner.pdf = Pdf(value_bytes=file_bytes)
+                pdf_scanner.pdf = Pdf(file=io.BytesIO(file_bytes))
                 pdf_scanner.sub_path = file_in_zip
                 pdf_matches: list[PAN] = pdf_scanner.scan(
                     excluded_pans_list=excluded_pans_list,search_extensions=search_extensions)

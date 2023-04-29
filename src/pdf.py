@@ -1,23 +1,25 @@
-import io
-from typing import Optional
+from io import BufferedReader, BytesIO, StringIO
+from typing import Optional, Union
 
 from pdfminer.high_level import extract_text
 
 
 class Pdf:
 
-    filename:str
+    __file:Optional[str | BytesIO] = None
 
-    __binary_data: Optional[bytes] = None
+    def __init__(self, file:str | BytesIO) -> None:
+            self.__file=file
 
-    def __init__(self, filename:str = '', value_bytes:Optional[bytes] = None) -> None:
-        self.filename=filename
-        if value_bytes:
-            self.__binary_data = value_bytes
 
     def get_text(self) ->str:
-        if self.__binary_data:
-            byte_stream = io.BytesIO(self.__binary_data)
-            return extract_text(byte_stream)
+        in_file : Optional[Union[BufferedReader, BytesIO]] = None
+        if isinstance(self.__file,str):
+            in_file = open(self.__file, "rb")
+        elif isinstance(self.__file,BytesIO):
+                in_file = self.__file
 
-        return extract_text(pdf_file=self.filename)
+        if in_file is None:
+            return ''
+
+        return extract_text(in_file)
