@@ -282,10 +282,8 @@ class _ZipScanner(_ScannerBase):
 
         match_list: list[PAN] = []
 
-        all_extensions: list[str] = search_extensions[FileTypeEnum.Text] + \
-            search_extensions[FileTypeEnum.Zip] + \
-            search_extensions[FileTypeEnum.Mail] + \
-            search_extensions[FileTypeEnum.Pdf]
+        all_extensions: list[str] = [ext for ext_list in list(search_extensions.values()) for ext in ext_list]
+
 
 
         files_in_zip: list[str] = [file_in_zip for file_in_zip in self.zip_file.namelist(
