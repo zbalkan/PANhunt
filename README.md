@@ -13,6 +13,15 @@ It is heavily modified and refactored. There may be issues with functionality. D
 
 PANhunt is a tool that can be used to search drives for credit card numbers (PANs). This is useful for checking PCI DSS scope accuracy. It's designed to be a simple, standalone tool that can be run from a USB stick. PANhunt includes a python PST file parser.
 
+## Function
+
+The script uses regular expressions to look for Visa, MasterCard or AMEX credit card numbers in document files. Zip files are recursed to look for document files. PST and MSG files are parsed and emails and attachments searched in.
+
+The script will list but does not yet search Access databases.
+## Breaking changes
+
+This for includes a full architectural change to allow extending the scanning capabilities by providing a new scanner. It is more modular and has more file searching capabilities. It means there is a performance impact for the sake of accuracy.
+
 With v1.3, breaking changes are implemented:
 
 - Migrated to Python 3
@@ -24,10 +33,10 @@ With v1.3, breaking changes are implemented:
 - A flag `-q` (quiet) is added to disable terminal output be used when it is integrated with other tools.
 - A flag `-f` (filepath) is added to enable sigle-file scans. Great for FIM integration.
 - `.eml` and `.mbox` file scanning capability is added.
-- PDF file scanning capability is added. OCR is not working as expected.
+- PDF file scanning capability is added. OCR is not working as expected yet.
 
 
-NB! There is around 20-25% performance impact after refactoring. There are no performance improvements tried yet.
+NB! There is at least 20% performance impact after refactoring. There are no performance improvements tried yet.
 
 ## Build
 
@@ -51,11 +60,7 @@ In order to create panhunt as a standalone executable run (works in both Linux a
 pyinstaller panhunt.py -F
 ```
 
-Preferably, you can clean the cache, include the original icon and the dependencies (works in both Linux and Windows). The example uses a virtual environment:
-
-```bash
-pyinstaller src/panhunt.py -F --clean -i dionach.ico --paths="<path to virtual env>/Lib/site-packages"
-```
+However, you are advised  use a virtual environment. Update the path on the `build.sh` or `build.bat` file and run. With the short scripts, you can clean the cache, include the original icon and the dependencies (works in both Linux and Windows). The example uses a virtual environment in a folder called `.venv`.
 
 ## Usage
 
@@ -83,7 +88,7 @@ options:
   -q                No terminal output (default: False)
 ```
 
-Simply running it with no arguments will search the C:\ drive for documents containing PANs, and output to panhunt_<timestamp>.txt.
+Simply running it with no arguments will search the `C:\` drive on Windows and filesystem under `/` on Linux, for documents containing PANs, and output to panhunt_<timestamp>.txt.
 
 ## Example Output
 
@@ -266,10 +271,6 @@ FOUND PANs: c:\TEST\PANhunt_Test_File.zip (49.619140625KB 06/04/2023)
 
 Report written to panhunt_YYYY-MM-DD-HHMMSS.txt
 ```
-
-## Function
-
-The script uses regular expressions to look for Visa, MasterCard or AMEX credit card numbers in document files. Zip files are recursed to look for document files. PST and MSG files are parsed and emails and attachments searched in. The script will list but does not yet search Access databases.
 
 ## Configuration
 
