@@ -1,3 +1,4 @@
+from genericpath import exists
 import json
 import logging
 import os
@@ -78,6 +79,10 @@ class Report:
 
         pan_report = pan_report.replace('\n', os.linesep)
 
+        basedir: str = os.path.dirname(os.path.abspath(path=path))
+        if not exists(basedir):
+            os.makedirs(basedir)
+
         with open(path, encoding='utf-8', mode='w') as f:
             f.write(pan_report)
 
@@ -124,6 +129,11 @@ class Report:
         digest: str = panutils.get_text_hash(initial_report)
         report['hash'] = digest
         final_report: str = json.dumps(report, indent=4)
+
+        basedir: str = os.path.dirname(os.path.abspath(path=path))
+        if not exists(basedir):
+            os.makedirs(basedir)
+
         with open(path, "w") as f:  # type: ignore
             f.write(final_report)
 
