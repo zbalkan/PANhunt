@@ -318,7 +318,7 @@ class MSCFB:
         self.read_header(self.fd)
         if not self.validCFB:
             # DevSkim: ignore DS187371
-            logging.debug(f'Invalid MSG file: {cfb_file!r}')
+            logging.debug(f'Skipping invalid MSG file: {cfb_file!r}')
             return
         if self.MajorVersion == 3:
             self.SectorSize = 512

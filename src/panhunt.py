@@ -36,12 +36,12 @@ def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
     # Check if it is a single-file scan
     path: Optional[str] = configuration.file_path
     if path:
-        logging.debug(f"Added file to list: \"{path}\"")
+        logging.info(f"Added file to list: \"{path}\"")
 
         hunter.add_single_file(os.path.basename(path), os.path.dirname(path))
 
     else:
-        logging.debug("Started searching directories.")
+        logging.info("Started searching directories.")
 
         # find all files to check
         if quiet:
@@ -54,9 +54,9 @@ def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
                     pbar.update(items_found=docs_found,
                                 items_total=root_total_items, items_completed=root_items_completed)
 
-        logging.debug("Finished searching directories.")
+        logging.info("Finished searching directories.")
 
-    logging.debug("Started searching in file(s).")
+    logging.info("Started searching in file(s).")
 
     # check each file
     pans_found: int = 0
@@ -70,9 +70,9 @@ def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
                 pbar.update(items_found=pans_found,
                             items_total=len(hunter.get_files()), items_completed=files_completed)
 
-    logging.debug("Finished searching in files.")
+    logging.info("Finished searching in files.")
 
-    logging.debug("Finished searching.")
+    logging.info("Finished searching.")
 
     # Stop timer
     end: datetime = datetime.now()
@@ -82,7 +82,7 @@ def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
 
 def print_report(report: Report, configuration: PANHuntConfiguration) -> None:
 
-    logging.debug("Creating TXT report.")
+    logging.info("Creating TXT report.")
     pan_sep: str = '\n\t'
     for pan_file in report.matched_files:
         pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
@@ -121,7 +121,7 @@ def main() -> None:
     logging.basicConfig(filename=os.path.join(panutils.get_root_dir(), 'PANhunt.log'),
                         encoding='utf-8',
                         format='%(asctime)s %(message)s',
-                        level=logging.DEBUG)
+                        level=logging.INFO)
 
     excepthook = logging.error
     logging.info('Starting')

@@ -50,7 +50,7 @@ class Report:
 
     def create_text_report(self, path: str) -> None:
 
-        logging.debug("Creating TXT report.")
+        logging.info("Creating TXT report.")
 
         pan_sep: str = '\n\t'
         pan_report: str = f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}\n{"=" * 100}\n'
@@ -83,14 +83,14 @@ class Report:
 
         self.append_hash(path)
 
-        logging.debug("Created TXT report.")
+        logging.info("Created TXT report.")
 
     def create_json_report(self, path: Optional[str]) -> None:
 
         if path is None:
             return
 
-        logging.debug("Creating JSON report.")
+        logging.info("Creating JSON report.")
 
         report: dict = {}
         report['timestamp'] = self.__timestamp
@@ -127,7 +127,7 @@ class Report:
         with open(path, "w") as f:  # type: ignore
             f.write(final_report)
 
-        logging.debug("Created JSON report.")
+        logging.info("Created JSON report.")
 
     def append_hash(self, text_file: str) -> None:
 
