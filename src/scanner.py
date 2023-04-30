@@ -2,7 +2,7 @@ import io
 import os
 import zipfile
 from abc import ABC, abstractmethod
-from typing import Optional, Type
+from typing import Final, Optional, Type
 
 import panutils
 from eml import Attachment as emlAttachment
@@ -18,6 +18,8 @@ from pdf import Pdf
 from pst import PST
 from pst import Attachment as pstAttachment
 
+''' If file size is 30MB or bigger, read line by line for better memory management '''
+LARGE_FILE_LIMIT_BYTES: Final[int] = 31_457_280 # 30MB
 
 class _ScannerBase(ABC):
 
@@ -34,7 +36,7 @@ class _ScannerBase(ABC):
         raise NotImplementedError()
 
 
-class _InFileScanner(_ScannerBase):
+class _SimpleTextScanner(_ScannerBase):
     text: str
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
@@ -51,16 +53,34 @@ class _InFileScanner(_ScannerBase):
 
 class _BasicScanner(_ScannerBase):
 
-    def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
-        with open(self.filename, 'r', encoding='utf-8', errors='backslashreplace') as f:
-            text: str = f.read()
+    file_size:int
 
-        ifs = _InFileScanner()
-        ifs.filename = self.filename
-        ifs.sub_path = self.sub_path
-        ifs.text = text
-        matches: list[PAN] = ifs.scan(
-            excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+    def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
+
+        if self.file_size == 0:
+            return []
+
+        matches: list[PAN] = []
+
+        if 0 < self.file_size < LARGE_FILE_LIMIT_BYTES:
+            with open(self.filename, 'r', encoding='utf-8', errors='backslashreplace') as f:
+                text: str = f.read()
+
+            ifs = _SimpleTextScanner()
+            ifs.filename = self.filename
+            ifs.sub_path = self.sub_path
+            ifs.text = text
+            matches.extend(ifs.scan(
+                        excluded_pans_list=excluded_pans_list, search_extensions=search_extensions))
+        else:
+            with open(self.filename, 'r', encoding='utf-8', errors='backslashreplace') as f:
+                for line in f:
+                    ifs = _SimpleTextScanner()
+                    ifs.filename = self.filename
+                    ifs.sub_path = self.sub_path
+                    ifs.text = line
+                    matches.extend(ifs.scan(
+                        excluded_pans_list=excluded_pans_list, search_extensions=search_extensions))
         return matches
 
 
@@ -69,11 +89,10 @@ class _AttachmentScanner(_ScannerBase):
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
         match_list: list[PAN] = []
-
         attachment_ext: str = panutils.get_ext(self.attachment.Filename)
         if attachment_ext in search_extensions[FileTypeEnum.Text]:
             if self.attachment.BinaryData:
-                text_scanner = _InFileScanner()
+                text_scanner = _SimpleTextScanner()
                 text_scanner.text = self.attachment.BinaryData.decode(
                     'utf-8', errors='backslashreplace')
                 text_scanner.filename = self.filename
@@ -134,27 +153,28 @@ class _MsgScanner(_ScannerBase):
     msg: Optional[MSMSG] = None
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
-        match_list: list[PAN] = []
-
         if self.msg is None:
             self.msg = MSMSG(self.filename)
 
-        if self.msg.Body:
-            text_scanner = _InFileScanner()
-            text_scanner.text = self.msg.Body
-            text_scanner.filename = self.filename
-            body_matches: list[PAN] = text_scanner.scan(
-                excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
-            if len(body_matches) > 0:
-                match_list.extend(body_matches)
-        if self.msg.attachments:
-            for _, att in enumerate(self.msg.attachments):
-                att_scanner = _AttachmentScanner(path=self.filename)
-                att_scanner.attachment = att
-                att_matches: list[PAN] = att_scanner.scan(
+        match_list: list[PAN] = []
+
+        if self.msg.validMSG:
+            if self.msg.Body:
+                text_scanner = _SimpleTextScanner()
+                text_scanner.text = self.msg.Body
+                text_scanner.filename = self.filename
+                body_matches: list[PAN] = text_scanner.scan(
                     excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
-                if len(att_matches) > 0:
-                    match_list.extend(att_matches)
+                if len(body_matches) > 0:
+                    match_list.extend(body_matches)
+            if self.msg.attachments:
+                for _, att in enumerate(self.msg.attachments):
+                    att_scanner = _AttachmentScanner(path=self.filename)
+                    att_scanner.attachment = att
+                    att_matches: list[PAN] = att_scanner.scan(
+                        excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
+                    if len(att_matches) > 0:
+                        match_list.extend(att_matches)
         return match_list
 
 
@@ -162,13 +182,13 @@ class _EmlScanner(_ScannerBase):
     eml: Optional[Eml] = None
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
-        match_list: list[PAN] = []
-
         if self.eml is None:
             self.eml = Eml(self.filename)
 
+        match_list: list[PAN] = []
+
         if self.eml.body:
-            text_scanner = _InFileScanner()
+            text_scanner = _SimpleTextScanner()
             text_scanner.text = self.eml.body
             text_scanner.filename = self.filename
             body_matches: list[PAN] = text_scanner.scan(
@@ -190,14 +210,14 @@ class _MboxScanner(_ScannerBase):
     mbox: Optional[Mbox] = None
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
-        match_list: list[PAN] = []
-
         if self.mbox is None:
             self.mbox = Mbox(self.filename)
 
+        match_list: list[PAN] = []
+
         for mail in self.mbox.mails:
             if mail.body:
-                text_scanner = _InFileScanner()
+                text_scanner = _SimpleTextScanner()
                 text_scanner.text = mail.body
                 body_matches: list[PAN] = text_scanner.scan(
                     excluded_pans_list=excluded_pans_list, search_extensions=search_extensions)
@@ -219,10 +239,10 @@ class _PstScanner(_ScannerBase):
     pst: Optional[PST] = None
 
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
-        match_list: list[PAN] = []
-
         if self.pst is None:
             self.pst = PST(self.filename)
+
+        match_list: list[PAN] = []
 
         if self.pst.header.validPST:
             for folder in self.pst.folder_generator():
@@ -235,7 +255,7 @@ class _PstScanner(_ScannerBase):
                             folder.path, '[NoSubject]')
 
                     if message.Body:
-                        text_scanner = _InFileScanner()
+                        text_scanner = _SimpleTextScanner()
                         text_scanner.text = message.Body
                         text_scanner.filename = self.filename
                         text_scanner.sub_path = message_path
@@ -284,8 +304,6 @@ class _ZipScanner(_ScannerBase):
 
         all_extensions: list[str] = [ext for ext_list in list(search_extensions.values()) for ext in ext_list]
 
-
-
         files_in_zip: list[str] = [file_in_zip for file_in_zip in self.zip_file.namelist(
         ) if panutils.get_ext(file_in_zip) in all_extensions]
 
@@ -309,7 +327,7 @@ class _ZipScanner(_ScannerBase):
             elif ext in search_extensions[FileTypeEnum.Text]:
                 file_text: str = panutils.decode_zip_text(
                     self.zip_file.open(file_in_zip).read())
-                text_scanner = _InFileScanner()
+                text_scanner = _SimpleTextScanner()
                 text_scanner.filename = self.filename
                 text_scanner.sub_path = os.path.join(
                     self.sub_path, file_in_zip)
@@ -355,7 +373,7 @@ class _PdfScanner(_ScannerBase):
         if self.pdf is None:
             self.pdf = Pdf(self.filename)
 
-        ifs = _InFileScanner()
+        ifs = _SimpleTextScanner()
         ifs.filename = self.filename
         ifs.sub_path = self.sub_path
         ifs.text = self.pdf.get_text()
