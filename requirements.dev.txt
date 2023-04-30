@@ -1,9 +1,12 @@
+appdirs==1.4.4
 autopep8==2.0.2
 colorama==0.4.6
 isort==5.12.0
 mypy==1.2.0
 mypy-extensions==1.0.0
+pdfminer.six==20221105
 progressbar==2.5
 pycodestyle==2.10.0
+pyparsing==3.0.9
 tomli==2.0.1
 typing_extensions==4.5.0
