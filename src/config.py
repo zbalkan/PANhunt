@@ -22,7 +22,10 @@ class PANHuntConfiguration:
     search_pdf:bool
 
     def __init__(self) -> None:
-        self.search_dir = '/'
+        if os.name == 'nt':
+            self.search_dir = 'C:\\'
+        else:
+            self.search_dir = '/'
         self.file_path = None
         self.config_file = None
         self.report_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.report'
