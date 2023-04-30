@@ -53,16 +53,16 @@ class _SimpleTextScanner(_ScannerBase):
 
 class _BasicScanner(_ScannerBase):
 
-    file_size:int
-
     def scan(self, excluded_pans_list: list[str], search_extensions: dict[FileTypeEnum, list[str]]) -> list[PAN]:
 
-        if self.file_size == 0:
+        file_size: int = os.stat(self.filename).st_size
+
+        if file_size == 0:
             return []
 
         matches: list[PAN] = []
 
-        if 0 < self.file_size < LARGE_FILE_LIMIT_BYTES:
+        if 0 < file_size < LARGE_FILE_LIMIT_BYTES:
             with open(self.filename, 'r', encoding='utf-8', errors='backslashreplace') as f:
                 text: str = f.read()
 
