@@ -44,7 +44,7 @@ class PANFile:
             self.accessed = self.dtm_from_ts(stat.st_atime)
             self.modified = self.dtm_from_ts(stat.st_mtime)
             self.created = self.dtm_from_ts(stat.st_ctime)
-        except WindowsError as ex:
+        except IOError as ex:
             self.size = -1
             self.set_error(str(ex))
 
