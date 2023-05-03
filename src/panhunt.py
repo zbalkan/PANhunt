@@ -136,7 +136,7 @@ def main() -> None:
     arg_parser.add_argument(
         '-f', dest='file_path', help='File path for single file scan')
     arg_parser.add_argument('-x', dest='exclude_dirs',
-                            help='directories to exclude from the search', default='C:\\Windows,C:\\Program Files,C:\\Program Files(x86),/mnt,/dev,/proc')
+                            help='directories to exclude from the search', default='C:\\Windows,C:\\Program Files,C:\\Program Files (x86),/mnt,/dev,/proc')
     arg_parser.add_argument(
         '-t', dest='text_files', help='text file extensions to search', default='.doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json')
     arg_parser.add_argument(
@@ -179,7 +179,7 @@ def main() -> None:
     mail_message_extensions_string = str(args.mail_messages)
     mail_archive_extensions_string = str(args.mail_archives)
     other_extensions_string = str(args.other_files)
-    search_pdf : bool = args.search_pdf
+    search_pdf: bool = args.search_pdf
     mask_pans: bool = not args.unmask
     excluded_pans_string = str(args.exclude_pan)
     json_dir: Optional[str] = args.json_dir
@@ -196,18 +196,18 @@ def main() -> None:
     else:
         # Else, read the CLI parameters
         config.with_args(search_dir=search_dir,
-                     file_path=file_path,
-                     report_dir=report_dir,
-                     json_dir=json_dir,
-                     mask_pans=mask_pans,
-                     excluded_directories_string=excluded_directories_string,
-                     text_extensions_string=text_extensions_string,
-                     zip_extensions_string=zip_extensions_string,
-                     mail_message_extensions_string=mail_message_extensions_string,
-                     mail_archive_extensions_string=mail_archive_extensions_string,
-                     other_extensions_string=other_extensions_string,
-                     search_pdf=search_pdf,
-                     excluded_pans_string=excluded_pans_string)
+                         file_path=file_path,
+                         report_dir=report_dir,
+                         json_dir=json_dir,
+                         mask_pans=mask_pans,
+                         excluded_directories_string=excluded_directories_string,
+                         text_extensions_string=text_extensions_string,
+                         zip_extensions_string=zip_extensions_string,
+                         mail_message_extensions_string=mail_message_extensions_string,
+                         mail_archive_extensions_string=mail_archive_extensions_string,
+                         other_extensions_string=other_extensions_string,
+                         search_pdf=search_pdf,
+                         excluded_pans_string=excluded_pans_string)
 
     report: Report = hunt_pans(quiet=quiet, configuration=config)
 
