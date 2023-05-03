@@ -136,7 +136,7 @@ def main() -> None:
     arg_parser.add_argument(
         '-f', dest='file_path', help='File path for single file scan')
     arg_parser.add_argument('-x', dest='exclude_dirs',
-                            help='directories to exclude from the search')
+                            help='directories to exclude from the search', default='C:\\Windows,C:\\Program Files,C:\\Program Files(x86),/mnt,/dev,/proc')
     arg_parser.add_argument(
         '-t', dest='text_files', help='text file extensions to search', default='.doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json')
     arg_parser.add_argument(
@@ -150,7 +150,7 @@ def main() -> None:
     arg_parser.add_argument(
         '-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
     arg_parser.add_argument('-p', dest='search_pdf', action='store_true',
-                            default=False, help='Search PDF files including OCR (NB: longer search time)')
+                            default=False, help='Search PDF files (NB: longer search time)')
     arg_parser.add_argument(
         '-j', dest='json_dir', help='Report file directory for JSON formatted PAN report')
     arg_parser.add_argument('-u', dest='unmask', action='store_true',
