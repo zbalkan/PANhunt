@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Update paths accordingly, like "<path to virtual env>/Lib/site-packages"
 
