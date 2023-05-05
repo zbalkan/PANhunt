@@ -3,3 +3,4 @@ colorama==0.4.6
 pdfminer.six==20221105
 progressbar==2.5
 pyparsing==3.0.9
+python-magic-bin==0.4.14
