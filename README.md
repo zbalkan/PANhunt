@@ -25,6 +25,7 @@ This for includes a full architectural change to allow extending the scanning ca
 With v1.3, breaking changes are implemented:
 
 - Migrated to Python 3
+- Used file type detection via `python-magic` instead of depending on file extensions only.
 - A default text log capability is added for the sake of accountability.
 - Text report now accepts only directory as an argument while the name is fixed.
   - Text report filename template: `panhunt_<timestamp>.report`
