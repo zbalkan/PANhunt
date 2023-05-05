@@ -6,7 +6,6 @@ import re
 import struct
 import sys
 import unicodedata
-from ctypes import ArgumentError
 from typing import Any
 
 import magic
@@ -23,8 +22,12 @@ def get_root_dir() -> str:
 
 def get_mime_data_from_buffer(value_bytes: bytes) -> tuple[str, str]:
     m = magic.Magic(mime=True, mime_encoding=True)
-    mime_data: list[str] = m.from_buffer(
-        value_bytes).split(';')
+    buffer:bytes
+    if (len(value_bytes) < 2048):
+        buffer = value_bytes
+    else:
+        buffer = value_bytes[:2048]
+    mime_data: list[str] = m.from_buffer(buffer).split(';')
     mime_type: str = mime_data[0].strip().lower()
     encoding: str = mime_data[1].replace(
         ' charset=', '').strip().lower()
@@ -98,14 +101,14 @@ def unpack_integer(format: str, buffer: bytes) -> int:
     if format in ['b', 'B', 'h', 'H', 'i', 'I', 'l', 'L', 'q', 'Q', 'n', 'N', 'P']:
         return int(struct.unpack(format, buffer)[0])
     else:
-        raise ArgumentError(format, buffer)
+        raise ValueError(format, buffer)
 
 
 def unpack_float(format: str, buffer: bytes) -> float:
     if format in ['e', 'f', 'd']:
         return float(struct.unpack(format, buffer)[0])
     else:
-        raise ArgumentError(format, buffer)
+        raise ValueError(format, buffer)
 
 
 def unpack_bytes(format: str, buffer: bytes) -> bytes:
