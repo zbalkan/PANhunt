@@ -42,15 +42,6 @@ class PANFile:
         self.mime_type, self.encoding = panutils.get_mime_data_from_file(
             self.path)
 
-        # if self.extension.lower() in self.__conf.get_accepted_exts():  # type: ignore
-        #     self.set_file_stats()
-        #     self.file_category = self.__conf.get_filetype_per_extension()[self.extension.lower(
-        #     )]
-        #     if self.file_category in (FileCategoryEnum.Text, FileCategoryEnum.Mail) and self.size > TEXT_FILE_SIZE_LIMIT:
-        #         self.file_category = FileCategoryEnum.Other
-        #         self.set_error(
-        #             f'File size {panutils.size_friendly(self.size)} over limit of {panutils.size_friendly(TEXT_FILE_SIZE_LIMIT)} for checking for file \"{filename}\"')
-
     def __cmp__(self, other: 'PANFile') -> bool:
 
         return self.path.lower() == other.path.lower()
