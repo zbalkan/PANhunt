@@ -1,12 +1,14 @@
 import datetime as dt
 import hashlib
 import os
+import pathlib
 import re
 import struct
 import sys
 import unicodedata
-from ctypes import ArgumentError
 from typing import Any
+
+import magic
 
 
 def get_root_dir() -> str:
@@ -16,6 +18,29 @@ def get_root_dir() -> str:
         return os.path.dirname(__file__)
     else:
         return './'
+
+
+def get_mime_data_from_buffer(value_bytes: bytes) -> tuple[str, str]:
+    m = magic.Magic(mime=True, mime_encoding=True)
+    buffer:bytes
+    if (len(value_bytes) < 2048):
+        buffer = value_bytes
+    else:
+        buffer = value_bytes[:2048]
+    mime_data: list[str] = m.from_buffer(buffer).split(';')
+    mime_type: str = mime_data[0].strip().lower()
+    encoding: str = mime_data[1].replace(
+        ' charset=', '').strip().lower()
+    return mime_type, encoding
+
+
+def get_mime_data_from_file(path: str) -> tuple[str, str]:
+    m = magic.Magic(mime=True, mime_encoding=True)
+    mime_data: list[str] = m.from_file(filename=path).split(';')
+    mime_type: str = mime_data[0].strip().lower()
+    encoding: str = mime_data[1].replace(
+        ' charset=', '').strip().lower()
+    return mime_type, encoding
 
 
 def unicode_to_ascii(unicode_str: str) -> str:
@@ -49,7 +74,12 @@ def decode_zip_text(zip_text: str | bytes) -> str:
 
 def get_ext(file_name: str) -> str:
 
-    return os.path.splitext(file_name)[-1].lower()
+    return pathlib.Path(file_name).suffix.lower()
+
+
+def get_exts(file_name: str) -> list[str]:
+
+    return [ext.lower() for ext in pathlib.Path(file_name).suffixes]
 
 
 def get_safe_filename(filename: str) -> str:
@@ -71,14 +101,14 @@ def unpack_integer(format: str, buffer: bytes) -> int:
     if format in ['b', 'B', 'h', 'H', 'i', 'I', 'l', 'L', 'q', 'Q', 'n', 'N', 'P']:
         return int(struct.unpack(format, buffer)[0])
     else:
-        raise ArgumentError(format, buffer)
+        raise ValueError(format, buffer)
 
 
 def unpack_float(format: str, buffer: bytes) -> float:
     if format in ['e', 'f', 'd']:
         return float(struct.unpack(format, buffer)[0])
     else:
-        raise ArgumentError(format, buffer)
+        raise ValueError(format, buffer)
 
 
 def unpack_bytes(format: str, buffer: bytes) -> bytes:

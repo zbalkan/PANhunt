@@ -3,9 +3,12 @@ import os
 from datetime import datetime
 from typing import Optional
 
-from enums import FileTypeEnum
+import magic
+
+import panutils
+from dispatcher import Dispatcher
+from enums import FileCategoryEnum
 from PAN import PAN
-from scanner import Dispatcher
 
 
 class PANFile:
@@ -14,9 +17,7 @@ class PANFile:
     filename: str
     dir: str
     path: str
-    root: str
-    ext: str
-    filetype: Optional[FileTypeEnum]
+    file_category: Optional[FileCategoryEnum]
     errors: Optional[list[str]] = None
     matches: list[PAN]
     size: int
@@ -24,13 +25,22 @@ class PANFile:
     modified: datetime
     created: datetime
 
+    mime_type: str
+    encoding: str
+    extension: str
+    extensions: list[str]
+
     def __init__(self, filename: str, file_dir: str) -> None:
         self.filename = filename
         self.dir = file_dir
         self.path = os.path.join(self.dir, self.filename)
-        self.root, self.ext = os.path.splitext(self.filename)
-        self.filetype = None
+        self.file_category = None
         self.matches = []
+
+        self.extension = panutils.get_ext(self.path)
+        self.extensions = panutils.get_exts(self.path)
+        self.mime_type, self.encoding = panutils.get_mime_data_from_file(
+            self.path)
 
     def __cmp__(self, other: 'PANFile') -> bool:
 
@@ -70,18 +80,20 @@ class PANFile:
     def scan_with(self, dispatcher: Dispatcher) -> list[PAN]:
         """Checks the file for matching regular expressions: if a ZIP then each file in the ZIP (recursively) or the text in a document"""
 
-        if self.filetype:
-            try:
-                match_list: list[PAN] = dispatcher.dispatch(
-                    file_type=self.filetype, path=self.path)
-                if len(match_list) > 0:
-                    self.matches.extend(match_list)
-            except IOError as ex:
-                self.set_error(str(ex))
-            except Exception as ex:
-                self.set_error(str(ex))
+        try:
+            match_list: list[PAN] = dispatcher.dispatch(
+                mime_type=self.mime_type, extension=self.extension, path=self.path)
+            if len(match_list) > 0:
+                self.matches.extend(match_list)
+        except IOError as ex:
+            self.set_error(str(ex))
+        except Exception as ex:
+            self.set_error(str(ex))
 
         if len(self.matches) > 0:
             logging.info(
                 f'Found {len(self.matches)} possible PANs in \"{self.path}\"')
         return self.matches
+
+    def __str__(self) -> str:
+        return f'{self.path} ({self.mime_type} : {self.encoding})'

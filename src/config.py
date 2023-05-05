@@ -4,7 +4,7 @@ import time
 from typing import Optional
 
 import panutils
-from enums import FileTypeEnum
+from enums import FileCategoryEnum
 
 
 class PANHuntConfiguration:
@@ -17,9 +17,8 @@ class PANHuntConfiguration:
     json_dir: Optional[str]
     mask_pans: bool
     excluded_directories: list[str]
-    search_extensions: dict[FileTypeEnum, list[str]]
+    search_extensions: dict[FileCategoryEnum, list[str]]
     excluded_pans: list[str]
-    search_pdf:bool
 
     def __init__(self) -> None:
         if os.name == 'nt':
@@ -36,14 +35,14 @@ class PANHuntConfiguration:
         self.excluded_directories = ['C:\\Windows',
                                      'C:\\Program Files', 'C:\\Program Files(x86)', '/mnt', '/dev', '/proc']
         self.search_extensions = {
-            FileTypeEnum.Text: ['.doc', '.xls', '.ppt', '.xml', '.txt', '.csv', '.log', '.rtf', '.tmp', '.bak', '.rtf', '.csv', '.htm', '.html', '.js', '.css', '.md', '.json'],
-            FileTypeEnum.Zip: ['.docx', '.xlsx', '.pptx', '.zip'],
-            FileTypeEnum.Mail: ['.msg'],
-            FileTypeEnum.MailArchive: ['.pst'],
-            FileTypeEnum.Other: ['.ost', '.accdb', '.mdb']
+            FileCategoryEnum.Text: ['.doc', '.xls', '.ppt', '.xml', '.txt', '.csv', '.log', '.rtf', '.tmp', '.bak', '.rtf', '.csv', '.htm', '.html', '.js', '.css', '.md', '.json'],
+            FileCategoryEnum.Zip: ['.docx', '.xlsx', '.pptx', '.zip'],
+            FileCategoryEnum.Mail: ['.msg'],
+            FileCategoryEnum.MailArchive: ['.pst'],
+            FileCategoryEnum.Other: ['.ost', '.accdb', '.mdb'],
+            FileCategoryEnum.Pdf: ['.pdf']
         }
         self.excluded_pans = []
-        self.search_pdf = False
 
     def with_args(self,
                   search_dir: Optional[str] = None,
@@ -56,7 +55,6 @@ class PANHuntConfiguration:
                   mail_message_extensions_string: Optional[str] = None,
                   mail_archive_extensions_string: Optional[str] = None,
                   other_extensions_string: Optional[str] = None,
-                  search_pdf: bool = False,
                   excluded_pans_string: Optional[str] = None,
                   json_dir: Optional[str] = None) -> None:
         """If any parameter is provided, it overwrites the previous value
@@ -73,7 +71,6 @@ class PANHuntConfiguration:
                       mail_message_extensions_string=mail_message_extensions_string,
                       mail_archive_extensions_string=mail_archive_extensions_string,
                       other_extensions_string=other_extensions_string,
-                      search_pdf=search_pdf,
                       excluded_pans_string=excluded_pans_string)
 
     def with_file(self, config_file: str) -> None:
@@ -112,7 +109,6 @@ class PANHuntConfiguration:
             config_from_file)
         excluded_pans_string: Optional[str] = PANHuntConfiguration.__try_parse(
             config_from_file=config_from_file, property='excludepans')
-        search_pdf: Optional[bool]  = PANHuntConfiguration.__get_search_pdf(config_from_file=config_from_file)
 
         self.__update(search_dir=search_dir,
                       file_path=file_path,
@@ -125,7 +121,6 @@ class PANHuntConfiguration:
                       mail_message_extensions_string=mail_message_extensions_string,
                       mail_archive_extensions_string=mail_archive_extensions_string,
                       other_extensions_string=other_extensions_string,
-                      search_pdf=search_pdf,
                       excluded_pans_string=excluded_pans_string)
 
     def get_json_path(self) -> Optional[str]:
@@ -137,8 +132,8 @@ class PANHuntConfiguration:
     def get_report_path(self) -> str:
         return os.path.join(self.report_dir, self.report_file)
 
-    def get_filetype_per_extension(self) -> dict[str, FileTypeEnum]:
-        extension_types: dict[str, FileTypeEnum] = {}
+    def get_filetype_per_extension(self) -> dict[str, FileCategoryEnum]:
+        extension_types: dict[str, FileCategoryEnum] = {}
         for ext_type, ext_list in self.search_extensions.items():
             for ext in ext_list:
                 extension_types[ext] = ext_type
@@ -177,7 +172,19 @@ class PANHuntConfiguration:
             return str(config_from_file[property])
         return None
 
-    def __update(self, search_dir: Optional[str], file_path: Optional[str], report_dir: Optional[str], json_dir: Optional[str], mask_pans: Optional[bool], excluded_directories_string: Optional[str], text_extensions_string: Optional[str], zip_extensions_string: Optional[str], mail_message_extensions_string: Optional[str], mail_archive_extensions_string: Optional[str], other_extensions_string: Optional[str], search_pdf:Optional[bool], excluded_pans_string: Optional[str]) -> None:
+    def __update(self,
+                 search_dir: Optional[str],
+                 file_path: Optional[str],
+                 report_dir: Optional[str],
+                 json_dir: Optional[str],
+                 mask_pans: Optional[bool],
+                 excluded_directories_string: Optional[str],
+                 text_extensions_string: Optional[str],
+                 zip_extensions_string: Optional[str],
+                 mail_message_extensions_string: Optional[str],
+                 mail_archive_extensions_string: Optional[str],
+                 other_extensions_string: Optional[str],
+                 excluded_pans_string: Optional[str]) -> None:
 
         if search_dir and search_dir != 'None':
             self.search_dir = os.path.abspath(search_dir)
@@ -198,25 +205,20 @@ class PANHuntConfiguration:
             self.excluded_directories = [os.path.abspath(exc_dir.lower())
                                          for exc_dir in excluded_directories_string.split(',')]
         if text_extensions_string and text_extensions_string != 'None':
-            self.search_extensions[FileTypeEnum.Text] = text_extensions_string.split(
+            self.search_extensions[FileCategoryEnum.Text] = text_extensions_string.split(
                 ',')
         if zip_extensions_string and zip_extensions_string != 'None':
-            self.search_extensions[FileTypeEnum.Zip] = zip_extensions_string.split(
+            self.search_extensions[FileCategoryEnum.Zip] = zip_extensions_string.split(
                 ',')
         if mail_message_extensions_string and mail_message_extensions_string != 'None':
-            self.search_extensions[FileTypeEnum.Mail] = mail_message_extensions_string.split(
+            self.search_extensions[FileCategoryEnum.Mail] = mail_message_extensions_string.split(
                 ',')
         if mail_archive_extensions_string and mail_archive_extensions_string != 'None':
-            self.search_extensions[FileTypeEnum.MailArchive] = mail_archive_extensions_string.split(
+            self.search_extensions[FileCategoryEnum.MailArchive] = mail_archive_extensions_string.split(
                 ',')
         if other_extensions_string and other_extensions_string != 'None':
-            self.search_extensions[FileTypeEnum.Other] = other_extensions_string.split(
+            self.search_extensions[FileCategoryEnum.Other] = other_extensions_string.split(
                 ',')
-
-        if search_pdf:
-            self.search_pdf = search_pdf
-            if search_pdf == True:
-                self.search_extensions[FileTypeEnum.Pdf] = ['.pdf']
 
         if excluded_pans_string and excluded_pans_string != excluded_pans_string and len(excluded_pans_string) > 0:
             self.excluded_pans = excluded_pans_string.split(',')
