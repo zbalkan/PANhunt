@@ -135,10 +135,27 @@ class PropIdEnum(Enum):
     PidTagXOriginatingIp = 0x8028  # Non-standard X-Originating-IP
 
 
-class FileTypeEnum(Enum):
+class FileCategoryEnum(Enum):
     Text = 0
     Zip = 1
     Mail = 2
     MailArchive = 3
     Pdf = 4
     Other = 5
+
+
+class FileTypeEnum(Enum):
+    Unknown = 0
+    Plaintext = 1
+    Rtf = 2
+    MsWord = 3
+    MsExcel = 4
+    MsPowerpoint = 5
+    Pdf = 6
+    MsMsg = 7
+    MsPst = 8
+    Eml = 9
+    Mbox = 10
+    Zip = 11
+    Tar = 12
+    SevenZip = 13

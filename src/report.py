@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Sequence
 
 import panutils
-from enums import FileTypeEnum
+from enums import FileCategoryEnum
 from PANFile import PANFile
 
 
@@ -47,7 +47,7 @@ class Report:
         self.matched_files = sorted(
             [pan_file for pan_file in all_files if pan_file.matches], key=lambda x: x.filename)
         self.interesting_files = sorted([
-            pan_file for pan_file in all_files if pan_file.filetype == FileTypeEnum.Other], key=lambda x: x.path)
+            pan_file for pan_file in all_files if pan_file.file_category == FileCategoryEnum.Other], key=lambda x: x.path)
 
     def create_text_report(self, path: str) -> None:
 
@@ -61,7 +61,7 @@ class Report:
         pan_report += f'Elapsed time: {self.__elapsed}\n'
         pan_report += f'Searched {self.total_files} files. Found {self.pans_found} possible PANs.\n{"=" * 100}\n\n'
 
-        for pan_file in self.matched_files:
+        for pan_file in sorted(self.matched_files, key=lambda x: x.path):
             pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
 
             pan_report += pan_header + '\n'

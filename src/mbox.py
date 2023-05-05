@@ -2,7 +2,7 @@ import base64
 import json
 import mailbox
 import quopri
-from typing import Any, Optional
+from typing import IO, Any, Optional
 
 
 class Mbox:
@@ -10,13 +10,23 @@ class Mbox:
     filename: str
     mails: list['Mail']
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, value_bytes:Optional[bytes] = None) -> None:
         self.filename = path
         self.mails = []
-
+        mbox: mailbox.mbox
         mbox = mailbox.mbox(path)
+        if value_bytes:
+            mailbox.mbox(path=path,
+            factory=self.__from_buffer)
+
         for message in mbox:
             self.mails.append(Mail(message))
+
+    def __from_buffer(self, buffer: IO[Any]) -> mailbox.mboxMessage:
+        b: bytes = buffer.read()
+        m = mailbox.mboxMessage(message=b)
+        return m
+
 
     def __str__(self) -> str:
         d: dict = {}

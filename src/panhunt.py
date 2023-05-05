@@ -138,7 +138,7 @@ def main() -> None:
     arg_parser.add_argument('-x', dest='exclude_dirs',
                             help='directories to exclude from the search', default='C:\\Windows,C:\\Program Files,C:\\Program Files (x86),/mnt,/dev,/proc')
     arg_parser.add_argument(
-        '-t', dest='text_files', help='text file extensions to search', default='.doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json')
+        '-t', dest='text_files', help='text file extensions to search', default=',.doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json')
     arg_parser.add_argument(
         '-z', dest='zip_files', help='zip file extensions to search', default='.docx,.xlsx,.pptx,.zip')
     arg_parser.add_argument('-m', dest='mail_messages',
@@ -149,8 +149,6 @@ def main() -> None:
         '-l', dest='other_files', help='other file extensions to list (NOT IMPLEMENTED)', default='.ost,.accdb,.mdb')
     arg_parser.add_argument(
         '-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
-    arg_parser.add_argument('-p', dest='search_pdf', action='store_true',
-                            default=False, help='Search PDF files (NB: longer search time)')
     arg_parser.add_argument(
         '-j', dest='json_dir', help='Report file directory for JSON formatted PAN report')
     arg_parser.add_argument('-u', dest='unmask', action='store_true',
@@ -179,7 +177,6 @@ def main() -> None:
     mail_message_extensions_string = str(args.mail_messages)
     mail_archive_extensions_string = str(args.mail_archives)
     other_extensions_string = str(args.other_files)
-    search_pdf: bool = args.search_pdf
     mask_pans: bool = not args.unmask
     excluded_pans_string = str(args.exclude_pan)
     json_dir: Optional[str] = args.json_dir
@@ -206,7 +203,6 @@ def main() -> None:
                          mail_message_extensions_string=mail_message_extensions_string,
                          mail_archive_extensions_string=mail_archive_extensions_string,
                          other_extensions_string=other_extensions_string,
-                         search_pdf=search_pdf,
                          excluded_pans_string=excluded_pans_string)
 
     report: Report = hunt_pans(quiet=quiet, configuration=config)

@@ -1,4 +1,5 @@
 import base64
+import io
 import json
 import quopri
 from email import message, parser
@@ -13,19 +14,25 @@ class Eml:
 
     __text: str
 
-    def __init__(self, path: str) -> None:
-        with open(path, "rb") as f:
-            msg: message.Message = parser.BytesParser().parse(f)
-            self.filename = path
-            payloads: Any = msg.get_payload()
-            if isinstance(payloads, list):
-                self.body = ''
-                self.attachments = []
-                self.extract_body_parts(payloads)
-                self.extract_attachments(payloads)
-                self.__text = self.to_text()
-            else:
-                raise TypeError(msg)
+    def __init__(self, path: str, value_bytes:Optional[bytes] = None) -> None:
+        msg: message.Message
+        if value_bytes:
+            msg = parser.BytesParser().parsebytes(value_bytes)
+        else:
+            f: io.BufferedReader = open(path, "rb")
+            msg = parser.BytesParser().parse(f)
+            f.close()
+
+        self.filename = path
+        payloads: Any = msg.get_payload()
+        if isinstance(payloads, list):
+            self.body = ''
+            self.attachments = []
+            self.extract_body_parts(payloads)
+            self.extract_attachments(payloads)
+            self.__text = self.to_text()
+        else:
+            raise TypeError(msg)
 
     def extract_body_parts(self, payloads) -> None:
         body_data: Any = payloads[0]
