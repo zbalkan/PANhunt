@@ -39,8 +39,13 @@ class PANFile:
 
         self.extension = panutils.get_ext(self.path)
         self.extensions = panutils.get_exts(self.path)
-        self.mime_type, self.encoding = panutils.get_mime_data_from_file(
-            self.path)
+
+        try:
+            self.mime_type, self.encoding = panutils.get_mime_data_from_file(self.path)
+        except Exception as ex:
+            self.mime_type = 'Unknown'
+            self.encoding = 'Unknown'
+            self.set_error(f'Failed to detect mimetype and encoding. Inner exception: {ex}')
 
     def __cmp__(self, other: 'PANFile') -> bool:
 

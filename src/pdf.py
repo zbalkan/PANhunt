@@ -1,4 +1,4 @@
-from io import BufferedReader, BytesIO, StringIO
+from io import BufferedReader, BytesIO
 from typing import Optional, Union
 
 from pdfminer.high_level import extract_text
