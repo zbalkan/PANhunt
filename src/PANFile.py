@@ -3,8 +3,6 @@ import os
 from datetime import datetime
 from typing import Optional
 
-import magic
-
 import panutils
 from dispatcher import Dispatcher
 from enums import FileCategoryEnum

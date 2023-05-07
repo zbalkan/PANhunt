@@ -8,15 +8,13 @@
 #
 # Contributors: Zafer Balkan, 2023
 
-import argparse
-import datetime as dt
 import itertools
 import logging
 import math
 import os
 import string
 import struct
-import sys
+from datetime import datetime, timedelta
 from enum import Enum, Flag
 from io import BufferedReader, BytesIO
 from typing import Generator, Literal, Optional, Type, Union
@@ -25,8 +23,8 @@ import panutils
 from enums import PropIdEnum, PTypeEnum
 from exceptions import PANHuntException
 
-_ValueType = Optional[Union[int, float, dt.datetime, bool, str,
-                            bytes, list[int], list[float], list[dt.datetime], list[bytes], list[str]]]
+_ValueType = Optional[Union[int, float, datetime, bool, str,
+                            bytes, list[int], list[float], list[datetime], list[bytes], list[str]]]
 
 
 ##############################################################################################################################
@@ -975,13 +973,13 @@ class PstPTypeWrapper:
         return [panutils.unpack_float(
             format_dict[bit_size], value_bytes[i * buffer_size:(i + 1) * buffer_size]) for i in range(count)]
 
-    def get_floating_time(self, time_bytes: bytes) -> dt.datetime:
+    def get_floating_time(self, time_bytes: bytes) -> datetime:
 
-        return dt.datetime(year=1899, month=12, day=30) + dt.timedelta(days=panutils.unpack_float('d', time_bytes))
+        return datetime(year=1899, month=12, day=30) + timedelta(days=panutils.unpack_float('d', time_bytes))
 
-    def get_time(self, time_bytes: bytes) -> dt.datetime:
+    def get_time(self, time_bytes: bytes) -> datetime:
 
-        return dt.datetime(year=1601, month=1, day=1) + dt.timedelta(microseconds=panutils.unpack_integer('q', time_bytes) / 10.0)
+        return datetime(year=1601, month=1, day=1) + timedelta(microseconds=panutils.unpack_integer('q', time_bytes) / 10.0)
 
     def get_multi_value_offsets(self, value_bytes: bytes) -> tuple[int, list[int]]:
 
@@ -1380,9 +1378,9 @@ class SubMessage:
     nid: NID
     SentRepresentingName: Optional[str]
     Subject: Optional[str]
-    ClientSubmitTime: Optional[dt.datetime]
+    ClientSubmitTime: Optional[datetime]
 
-    def __init__(self, nid: NID, sent_representing_name: Optional[str], subject: Optional[str], client_submit_time: Optional[dt.datetime]) -> None:
+    def __init__(self, nid: NID, sent_representing_name: Optional[str], subject: Optional[str], client_submit_time: Optional[datetime]) -> None:
 
         self.nid = nid
         self.SentRepresentingName = sent_representing_name
@@ -1477,7 +1475,7 @@ class Folder:
                     subject: Optional[str] = ltp.strip_SubjectPrefix(
                         panutils.as_str(self.tc_contents.get_context_value(RowIndex, PropIdEnum.PidTagSubjectW) or "default"))
 
-                    cst: Optional[dt.datetime] = None
+                    cst: Optional[datetime] = None
                     st = self.tc_contents.get_context_value(
                         RowIndex, PropIdEnum.PidTagClientSubmitTime)
                     if st:
@@ -1569,7 +1567,7 @@ class Message:
     SenderName: Optional[str] = None
     SentRepresentingName: Optional[str] = None
     MessageStatus: Optional[int] = None
-    ClientSubmitTime: Optional[dt.datetime]
+    ClientSubmitTime: Optional[datetime]
 
     def __init__(self, nid: NID, ltp: LTP, nbd: Optional[NBD] = None, parent_message: Optional['Message'] = None, messaging: Optional['Messaging'] = None) -> None:
 
@@ -1628,7 +1626,7 @@ class Message:
         mdt = self.pc.get_raw_data(
             PropIdEnum.PidTagMessageDeliveryTime.value)
         if mdt:
-            self.MessageDeliveryTime: dt.datetime = panutils.as_datetime(
+            self.MessageDeliveryTime: datetime = panutils.as_datetime(
                 mdt.value)
 
         # Body can be null in an email
@@ -2609,119 +2607,3 @@ def get_unused_filename(filepath: str) -> str:
         return '%s-%s%s' % (os.path.splitext(filepath)
                             [0], suffix, os.path.splitext(filepath)[1])
     return filepath
-
-###############################################################################################################################
-#
-#  _____         _     _____                 _   _
-# |_   _|__  ___| |_  |  ___|   _ _ __   ___| |_(_) ___  _ __  ___
-#   | |/ _ \/ __| __| | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
-#   | |  __/\__ \ |_  |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
-#   |_|\___||___/\__| |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
-#
-###############################################################################################################################
-
-
-# def test_status_pst(pst_filepath: str) -> None:
-
-#     pst = PST(pst_filepath)
-#     print((panutils.unicode_to_ascii(pst.get_pst_status())))
-#     print(('Total Messages: %s' % pst.get_total_message_count()))
-#     print(('Total Attachments: %s' % pst.get_total_attachment_count()))
-#     pst.close()
-
-
-# def test_dump_pst(pst_filepath: str, output_path: str) -> None:
-#     """ dump out all PST email attachments and emails (into text files) to output_path folder"""
-
-#     pst = PST(pst_filepath)
-#     print((pst.get_pst_status()))
-
-#     with SimpleSubbar('Messages: ') as messages_bar:
-#         total_messages: int = pst.get_total_message_count()
-#         for i in pst.export_all_messages(output_path):
-#             messages_bar.update(i * 100.0 / total_messages)
-
-#     with SimpleSubbar('Attachments: ') as attachment_bar:
-#         total_attachments: int = pst.get_total_attachment_count()
-#         for i in pst.export_all_attachments(output_path):
-#             attachment_bar.update(i * 100.0 / total_attachments)
-
-#     pst.close()
-
-
-# def test_folder_psts(psts_folder: str) -> None:
-
-#     # global error_log_list
-
-#     s: str = ''
-#     for pst_filepath in [os.path.join(psts_folder, filename) for filename in os.listdir(psts_folder) if os.path.isfile(os.path.join(psts_folder, filename)) and os.path.splitext(filename.lower())[1] == '.pst']:
-#         try:
-#             s += 'Opening %s\n' % pst_filepath
-#             # error_log_list = []
-#             pst = PST(pst_filepath)
-#             status: str = panutils.unicode_to_ascii(pst.get_pst_status())
-#             print(status)
-#             password: str = ''
-#             if pst.messaging.PasswordCRC32Hash:
-#                 password = pst.crack_password(pst.messaging.PasswordCRC32Hash)
-#                 if password:
-#                     password = ' (%s)' % password
-#             s += status + password + '\n'
-#             pst.close()
-#             # s += '\n'.join(error_log_list)
-#             s += '\n\n\n'
-#         except Exception as e:
-#             s += 'ERROR: %s\n' % e
-
-#     with open(os.path.join(psts_folder, 'psts_test.txt'), 'w', encoding='ascii') as f:
-#         f.write(s)
-
-
-###################################################################################################################################
-#  __  __       _
-# |  \/  | __ _(_)_ __
-# | |\/| |/ _` | | '_ \
-# | |  | | (_| | | | | |
-# |_|  |_|\__,_|_|_| |_|
-#
-###################################################################################################################################
-
-
-if __name__ == "__main__":
-
-    input_pst_file: str = ''
-    output_folder = 'dump'
-
-    arg_parser = argparse.ArgumentParser(
-        prog='pst', description='PST: parses PST files. Can dump emails and attachments.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    arg_parser.add_argument('-i', dest='input_pst_file',
-                            default=input_pst_file, help='input PST file to dump')
-    arg_parser.add_argument('-o', dest='output_folder',
-                            default=output_folder, help='output folder')
-    arg_parser.add_argument('-t', dest='debug', help=argparse.SUPPRESS,
-                            action='store_true', default=False)  # hidden argument
-
-    args = arg_parser.parse_args()
-
-    if not args.debug:
-
-        input_pst_file = str(args.input_pst_file)
-        output_folder = str(args.output_folder)
-
-        if not os.path.exists(input_pst_file):
-            print('Input PST file does not exist')
-            sys.exit(1)
-
-        if not os.path.exists(output_folder):
-            print('Output folder does not exist')
-            sys.exit(1)
-
-        # test_dump_pst(input_pst_file, output_folder)
-
-    else:  # debug
-
-        pass
-        # test_folder = 'D:\\'
-        # test_status_pst(test_folder+'sample.pst')
-        # test_dump_pst(test_folder+'sample.pst', test_folder+'dump')
-        # test_folder_psts(test_folder)
