@@ -72,7 +72,8 @@ class BasicScanner(ScannerBase):
 
         text:str
         if self.value_bytes:
-            text = self.value_bytes.decode('utf-8')
+            _, encoding = panutils.get_mime_data_from_buffer(self.value_bytes)
+            text = self.value_bytes.decode(encoding, errors='backslashreplace')
             ifs = SimpleTextScanner(patterns=self.patterns)
             ifs.from_file(path=self.filename, sub_path=self.sub_path)
             ifs.text = text
