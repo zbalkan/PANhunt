@@ -120,7 +120,8 @@ def main() -> None:
 
     logging.basicConfig(filename=os.path.join(panutils.get_root_dir(), 'PANhunt.log'),
                         encoding='utf-8',
-                        format='%(asctime)s %(message)s',
+                        format='%(asctime)s:%(levelname)s:%(message)s',
+                        datefmt="%Y-%m-%dT%H:%M:%S%z",
                         level=logging.INFO)
 
     excepthook = logging.error
