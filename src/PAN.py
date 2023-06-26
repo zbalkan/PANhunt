@@ -21,7 +21,8 @@ class PAN:
         return f'{self.brand}:{pan_out}'
 
     @staticmethod
-    def is_excluded(pan: str, excluded_pans: list[str]) -> bool:
+    # def is_excluded(pan: str, excluded_pans: list[str]) -> bool:
+    def is_excluded(pan: str, excluded_pans: list) -> bool:
         for excluded_pan in excluded_pans:
             if pan == excluded_pan:
                 return True
@@ -33,12 +34,16 @@ class PAN:
 
         safe_pan: str = re.sub(r'[^\d]', '', pan)
 
-        def digits_of(n) -> list[int]:
+        # def digits_of(n) -> list[int]:
+        def digits_of(n) -> list:
             return [int(d) for d in str(n)]
 
-        digits: list[int] = digits_of(safe_pan)
-        odd_digits: list[int] = digits[-1::-2]
-        even_digits: list[int] = digits[-2::-2]
+        # digits: list[int] = digits_of(safe_pan)
+        # odd_digits: list[int] = digits[-1::-2]
+        # even_digits: list[int] = digits[-2::-2]
+        digits: list = digits_of(safe_pan)
+        odd_digits: list = digits[-1::-2]
+        even_digits: list = digits[-2::-2]
         checksum: int = 0
         checksum += sum(odd_digits)
         for d in even_digits:

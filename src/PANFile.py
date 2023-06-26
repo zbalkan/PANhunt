@@ -16,8 +16,10 @@ class PANFile:
     dir: str
     path: str
     file_category: Optional[FileCategoryEnum]
-    errors: Optional[list[str]] = None
-    matches: list[PAN]
+    # errors: Optional[list[str]] = None
+    errors: Optional[list] = None
+    # matches: list[PAN]
+    matches: list
     size: int
     accessed: datetime
     modified: datetime
@@ -26,7 +28,8 @@ class PANFile:
     mime_type: str
     encoding: str
     extension: str
-    extensions: list[str]
+    # extensions: list[str]
+    extensions: list
 
     def __init__(self, filename: str, file_dir: str) -> None:
         self.filename = filename
@@ -39,11 +42,13 @@ class PANFile:
         self.extensions = panutils.get_exts(self.path)
 
         try:
-            self.mime_type, self.encoding = panutils.get_mime_data_from_file(self.path)
+            self.mime_type, self.encoding = panutils.get_mime_data_from_file(
+                self.path)
         except Exception as ex:
             self.mime_type = 'Unknown'
             self.encoding = 'Unknown'
-            self.set_error(f'Failed to detect mimetype and encoding. Inner exception: {ex}')
+            self.set_error(
+                f'Failed to detect mimetype and encoding. Inner exception: {ex}')
 
     def __cmp__(self, other: 'PANFile') -> bool:
 
@@ -80,11 +85,14 @@ class PANFile:
             self.errors.append(error_msg)
         logging.error(f'{error_msg} ({self.path})')
 
-    def scan_with(self, dispatcher: Dispatcher) -> list[PAN]:
+    # def scan_with(self, dispatcher: Dispatcher) -> list[PAN]:
+    def scan_with(self, dispatcher: Dispatcher) -> list:
         """Checks the file for matching regular expressions: if a ZIP then each file in the ZIP (recursively) or the text in a document"""
 
         try:
-            match_list: list[PAN] = dispatcher.dispatch(
+            # match_list: list[PAN] = dispatcher.dispatch(
+            #     mime_type=self.mime_type, extension=self.extension, path=self.path, encoding=self.encoding)
+            match_list: list = dispatcher.dispatch(
                 mime_type=self.mime_type, extension=self.extension, path=self.path, encoding=self.encoding)
             if len(match_list) > 0:
                 self.matches.extend(match_list)

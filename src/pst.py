@@ -17,14 +17,16 @@ import struct
 from datetime import datetime, timedelta
 from enum import Enum, Flag
 from io import BufferedReader, BytesIO
-from typing import Generator, Literal, Optional, Type, Union
+from typing import Generator, Optional, Type, Union
 
 import panutils
 from enums import PropIdEnum, PTypeEnum
 from exceptions import PANHuntException
 
 _ValueType = Optional[Union[int, float, datetime, bool, str,
-                            bytes, list[int], list[float], list[datetime], list[bytes], list[str]]]
+                            bytes, list]]
+
+# Optional[Union[int, float, datetime, bool, str, bytes, list[int], list[float], list[datetime], list[bytes], list[str]]]
 
 
 ##############################################################################################################################
@@ -161,7 +163,7 @@ class Page:
     cEntMax: int
     cbEnt: int
     cLevel: int
-    rgEntries: list[Union['BTENTRY', 'NBTENTRY', 'BBTENTRY']]
+    rgEntries: list  # list[Union['BTENTRY', 'NBTENTRY', 'BBTENTRY']]
 
     def __init__(self, value_bytes: bytes, is_ansi: bool) -> None:
 
@@ -377,7 +379,7 @@ class Block:
     dwCRC: int
     data_block: bytes
     lcbTotal: int
-    rgbid: list[BID]
+    rgbid: list  # list[BID]
 
     def __init__(self, value_bytes: bytes, offset: int, data_size: int, is_ansi: bool, bid_check, bCryptMethod: CryptMethodEnum) -> None:
 
@@ -455,7 +457,8 @@ class Block:
 
             elif self.btype == 2:  # SLBLOCK, SIBLOCK
 
-                self.rgentries: list[SIENTRY | SLENTRY] = []
+                self.rgentries: list = []  # list[SIENTRY | SLENTRY]
+
                 if self.cLevel == 0:  # SLBLOCK
                     self.block_type = Block.btypeSLBLOCK
                     for i in range(self.cEnt):
@@ -483,8 +486,8 @@ class NBD:
 
     fd: BufferedReader
     header: 'Header'
-    nbt_entries: dict[int, NBTENTRY]
-    bbt_entries: dict[int, BBTENTRY]
+    nbt_entries: dict  # dict[int, NBTENTRY]
+    bbt_entries: dict  # dict[int, BBTENTRY]
 
     def __init__(self, fd: BufferedReader, header: 'Header') -> None:
 
@@ -526,10 +529,11 @@ class NBD:
         self.fd.seek(offset)
         return Block(self.fd.read(block_size), offset, data_size, self.header.is_ansi, bid, self.header.bCryptMethod)
 
-    def fetch_all_block_data(self, bid: BID) -> list[bytes]:
+    def fetch_all_block_data(self, bid: BID) -> list:  # list[bytes]
         """returns list of block datas"""
 
-        data_list: list[bytes] = []
+        data_list: list = []  # list[bytes]
+
         block: Block = self.fetch_block(bid)
         if block.block_type == Block.btypeData:
             data_list.append(block.data_block)
@@ -552,10 +556,10 @@ class NBD:
                 'Invalid block type (not data/XBLOCK/XXBLOCK), got %s' % block.block_type)
         return data_list
 
-    def fetch_subnodes(self, bid: BID) -> dict[int, SLENTRY]:
+    def fetch_subnodes(self, bid: BID) -> dict:  # dict[int, SLENTRY]
         """ get dictionary of subnode SLENTRYs for subnode bid"""
 
-        subnodes: dict[int, SLENTRY] = {}
+        subnodes: dict = {}  # dict[int, SLENTRY]
         block: Block = self.fetch_block(bid)
         if block.block_type == Block.btypeSLBLOCK:
             for entry in block.rgentries:
@@ -574,10 +578,12 @@ class NBD:
                 'Invalid block type (not SLBLOCK/SIBLOCK), got %s' % block.block_type)
         return subnodes
 
-    def get_page_leaf_entries(self, entry_type: Type[NBTENTRY] | Type[BBTENTRY], page_offset: int) -> dict[int, NBTENTRY | BBTENTRY]:
+    # dict[int, NBTENTRY | BBTENTRY]:
+    def get_page_leaf_entries(self, entry_type: Type[NBTENTRY] | Type[BBTENTRY], page_offset: int) -> dict:
         """ entry type is NBTENTRY or BBTENTRY"""
 
-        leaf_entries: dict[int, NBTENTRY | BBTENTRY] = {}
+        # dict[int, NBTENTRY | BBTENTRY]
+        leaf_entries: dict = {}
         page: Page = self.fetch_page(page_offset)
         for entry in page.rgEntries:
 
@@ -629,7 +635,7 @@ class HID:
 class HNPAGEMAP:
     cAlloc: int
     cFree: int
-    rgibAlloc: list[int]
+    rgibAlloc: list  # list[int]
 
     def __init__(self, value_bytes: bytes) -> None:
 
@@ -648,16 +654,17 @@ class HN:
     bTypePC: int = 0xBC
 
     nbt_entry: NBTENTRY
-    data_sections: list[bytes]
+    data_sections: list  # list[bytes]
     ltp: 'LTP'
-    hnpagemaps: list[HNPAGEMAP]
-    subnodes: Optional[dict[int, SLENTRY]] = None
+    hnpagemaps: list  # list[HNPAGEMAP]
+    subnodes: Optional[dict] = None  # Optional[dict[int, SLENTRY]]
     bSig: int
     bClientSig: int
     hidUserRoot: HID
     rgbFillLevel: int
 
-    def __init__(self, nbt_entry: NBTENTRY, ltp: 'LTP', data_sections: list[bytes]) -> None:
+    # list[bytes]
+    def __init__(self, nbt_entry: NBTENTRY, ltp: 'LTP', data_sections: list) -> None:
         """data_sections = list of data sections from blocks"""
 
         self.nbt_entry = nbt_entry
@@ -733,7 +740,7 @@ class BTH:
     cbEnt: int
     bIdxLevels: int
     hidRoot: HID
-    bth_data_list: list[BTHData]
+    bth_data_list: list  # list[BTHData]
 
     def __init__(self, hn: HN, bth_hid: HID) -> None:
         """ hn = HN heapnode, bth_hid is hid of BTH header"""
@@ -747,14 +754,21 @@ class BTH:
         if self.bType != HN.bTypeBTH:
             raise PANHuntException('Invalid BTH Type %s' % self.bType)
         self.bth_data_list = []
-        bth_working_stack: list[BTHIntermediate] = []
+        bth_working_stack: list = []  # list[BTHIntermediate]
+
         if self.hidRoot.hidIndex != 0:
             value_bytes: bytes = hn.get_hid_data(self.hidRoot)
-            bth_record_list: list[BTHData | BTHIntermediate] = self.get_bth_records(
+
+            # list[BTHData | BTHIntermediate]
+            bth_record_list: list = self.get_bth_records(
                 value_bytes, self.bIdxLevels)
-            bth_data_list: list[BTHData] = [
+
+            # list[BTHData]
+            bth_data_list: list = [
                 bthdata for bthdata in bth_record_list if isinstance(bthdata, BTHData)]
-            bth_intermediate_list: list[BTHIntermediate] = [
+
+            # list[BTHIntermediate]
+            bth_intermediate_list: list = [
                 bthim for bthim in bth_record_list if isinstance(bthim, BTHIntermediate)]
 
             if self.bIdxLevels == 0:  # no intermediate levels
@@ -772,9 +786,11 @@ class BTH:
                     else:
                         bth_working_stack.extend(bth_intermediate_list)
 
-    def get_bth_records(self, value_bytes: bytes, bIdxLevel: int) -> list[BTHData | BTHIntermediate]:
+    # list[BTHData | BTHIntermediate]
+    def get_bth_records(self, value_bytes: bytes, bIdxLevel: int) -> list:
 
-        bth_record_list: list[BTHData | BTHIntermediate] = []
+        bth_record_list: list = []  # list[BTHData | BTHIntermediate]
+
         if bIdxLevel == 0:  # leaf
             record_size: int = self.cbKey + self.cbEnt
             records: int = len(value_bytes) // record_size
@@ -834,7 +850,9 @@ class PCBTHData:
                 else:
                     raise PANHuntException(
                         'Invalid NID subnode reference %s' % self.subnode_nid)
-                data_list: list[bytes] = hn.ltp.nbd.fetch_all_block_data(
+
+                # list[bytes]
+                data_list: list = hn.ltp.nbd.fetch_all_block_data(
                     subnode_nid_bid)
                 self.value = ptype.value(b''.join(data_list))
 
@@ -858,8 +876,8 @@ class PstPTypeWrapper:
         """value_bytes is normally a string of bytes, but if multi and variable, bytes is a list of bytes"""
 
         ul_count: int
-        rgul_data_offsets: list[int]
-        data_list: list[bytes]
+        rgul_data_offsets: list  # list[int]
+        data_list: list  # list[bytes]
 
         if self.ptype == PTypeEnum.PtypInteger16:
             return panutils.unpack_integer('h', value_bytes)
@@ -922,7 +940,8 @@ class PstPTypeWrapper:
         if self.ptype == PTypeEnum.PtypMultipleString:
             ul_count, rgul_data_offsets = self.get_multi_value_offsets(
                 value_bytes)
-            s: list[str] = []
+            s: list = []  # list[str]
+
             for i in range(ul_count):
                 s.append(
                     value_bytes[rgul_data_offsets[i]:rgul_data_offsets[i + 1]].decode('utf-16-le'))
@@ -959,15 +978,21 @@ class PstPTypeWrapper:
         # raise PSTException(
         #     f"Invalid PTypeEnum for type {self.ptype} and value {value_bytes!r}")
 
-    def unpack_list_int(self, value_bytes: bytes, bit_size: Literal[16, 32, 64]) -> list[int]:
-        format_dict: dict[int, str] = {16: 'h', 32: 'i', 64: 'q'}
+    # list[int]
+    def unpack_list_int(self, value_bytes: bytes, bit_size: int) -> list:
+        '''bit_size: Literal[16, 32, 64]'''
+
+        format_dict: dict = {16: 'h', 32: 'i', 64: 'q'}  # dict[int, str]
         buffer_size = (bit_size // 8)
         count: int = len(value_bytes) // buffer_size
         return [panutils.unpack_integer(
             format_dict[bit_size], value_bytes[i * buffer_size:(i + 1) * buffer_size]) for i in range(count)]
 
-    def unpack_list_float(self, value_bytes: bytes, bit_size: Literal[32, 64]) -> list[float]:
-        format_dict: dict[int, str] = {32: 'f', 64: 'd'}
+    # list[float]
+    def unpack_list_float(self, value_bytes: bytes, bit_size: int) -> list:
+        '''bit_size: Literal[32, 64]'''
+
+        format_dict: dict = {32: 'f', 64: 'd'}  # dict[int, str]
         buffer_size = (bit_size // 8)
         count: int = len(value_bytes) // buffer_size
         return [panutils.unpack_float(
@@ -981,10 +1006,13 @@ class PstPTypeWrapper:
 
         return datetime(year=1601, month=1, day=1) + timedelta(microseconds=panutils.unpack_integer('q', time_bytes) / 10.0)
 
-    def get_multi_value_offsets(self, value_bytes: bytes) -> tuple[int, list[int]]:
+    # tuple[int, list[int]]:
+    def get_multi_value_offsets(self, value_bytes: bytes) -> tuple:
 
         ul_count: int = panutils.unpack_integer('I', value_bytes[:4])
-        rgul_data_offsets: list[int] = [panutils.unpack_integer(
+
+        # list[int]
+        rgul_data_offsets: list = [panutils.unpack_integer(
             'I', value_bytes[(i + 1) * 4:(i + 2) * 4]) for i in range(ul_count)]
 
         rgul_data_offsets.append(len(value_bytes))
@@ -995,7 +1023,7 @@ class PC:  # Property Context
 
     hn: HN
     bth: BTH
-    properties: dict[int, PCBTHData]
+    properties: dict  # dict[int, PCBTHData]
 
     def __init__(self, hn: HN) -> None:
 
@@ -1080,11 +1108,11 @@ class TC:  # Table Context
     cCols: int
     hnidRows: HID | NID
     hidRowIndex: HID
-    rgib: tuple[int, int, int, int]
-    rgTCOLDESC: list[TCOLDESC]
+    rgib: tuple  # tuple[int, int, int, int]
+    rgTCOLDESC: list  # list[TCOLDESC]
     hidIndex: bytes
-    RowIndex: dict[int, TCROWID]
-    RowMatrix: dict[int, dict[int, _ValueType]]
+    RowIndex: dict  # dict[int, TCROWID]
+    RowMatrix: dict  # dict[int, dict[int, _ValueType]]
 
     def __init__(self, hn: HN) -> None:
 
@@ -1117,7 +1145,7 @@ class TC:  # Table Context
     def setup_row_index(self) -> None:
 
         # key is dwRowID, value is dwRowIndex
-        self.RowIndex: dict[int, TCROWID] = {}
+        self.RowIndex = {}
         if not (self.hnidRows.is_hid and self.hnidRows.hidIndex == 0):  # type: ignore
             row_index_bth: BTH = BTH(self.hn, self.hidRowIndex)
             if row_index_bth.cbKey != 4:
@@ -1130,7 +1158,7 @@ class TC:  # Table Context
     def setup_row_matrix(self) -> None:
 
         self.RowMatrix = {}
-        row_matrix_data: list[bytes]
+        row_matrix_data: list  # list[bytes]
 
         if self.RowIndex:
             if self.hn.ltp.nbd.header.is_ansi:
@@ -1169,7 +1197,7 @@ class TC:  # Table Context
                 dwRowID: int = panutils.unpack_integer('I', row_bytes[:4])
                 rgbCEB: bytes = row_bytes[self.rgib[TC.TCI_1b]:]
 
-                rowvals: dict[int, _ValueType] = {}
+                rowvals: dict = {}  # dict[int, _ValueType]
                 for tcoldesc in self.rgTCOLDESC:
                     is_fCEB: bool = (
                         (rgbCEB[tcoldesc.iBit // 8] & (1 << (7 - (tcoldesc.iBit % 8)))) != 0)
@@ -1213,7 +1241,8 @@ class TC:  # Table Context
             raise PANHuntException(
                 'Row Matrix Value HNID Subnode invalid: %s' % subnode_nid)
 
-        data_sectors: list[bytes] = self.hn.ltp.nbd.fetch_all_block_data(
+        # list[bytes]
+        data_sectors: list = self.hn.ltp.nbd.fetch_all_block_data(
             subnode_nid_bid)
         return ptype.value(b''.join(data_sectors))
 
@@ -1224,8 +1253,9 @@ class TC:  # Table Context
     def get_context_value(self, row_index: int, prop_id: PropIdEnum) -> _ValueType:
 
         row_id: int = self.get_row_ID(row_index)
-        row_values: dict[int,
-                         _ValueType] = self.RowMatrix[row_id]
+
+        # dict[int, _ValueType]
+        row_values: dict = self.RowMatrix[row_id]
         if prop_id.value in row_values.keys():
             return row_values[prop_id.value]
         return None
@@ -1246,8 +1276,8 @@ class LTP:
     def __init__(self, nbd: NBD) -> None:
 
         self.nbd: NBD = nbd
-
-        self.ptypes: dict[PTypeEnum, PstPTypeWrapper] = {
+        # dict[PTypeEnum, PstPTypeWrapper]
+        self.ptypes: dict = {
             PTypeEnum.PtypInteger16: PstPTypeWrapper(PTypeEnum.PtypInteger16, 2, False, False),
             PTypeEnum.PtypInteger32: PstPTypeWrapper(PTypeEnum.PtypInteger32, 4, False, False),
             PTypeEnum.PtypFloating32: PstPTypeWrapper(PTypeEnum.PtypFloating32, 4, False, False),
@@ -1286,14 +1316,17 @@ class LTP:
     def get_pc_by_nid(self, nid: NID) -> PC:
 
         nbt_entry: NBTENTRY = self.nbd.nbt_entries[nid.nid]
-        block_data_list: list[bytes] = self.nbd.fetch_all_block_data(
+
+        # list[bytes]
+        block_data_list: list = self.nbd.fetch_all_block_data(
             nbt_entry.bidData)
         hn: HN = HN(nbt_entry, self, block_data_list)
         return PC(hn)
 
     def get_pc_by_slentry(self, slentry: SLENTRY) -> PC:
 
-        block_data_list: list[bytes] = self.nbd.fetch_all_block_data(
+        # list[bytes]
+        block_data_list: list = self.nbd.fetch_all_block_data(
             slentry.bidData)
         # TODO: Solve HN with SLENTRY parameter
         hn: HN = HN(slentry, self, block_data_list)
@@ -1303,14 +1336,17 @@ class LTP:
     def get_tc_by_nid(self, nid: NID) -> TC:
 
         nbt_entry: NBTENTRY = self.nbd.nbt_entries[nid.nid]
-        block_data_list: list[bytes] = self.nbd.fetch_all_block_data(
+
+        # list[bytes]
+        block_data_list: list = self.nbd.fetch_all_block_data(
             nbt_entry.bidData)
         hn: HN = HN(nbt_entry, self, block_data_list)
         return TC(hn)
 
     def get_tc_by_slentry(self, slentry: SLENTRY) -> TC:
 
-        block_data_list: list[bytes] = self.nbd.fetch_all_block_data(
+        # list[bytes]
+        block_data_list: list = self.nbd.fetch_all_block_data(
             slentry.bidData)
         # TODO: Solve HN with SLENTRY parameter
         hn: HN = HN(slentry, self, block_data_list)
@@ -1405,8 +1441,8 @@ class Folder:
     tc_contents: Optional[TC]
     tc_hierarchy: Optional[TC]
     tc_fai: Optional[TC]
-    subfolders: list[SubFolder]
-    submessages: list[SubMessage]
+    subfolders: list  # list[SubFolder]
+    submessages: list  # list[SubMessage]
 
     def __init__(self, nid: NID, ltp: LTP, parent_path='', messaging: Optional['Messaging'] = None) -> None:
 
@@ -1464,8 +1500,9 @@ class Folder:
         except PANHuntException as e:
             logging.error(e)
 
-    def __get_submessages(self, ltp: LTP) -> list[SubMessage]:
-        submessages: list[SubMessage] = []
+    def __get_submessages(self, ltp: LTP) -> list:  # list[SubMessage]
+        submessages: list = []  # list[SubMessage]
+
         if self.tc_contents:
             for RowIndex in range(len(self.tc_contents.RowIndex)):
                 if RowIndex in list(self.tc_contents.RowIndex.keys()):
@@ -1555,8 +1592,8 @@ class Message:
     EntryId: bytes
     tc_attachments: Optional[TC]
     tc_recipients: Optional[TC]
-    subrecipients: list[SubRecipient]
-    subattachments: list[SubAttachment]
+    subrecipients: list  # list[SubRecipient]
+    subattachments: list  # list[SubAttachment]
     Body: Optional[str] = None
     Subject: Optional[str] = None
     Read: bool
@@ -1575,7 +1612,9 @@ class Message:
 
         if parent_message and parent_message.pc.hn.subnodes and nbd:
             subnode: SLENTRY = parent_message.pc.hn.subnodes[nid.nid]
-            block_data_list: list[bytes] = nbd.fetch_all_block_data(
+
+            # list[bytes]
+            block_data_list: list = nbd.fetch_all_block_data(
                 subnode.bidData)
             # TODO: Solve HN with SLENTRY parameter
             hn: HN = HN(subnode, ltp, block_data_list)
@@ -1684,8 +1723,9 @@ class Message:
 
         self.subrecipients = self.__read_subrecipients()
 
-    def __read_subrecipients(self) -> list[SubRecipient]:
-        subrecipients: list[SubRecipient] = []
+    def __read_subrecipients(self) -> list:  # list[SubRecipient]
+        subrecipients: list = []  # list[SubRecipient]
+
         if self.tc_recipients:
             for i in range(len(self.tc_recipients.RowIndex)):
 
@@ -1723,8 +1763,9 @@ class Message:
 
         return subrecipients
 
-    def __read_attachments(self) -> list[SubAttachment]:
-        subattachments: list[SubAttachment] = []
+    def __read_attachments(self) -> list:  # list[SubAttachment]
+        subattachments: list = []  # list[SubAttachment]
+
         if self.tc_attachments:
             for i in range(len(self.tc_attachments.RowIndex)):
                 nid: NID = self.tc_attachments.RowIndex[i].nid
@@ -1877,7 +1918,7 @@ class Messaging:
     """Messaging Layer"""
 
     PasswordCRC32Hash: Optional[int]
-    nameid_entries: list[NAMEID]
+    nameid_entries: list  # list[NAMEID]
     ltp: LTP
     message_store: PC
     store_record_key: bytes
@@ -2455,7 +2496,9 @@ class PST:
 
         root_folder: Folder = self.messaging.get_folder(
             self.messaging.root_entryid, '')
-        subfolder_stack: list[SubFolder] = root_folder.subfolders
+
+        # list[SubFolder]
+        subfolder_stack: list = root_folder.subfolders
         yield root_folder
 
         # Deleted Items should also be in root folder, so don't need to get this one
@@ -2571,7 +2614,7 @@ class PST:
 
         if dictionary_file:
             with open(dictionary_file, 'r', encoding='ascii') as f:
-                dic_entries: list[str] = f.readlines()
+                dic_entries: list = f.readlines()  # list[str]
 
                 for password_check in dic_entries:
                     crc_check: int = CRC.ComputeCRC(
