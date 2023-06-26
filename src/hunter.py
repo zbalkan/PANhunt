@@ -1,5 +1,5 @@
 import os
-from typing import Final, Generator, Optional
+from typing import Generator, Optional
 
 import panutils
 from config import PANHuntConfiguration
@@ -9,12 +9,12 @@ from PAN import PAN
 from PANFile import PANFile
 from patterns import CardPatterns
 
-TEXT_FILE_SIZE_LIMIT: Final[int] = 1073741824  # 1Gb
+TEXT_FILE_SIZE_LIMIT: int = 1_073_741_824  # 1Gb
 
 
 class Hunter:
 
-    __all_files: list[PANFile]
+    __all_files: list  # list[PANFile]
     __conf: PANHuntConfiguration
     __patterns: CardPatterns
 
@@ -23,24 +23,28 @@ class Hunter:
         self.__all_files = []
         self.__patterns = CardPatterns()
 
-    def get_files(self) -> tuple[PANFile, ...]:
+    def get_files(self) -> tuple:  # tuple[PANFile, ...]:
         return tuple(self.__all_files)
 
     def add_single_file(self, filename: str, dir: str) -> None:
         file: PANFile = self.__try_init_PANfile(filename=filename, dir=dir)
         self.__all_files.append(file)
 
-    def get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
+    # def get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
+    def get_scannable_files(self) -> Generator[tuple, None, None]:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
 
-        doc_files: list[PANFile] = []
-        root_dir_dirs: Optional[list[str]] = None
+        # list[PANFile]
+        doc_files: list = []
+        # root_dir_dirs: Optional[list[str]] = None
+        root_dir_dirs: Optional[list] = None
         root_items_completed = 0
         docs_found = 0
         root_total_items: int = 0
 
         for root, sub_ds, files in os.walk(self.__conf.search_dir):
-            sub_dirs: list[str] = [check_dir for check_dir in sub_ds if os.path.join(
+            # list[str]
+            sub_dirs: list = [check_dir for check_dir in sub_ds if os.path.join(
                 root, check_dir)
                 .lower() not in self.__conf.excluded_directories]
             if not root_dir_dirs:
@@ -66,7 +70,8 @@ class Hunter:
 
         self.__all_files += doc_files
 
-    def scan_files(self) -> Generator[tuple[int, int], None, None]:
+    # def scan_files(self) -> Generator[tuple[int, int], None, None]:
+    def scan_files(self) -> Generator[tuple, None, None]:
         """ Searches files in doc_files list for regular expressions"""
 
         files_completed: int = 0
@@ -75,7 +80,8 @@ class Hunter:
             excluded_pans_list=self.__conf.excluded_pans, search_extensions=self.__conf.search_extensions, patterns=self.__patterns)
 
         for pan_file in self.__all_files:
-            matches: list[PAN] = pan_file.scan_with(dispatcher=dispatcher)
+            # matches: list[PAN] = pan_file.scan_with(dispatcher=dispatcher)
+            matches: list = pan_file.scan_with(dispatcher=dispatcher)
             matches_found += len(matches)
             files_completed += 1
             yield matches_found, files_completed

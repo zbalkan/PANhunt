@@ -13,21 +13,18 @@ import os
 import struct
 from datetime import datetime, timedelta
 from io import BufferedReader
-from typing import Literal, Optional, TypeAlias, Union
+from typing import Optional, Union
 
 import panutils
 from enums import PropIdEnum, PTypeEnum
 from exceptions import PANHuntException
 
-_FilePathOrFileObject: TypeAlias = BufferedReader | int | str | bytes | os.PathLike[
+_FilePathOrFileObject = BufferedReader | int | str | bytes | os.PathLike[
     str] | os.PathLike[bytes]
 
 _ValueType = Optional[Union[int, float, datetime, bool, str,
-                            bytes, list[int], list[float], list[datetime], list[bytes], list[str]]]
-
-
-# error_log_list: list = []
-
+                            bytes, list]]
+# Optional[Union[int, float, datetime, bool, str, bytes, list[int], list[float], list[datetime], list[bytes], list[str]]]
 
 ###################################################################################################################################
 #  __  __ ____         ____ _____ ____
@@ -47,7 +44,7 @@ class FAT:
     FREESECT = 0xFFFFFFFF
 
     mscfb: 'MSCFB'
-    entries: list[int]
+    entries: list  # list[int]
 
     def __init__(self, mscfb: 'MSCFB') -> None:
 
@@ -85,7 +82,7 @@ class MiniFAT:
 
     SECTORSIZE: int = 64
 
-    entries: list[int]
+    entries: list  # list[int]
     mscfb: 'MSCFB'
     mini_stream_bytes: bytes
 
@@ -122,13 +119,14 @@ class MiniFAT:
 
     def __str__(self) -> str:
 
+        # type: ignore
         return ', '.join([f"{hex(sector)}:{hex(entry)}" for sector, entry in zip(list(range(len(self.entries))), self.entries)])
 
 
 class Directory:
 
     mscfb: 'MSCFB'
-    entries: list['DirectoryEntry']
+    entries: list  # list['DirectoryEntry']
 
     def __init__(self, mscfb: 'MSCFB') -> None:
 
@@ -137,9 +135,10 @@ class Directory:
             self.mscfb.FirstDirectorySectorLocation)
         self.set_entry_children(self.entries[0])  # recursive
 
-    def get_all_directory_entries(self, start_sector: int) -> list['DirectoryEntry']:
+    # list['DirectoryEntry']:
+    def get_all_directory_entries(self, start_sector: int) -> list:
 
-        entries: list[DirectoryEntry] = []
+        entries: list = []  # list[DirectoryEntry]
         sector: int = start_sector
         while sector != FAT.ENDOFCHAIN:
             entries.extend(self.get_directory_sector(sector))
@@ -149,7 +148,7 @@ class Directory:
     def set_entry_children(self, dir_entry: 'DirectoryEntry') -> None:
 
         dir_entry.children = {}
-        child_ids_queue: list[int] = []
+        child_ids_queue: list = []  # list[int]
         if dir_entry.ChildID != DirectoryEntry.NOSTREAM:
             child_ids_queue.append(dir_entry.ChildID)
             while child_ids_queue:
@@ -166,9 +165,10 @@ class Directory:
                 if child_entry.ChildID != DirectoryEntry.NOSTREAM:
                     self.set_entry_children(child_entry)
 
-    def get_directory_sector(self, sector: int) -> list['DirectoryEntry']:
+    # list['DirectoryEntry']
+    def get_directory_sector(self, sector: int) -> list:
 
-        entries: list[DirectoryEntry] = []
+        entries: list = []  # list['DirectoryEntry']
         sector_bytes: bytes = self.mscfb.get_sector_bytes(sector)
         sector_directory_entry_count: int = int(self.mscfb.SectorSize / 128)
         for i in range(sector_directory_entry_count):
@@ -203,7 +203,7 @@ class DirectoryEntry:
     StreamSize: int
     StartingSectorLocation: int
     stream_data: bytes
-    children: dict[str, 'DirectoryEntry']
+    children: dict  # dict[str, 'DirectoryEntry']
 
     def __init__(self, mscfb: 'MSCFB', directory_bytes: bytes) -> None:
 
@@ -264,7 +264,8 @@ class DirectoryEntry:
 
         line_pfx: str = '\t' * level
         s: str = ''
-        sorted_entries: list[DirectoryEntry] = [
+        # list['DirectoryEntry']
+        sorted_entries: list = [
             i for i in self.children.values()]
         sorted_entries.sort(key=lambda x: x.Name)
         for child_entry in sorted_entries:
@@ -303,7 +304,7 @@ class MSCFB:
     MiniFATSectors: int
     FirstDIFATSectorLocation: int
     DIFATSectors: int
-    DIFAT: list[int]
+    DIFAT: list  # list[int]
     signature: bytes
     CLSID: bytes
 
@@ -388,7 +389,7 @@ class PropertyStream:
     EMBEDDED_MSG_HEADER_SIZE: int = 24
 
     msmsg: 'MSMSG'
-    properties: dict[int, 'PropertyEntry']
+    properties: dict  # dict[int, 'PropertyEntry']
     NextRecipientID: int
     NextAttachmentID: int
     RecipientCount: int
@@ -470,12 +471,12 @@ class PropertyEntry:
                 else:  # PtypMultipleString8 or PtypMultipleString
                     len_item_size = 4
 
-                value_lengths: list[int] = []
+                value_lengths: list = []  # list[int]
                 for i in range(int(len(property_bytes) / len_item_size)):
                     value_lengths.append(panutils.unpack_integer(
                         'I', property_bytes[i * len_item_size:i * len_item_size + 4]))
 
-                property_byte_list: list[bytes] = []
+                property_byte_list: list = []  # list[bytes]
                 for i in range(len(value_lengths)):
                     index_stream_name: str = f"{stream_name}-{panutils.to_zeropaddedhex(i, 8)}"
                     property_byte_list.append(
@@ -589,15 +590,19 @@ class MsgPTypeWrapper:
             return value_bytes
         raise PANHuntException(f"Invalid PTypeEnum for value {self.ptype}")
 
-    def unpack_list_int(self, value_bytes: bytes, bit_size: Literal[16, 32, 64]) -> list[int]:
-        format_dict: dict[int, str] = {16: 'h', 32: 'i', 64: 'q'}
+    # list[int]
+    def unpack_list_int(self, value_bytes: bytes, bit_size: int) -> list:
+        '''bit_size: Literal[16, 32, 64] # Downgraded to python3.6 '''
+        format_dict: dict = {16: 'h', 32: 'i', 64: 'q'}  # dict[int, str]
         buffer_size = (bit_size // 8)
         count: int = len(value_bytes) // buffer_size
         return [panutils.unpack_integer(
             format_dict[bit_size], value_bytes[i * buffer_size:(i + 1) * buffer_size]) for i in range(count)]
 
-    def unpack_list_float(self, value_bytes: bytes, bit_size: Literal[32, 64]) -> list[float]:
-        format_dict: dict[int, str] = {32: 'f', 64: 'd'}
+    # list[float]
+    def unpack_list_float(self, value_bytes: bytes, bit_size: int) -> list:
+        '''bit_size: Literal[32, 64] # Downgraded to python3.6 '''
+        format_dict: dict = {32: 'f', 64: 'd'}  # dict[int, str]
         buffer_size = (bit_size // 8)
         count: int = len(value_bytes) // buffer_size
         return [panutils.unpack_float(
@@ -611,10 +616,12 @@ class MsgPTypeWrapper:
 
         return datetime(year=1601, month=1, day=1) + timedelta(microseconds=panutils.unpack_integer('q', time_bytes) / 10.0)
 
-    def get_multi_value_offsets(self, value_bytes: bytes) -> tuple[int, list[int]]:
+    # tuple[int, int]:
+    def get_multi_value_offsets(self, value_bytes: bytes) -> tuple:
 
         ul_count: int = panutils.unpack_integer('I', value_bytes[:4])
-        rgul_data_offsets: list[int] = [panutils.unpack_integer(
+        # list[int]
+        rgul_data_offsets: list = [panutils.unpack_integer(
             'I', value_bytes[(i + 1) * 4:(i + 2) * 4]) for i in range(ul_count)]
 
         rgul_data_offsets.append(len(value_bytes))
@@ -706,9 +713,9 @@ class MSMSG:
     validMSG: bool
     root_dir_entry: DirectoryEntry
     prop_stream: PropertyStream
-    recipients: list[Recipient]
-    attachments: list[Attachment]
-    ptype_mapping: dict[PTypeEnum, MsgPTypeWrapper]
+    recipients: list  # list[Recipient]
+    attachments: list  # list[Attachment]
+    ptype_mapping: dict  # dict[PTypeEnum, MsgPTypeWrapper]
     Subject: str
     ClientSubmitTime: Optional[datetime]
     SentRepresentingName: str

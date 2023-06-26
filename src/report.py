@@ -1,4 +1,3 @@
-from genericpath import exists
 import json
 import logging
 import os
@@ -7,6 +6,8 @@ import sys
 import time
 from datetime import datetime, timedelta
 from typing import Optional, Sequence
+
+from genericpath import exists
 
 import panutils
 from enums import FileCategoryEnum
@@ -21,8 +22,8 @@ class Report:
     searched: str
     excluded: str
     pans_found: int
-    matched_files: list[PANFile]
-    interesting_files: list[PANFile]
+    matched_files: list  # list[PANFile]
+    interesting_files: list  # list[PANFile]
 
     __command: str
     __timestamp: str
@@ -30,11 +31,12 @@ class Report:
 
     def __init__(self,
                  search_dir: str,
-                 excluded_dirs: list[str],
+                 excluded_dirs: list,
                  pans_found: int,
                  all_files: Sequence[PANFile],
                  start: datetime,
                  end: datetime) -> None:
+        '''excluded_dirs: list[str]'''
         self.total_files = len(all_files)
         self.start = start
         self.end = end
@@ -106,9 +108,12 @@ class Report:
         report['total_files'] = self.total_files
         report['pans_found'] = self.pans_found
 
-        matched_items: dict[str, list[str]] = {}
+        # dict[str, list[str]]
+        matched_items: dict = {}
         for pan_file in self.matched_files:
-            items: list[str] = []
+
+            # list[str]
+            items: list = []
             for pan in pan_file.matches:
                 item: str = ''
                 if pan.filename != '':
