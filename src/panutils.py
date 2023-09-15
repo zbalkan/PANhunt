@@ -20,23 +20,26 @@ def get_root_dir() -> str:
         return './'
 
 
-def get_mime_data_from_buffer(value_bytes: bytes) -> tuple[str, str]:
+def get_mime_data_from_buffer(value_bytes: bytes) -> tuple:  # tuple[str, str]:
     m = magic.Magic(mime=True, mime_encoding=True)
-    buffer:bytes
+    buffer: bytes
     if (len(value_bytes) < 2048):
         buffer = value_bytes
     else:
         buffer = value_bytes[:2048]
-    mime_data: list[str] = m.from_buffer(buffer).split(';')
+
+    # list[str]
+    mime_data: list = m.from_buffer(buffer).split(';')
     mime_type: str = mime_data[0].strip().lower()
     encoding: str = mime_data[1].replace(
         ' charset=', '').strip().lower()
     return mime_type, encoding
 
 
-def get_mime_data_from_file(path: str) -> tuple[str, str]:
+def get_mime_data_from_file(path: str) -> tuple:  # tuple[str, str]:
     m = magic.Magic(mime=True, mime_encoding=True)
-    mime_data: list[str] = m.from_file(filename=path).split(';')
+    # list[str]
+    mime_data: list = m.from_file(filename=path).split(';')
     mime_type: str = mime_data[0].strip().lower()
     encoding: str = mime_data[1].replace(
         ' charset=', '').strip().lower()
@@ -77,7 +80,7 @@ def get_ext(file_name: str) -> str:
     return pathlib.Path(file_name).suffix.lower()
 
 
-def get_exts(file_name: str) -> list[str]:
+def get_exts(file_name: str) -> list:  # list[str]:
 
     return [ext.lower() for ext in pathlib.Path(file_name).suffixes]
 
@@ -115,7 +118,7 @@ def unpack_bytes(format: str, buffer: bytes) -> bytes:
     if re.compile(r'\d+s').match(format):
         return bytes(struct.unpack(format, buffer)[0])
     else:
-        raise ArgumentError(format, buffer)
+        raise ValueError(format, buffer)
 
 
 def as_binary(value: Any) -> bytes:

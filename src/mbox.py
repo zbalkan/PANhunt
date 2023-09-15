@@ -8,16 +8,16 @@ from typing import IO, Any, Optional
 class Mbox:
 
     filename: str
-    mails: list['Mail']
+    mails: list  # list['Mail']
 
-    def __init__(self, path: str, value_bytes:Optional[bytes] = None) -> None:
+    def __init__(self, path: str, value_bytes: Optional[bytes] = None) -> None:
         self.filename = path
         self.mails = []
         mbox: mailbox.mbox
         mbox = mailbox.mbox(path)
         if value_bytes:
             mailbox.mbox(path=path,
-            factory=self.__from_buffer)
+                         factory=self.__from_buffer)
 
         for message in mbox:
             self.mails.append(Mail(message))
@@ -26,7 +26,6 @@ class Mbox:
         b: bytes = buffer.read()
         m = mailbox.mboxMessage(message=b)
         return m
-
 
     def __str__(self) -> str:
         d: dict = {}
@@ -41,7 +40,7 @@ class Mbox:
 class Mail:
     subject: str
     body: str
-    attachments: list['Attachment']
+    attachments: list  # list['Attachment']
 
     def __init__(self, message: mailbox.mboxMessage) -> None:
         self.subject = self.get_subject(message)
@@ -93,7 +92,8 @@ class Mail:
         for bp in body_payload_list:
             headers: dict = dict(bp._headers)
 
-            content_type: list[str] = str(
+            # list[str]
+            content_type: list = str(
                 headers.get('Content-Type')).split(';')
 
             if content_type[0] == 'text/plain':
@@ -110,13 +110,13 @@ class Mail:
         headers = dict(attachment_payload._headers)
         filename: str = str(
             headers.get('Content-Disposition'))\
-                .removeprefix('attachment;')\
-                .removeprefix('\n')\
-                .removeprefix('\t')\
-                .removeprefix(' ')\
-                .removeprefix('filename=')\
-                .removeprefix('\"')\
-                .removesuffix('"')
+            .removeprefix('attachment;')\
+            .removeprefix('\n')\
+            .removeprefix('\t')\
+            .removeprefix(' ')\
+            .removeprefix('filename=')\
+            .removeprefix('\"')\
+            .removesuffix('"')
 
         encoding: str = str(headers.get('Content-Transfer-Encoding'))
 
@@ -132,7 +132,8 @@ class Mail:
             else:
                 raw = str(attachment_payload.get_payload())
                 decoded: bytes = quopri.decodestring(raw)
-                self.attachments.append(Attachment(filename=filename, value_bytes=decoded))
+                self.attachments.append(Attachment(
+                    filename=filename, value_bytes=decoded))
         else:
             raise NotImplementedError(encoding)
 

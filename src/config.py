@@ -16,9 +16,12 @@ class PANHuntConfiguration:
     json_file: str
     json_dir: Optional[str]
     mask_pans: bool
-    excluded_directories: list[str]
-    search_extensions: dict[FileCategoryEnum, list[str]]
-    excluded_pans: list[str]
+    # excluded_directories: list[str]
+    excluded_directories: list
+    # search_extensions: dict[FileCategoryEnum, list[str]]
+    search_extensions: dict
+    # excluded_pans: list[str]
+    excluded_pans: list
 
     def __init__(self) -> None:
         if os.name == 'nt':
@@ -132,14 +135,17 @@ class PANHuntConfiguration:
     def get_report_path(self) -> str:
         return os.path.join(self.report_dir, self.report_file)
 
-    def get_filetype_per_extension(self) -> dict[str, FileCategoryEnum]:
-        extension_types: dict[str, FileCategoryEnum] = {}
+    # def get_filetype_per_extension(self) -> dict[str, FileCategoryEnum]:
+    def get_filetype_per_extension(self) -> dict:
+        # extension_types: dict[str, FileCategoryEnum] = {}
+        extension_types: dict = {}
         for ext_type, ext_list in self.search_extensions.items():
             for ext in ext_list:
                 extension_types[ext] = ext_type
         return extension_types
 
-    def get_accepted_exts(self) -> list[str]:
+    # def get_accepted_exts(self) -> list[str]:
+    def get_accepted_exts(self) -> list:
         return [ext for ext_list in list(self.search_extensions.values()) for ext in ext_list]
 
     @staticmethod

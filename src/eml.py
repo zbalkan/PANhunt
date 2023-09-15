@@ -10,11 +10,11 @@ class Eml:
 
     filename: str
     body: str
-    attachments: list['Attachment']
+    attachments: list  # list['Attachment']
 
     __text: str
 
-    def __init__(self, path: str, value_bytes:Optional[bytes] = None) -> None:
+    def __init__(self, path: str, value_bytes: Optional[bytes] = None) -> None:
         msg: message.Message
         if value_bytes:
             msg = parser.BytesParser().parsebytes(value_bytes)
@@ -55,7 +55,8 @@ class Eml:
     def parse_body(self, body_payload: Any) -> None:
         headers: dict = dict(body_payload._headers)
 
-        content_type: list[str] = str(headers.get('Content-Type')).split(';')
+        # list[str]
+        content_type: list = str(headers.get('Content-Type')).split(';')
 
         if content_type[0] == 'text/plain':
             charset: str = content_type[1].lstrip().removeprefix(
@@ -71,13 +72,13 @@ class Eml:
         headers = dict(attachment_payload._headers)
         filename: str = str(
             headers.get('Content-Disposition'))\
-                .removeprefix('attachment;')\
-                .removeprefix('\n')\
-                .removeprefix('\t')\
-                .removeprefix(' ')\
-                .removeprefix('filename=')\
-                .removeprefix('\"')\
-                .removesuffix('"')
+            .removeprefix('attachment;')\
+            .removeprefix('\n')\
+            .removeprefix('\t')\
+            .removeprefix(' ')\
+            .removeprefix('filename=')\
+            .removeprefix('\"')\
+            .removesuffix('"')
 
         encoding: str = str(headers.get('Content-Transfer-Encoding'))
 
@@ -89,7 +90,8 @@ class Eml:
         elif encoding == "7bit" or encoding == 'quoted-printable' or encoding == 'None':
             raw = str(attachment_payload.get_payload())
             decoded: bytes = quopri.decodestring(raw)
-            self.attachments.append(Attachment(filename=filename, value_bytes=decoded))
+            self.attachments.append(Attachment(
+                filename=filename, value_bytes=decoded))
         else:
             raise NotImplementedError(encoding)
 
