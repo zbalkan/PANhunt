@@ -42,7 +42,7 @@ class Hunter:
         docs_found = 0
         root_total_items: int = 0
 
-        for root, sub_ds, files in os.walk(self.__conf.search_dir):
+        for root, sub_ds, files in os.walk(top=self.__conf.search_dir):
             # list[str]
             sub_dirs: list = [check_dir for check_dir in sub_ds if os.path.join(
                 root, check_dir)
@@ -59,12 +59,11 @@ class Hunter:
             for filename in files:
                 if root == self.__conf.search_dir:
                     root_items_completed += 1
-                    if panutils.get_ext(filename).lower() in self.__conf.get_accepted_exts():
-                        pan_file: PANFile = self.__try_init_PANfile(
-                            filename=filename, dir=root)
-                        doc_files.append(pan_file)
-                        if not pan_file.errors:
-                            docs_found += 1
+                    pan_file: PANFile = self.__try_init_PANfile(
+                        filename=filename, dir=root)
+                    doc_files.append(pan_file)
+                    if not pan_file.errors:
+                        docs_found += 1
 
                 yield docs_found, root_total_items, root_items_completed
 
@@ -77,7 +76,7 @@ class Hunter:
         files_completed: int = 0
         matches_found: int = 0
         dispatcher = Dispatcher(
-            excluded_pans_list=self.__conf.excluded_pans, search_extensions=self.__conf.search_extensions, patterns=self.__patterns)
+            excluded_pans_list=self.__conf.excluded_pans, patterns=self.__patterns)
 
         for pan_file in self.__all_files:
             # matches: list[PAN] = pan_file.scan_with(dispatcher=dispatcher)
@@ -88,13 +87,9 @@ class Hunter:
 
     def __try_init_PANfile(self, filename: str, dir: str) -> PANFile:
         pan_file = PANFile(filename=filename, file_dir=dir)
-        if pan_file.extension.lower() in self.__conf.get_accepted_exts():
-            pan_file.set_file_stats()
-            pan_file.file_category = self.__conf.get_filetype_per_extension()[pan_file.extension.lower(
-            )]
-            if pan_file.file_category in (FileCategoryEnum.Text, FileCategoryEnum.Mail) and pan_file.size > TEXT_FILE_SIZE_LIMIT:
-                pan_file.file_category = FileCategoryEnum.Other
-                pan_file.set_error(
-                    f'File size {panutils.size_friendly(pan_file.size)} over limit of {panutils.size_friendly(TEXT_FILE_SIZE_LIMIT)} for checking for file \"{filename}\"')
+        pan_file.set_file_stats()
+        if pan_file.size > TEXT_FILE_SIZE_LIMIT:
+            pan_file.set_error(
+                error_msg=f'File size {panutils.size_friendly(size=pan_file.size)} over limit of {panutils.size_friendly(size=TEXT_FILE_SIZE_LIMIT)} for checking for file \"{filename}\"')
 
         return pan_file

@@ -36,6 +36,9 @@ With v1.3, breaking changes are implemented:
 - `.eml` and `.mbox` file scanning capability is added.
 - PDF file scanning capability is added. OCR is not working as expected yet.
 
+With v1.4, breaking changes are implemented:
+- Removed file extension based filtering. Now it relies on `magic` results.
+
 
 NB! There is at least 20% performance impact after refactoring. There are no performance improvements tried yet.
 
@@ -66,7 +69,7 @@ However, you are advised  use a virtual environment. Update the path on the `bui
 ## Usage
 
 ```
-usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-t TEXT_FILES] [-z ZIP_FILES] [-m MAIL_MESSAGES] [-a MAIL_ARCHIVES] [-l OTHER_FILES] [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
+usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
 
 PAN Hunt v1.3: search directories and sub directories for documents containing PANs.
 
@@ -75,11 +78,6 @@ options:
   -s SEARCH_DIR     base directory to search in (default: /)
   -f FILE_PATH      File path for single file scan (default: None)
   -x EXCLUDE_DIRS   directories to exclude from the search (default: C:\Windows,C:\Program Files,C:\Program Files (x86),/mnt,/dev,/proc)
-  -t TEXT_FILES     text file extensions to search (default:,.doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json)
-  -z ZIP_FILES      zip file extensions to search (default: .docx,.xlsx,.pptx,.zip)
-  -m MAIL_MESSAGES  email message file extensions to search (default: .msg,.eml)
-  -a MAIL_ARCHIVES  email archive file extensions to search (default: .pst,.mbox)
-  -l OTHER_FILES    other file extensions to list (NOT IMPLEMENTED) (default: .ost,.accdb,.mdb)
   -o REPORT_DIR     Report file directory for TXT formatted PAN report (default: ./)
   -j JSON_DIR       Report file directory for JSON formatted PAN report (default: None)
   -u                unmask PANs in output (default: False)

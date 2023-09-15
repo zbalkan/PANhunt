@@ -14,10 +14,9 @@ class Dispatcher:
     patterns: CardPatterns
 
     # def __init__(self, excluded_pans_list: list[str], search_extensions: dict[FileCategoryEnum, list[str]], patterns: CardPatterns) -> None:
-    def __init__(self, excluded_pans_list: list, search_extensions: dict, patterns: CardPatterns) -> None:
+    def __init__(self, excluded_pans_list: list, patterns: CardPatterns) -> None:
 
         self.excluded_pans_list = excluded_pans_list
-        self.search_extensions = search_extensions
         self.patterns = patterns
 
     # list[PAN]:
@@ -32,4 +31,4 @@ class Dispatcher:
         scanner_instance.encoding = encoding
 
         return scanner_instance.scan(
-            excluded_pans_list=self.excluded_pans_list, search_extensions=self.search_extensions)
+            excluded_pans_list=self.excluded_pans_list)

@@ -24,7 +24,7 @@ from hunter import Hunter
 from pbar import DocProgressbar
 from report import Report
 
-APP_VERSION: str = '1.3'
+APP_VERSION: str = '1.4'
 
 
 def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
@@ -144,16 +144,6 @@ def main() -> None:
     arg_parser.add_argument('-x', dest='exclude_dirs',
                             help='directories to exclude from the search', default='C:\\Windows,C:\\Program Files,C:\\Program Files (x86),/mnt,/dev,/proc')
     arg_parser.add_argument(
-        '-t', dest='text_files', help='text file extensions to search', default=',.doc,.xls,.ppt,.xml,.txt,.csv,.log,.rtf,.tmp,.bak,.rtf,.csv,.htm,.html,.js,.css,.md,.json')
-    arg_parser.add_argument(
-        '-z', dest='zip_files', help='zip file extensions to search', default='.docx,.xlsx,.pptx,.zip')
-    arg_parser.add_argument('-m', dest='mail_messages',
-                            help='email message file extensions to search', default='.msg,.eml')
-    arg_parser.add_argument(
-        '-a', dest='mail_archives', help='email archive file extensions to search', default='.pst,.mbox')
-    arg_parser.add_argument(
-        '-l', dest='other_files', help='other file extensions to list (NOT IMPLEMENTED)', default='.ost,.accdb,.mdb')
-    arg_parser.add_argument(
         '-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
     arg_parser.add_argument(
         '-j', dest='json_dir', help='Report file directory for JSON formatted PAN report')
@@ -178,11 +168,6 @@ def main() -> None:
     file_path = str(args.file_path)
     report_dir = str(args.report_dir)
     excluded_directories_string = str(args.exclude_dirs)
-    text_extensions_string = str(args.text_files)
-    zip_extensions_string = str(args.zip_files)
-    mail_message_extensions_string = str(args.mail_messages)
-    mail_archive_extensions_string = str(args.mail_archives)
-    other_extensions_string = str(args.other_files)
     mask_pans: bool = not args.unmask
     excluded_pans_string = str(args.exclude_pan)
     json_dir: Optional[str] = args.json_dir
@@ -204,11 +189,6 @@ def main() -> None:
                          json_dir=json_dir,
                          mask_pans=mask_pans,
                          excluded_directories_string=excluded_directories_string,
-                         text_extensions_string=text_extensions_string,
-                         zip_extensions_string=zip_extensions_string,
-                         mail_message_extensions_string=mail_message_extensions_string,
-                         mail_archive_extensions_string=mail_archive_extensions_string,
-                         other_extensions_string=other_extensions_string,
                          excluded_pans_string=excluded_pans_string)
 
     report: Report = hunt_pans(quiet=quiet, configuration=config)
