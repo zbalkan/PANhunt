@@ -1,8 +1,13 @@
+import gzip
 import io
+import lzma
 import os
+import tarfile
 import zipfile
 from abc import ABC, abstractmethod
-from typing import Optional, Type
+from typing import IO, Optional, Type
+
+import gzinfo
 
 import mappings
 import panutils
@@ -367,6 +372,136 @@ class ZipScanner(ScannerBase):
                     excluded_pans_list=excluded_pans_list)
                 if len(res) > 0:
                     matches.extend(res)
+        return matches
+
+
+class TarScanner(ScannerBase):
+
+    __archive_file: Optional[tarfile.TarFile] = None
+
+    def scan(self, excluded_pans_list: list) -> list:
+
+        if self.__archive_file is None:
+            if self.value_bytes:
+                file_like_object = io.BytesIO(initial_bytes=self.value_bytes)
+                self.__archive_file = tarfile.open(
+                    fileobj=file_like_object)
+            else:
+                self.__archive_file = tarfile.open(name=self.filename)
+
+        matches: list = []
+
+        files_in_archive: list[tarfile.TarInfo] = [
+            m for m in self.__archive_file.getmembers() if m.isfile()]
+
+        for member in files_in_archive:
+
+            extracted: Optional[IO[bytes]] = self.__archive_file.extractfile(
+                member=member)
+            if extracted is None:
+                continue
+            b: bytes = extracted.read()
+
+            if b:
+                mime_type, _ = panutils.get_mime_data_from_buffer(
+                    value_bytes=b)
+
+                scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
+                    mime_type=mime_type, extension=panutils.get_ext(file_name=member.name))
+                if scanner_init is None:
+                    return []
+
+                scanner_instance = scanner_init(patterns=self.patterns)
+                scanner_instance.from_file(
+                    path=self.filename, sub_path=member.name)
+                scanner_instance.from_buffer(buffer=b)
+
+                res: list = scanner_instance.scan(
+                    excluded_pans_list=excluded_pans_list)
+                if len(res) > 0:
+                    matches.extend(res)
+        return matches
+
+
+class GzipScanner(ScannerBase):
+
+    __gz_file: Optional[gzip.GzipFile] = None
+
+    def scan(self, excluded_pans_list: list) -> list:
+
+        if self.__gz_file is None:
+            if self.value_bytes:
+                file_like_object = io.BytesIO(initial_bytes=self.value_bytes)
+                self.__gz_file = gzip.GzipFile(
+                    fileobj=file_like_object)
+            else:
+                self.__gz_file = gzip.GzipFile(filename=self.filename)
+
+        matches: list = []
+        b: bytes = self.__gz_file.read1()
+        gz_info = gzinfo.read_gz_info(filename=self.filename)
+        if gz_info:
+            compressed_filename: str = gz_info.fname
+        else:
+            compressed_filename = self.filename.replace('.gz', '')
+
+        if b:
+            mime_type, _ = panutils.get_mime_data_from_buffer(
+                value_bytes=b)
+
+            scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
+                mime_type=mime_type, extension=panutils.get_ext(file_name=compressed_filename))
+            if scanner_init is None:
+                return []
+
+            scanner_instance = scanner_init(patterns=self.patterns)
+            scanner_instance.from_file(
+                path=self.filename, sub_path=compressed_filename)
+            scanner_instance.from_buffer(buffer=b)
+
+            res: list = scanner_instance.scan(
+                excluded_pans_list=excluded_pans_list)
+            if len(res) > 0:
+                matches.extend(res)
+        return matches
+
+
+class XzScanner(ScannerBase):
+
+    __xz_file: Optional[lzma.LZMAFile] = None
+
+    def scan(self, excluded_pans_list: list) -> list:
+
+        if self.__xz_file is None:
+            if self.value_bytes:
+                file_like_object = io.BytesIO(initial_bytes=self.value_bytes)
+                self.__xz_file = lzma.LZMAFile(filename=file_like_object)
+            else:
+                self.__xz_file = lzma.LZMAFile(filename=self.filename)
+
+        matches: list = []
+        b: bytes = self.__xz_file.read1()
+
+        compressed_filename: str = self.filename.replace('.xz', '')
+
+        if b:
+            mime_type, _ = panutils.get_mime_data_from_buffer(
+                value_bytes=b)
+
+            scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
+                mime_type=mime_type, extension=panutils.get_ext(file_name=compressed_filename))
+            if scanner_init is None:
+                return []
+
+            scanner_instance = scanner_init(patterns=self.patterns)
+            scanner_instance.from_file(
+                path=self.filename, sub_path=compressed_filename)
+            scanner_instance.from_buffer(buffer=b)
+
+            res: list = scanner_instance.scan(
+                excluded_pans_list=excluded_pans_list)
+            if len(res) > 0:
+                matches.extend(res)
         return matches
 
 

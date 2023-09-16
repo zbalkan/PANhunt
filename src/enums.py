@@ -158,4 +158,5 @@ class FileTypeEnum(Enum):
     Mbox = 10
     Zip = 11
     Tar = 12
-    SevenZip = 13
+    Gzip = 13
+    Xz = 14
