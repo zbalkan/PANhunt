@@ -6,7 +6,7 @@ import re
 import struct
 import sys
 import unicodedata
-from typing import Any
+from typing import Any, Union
 
 import magic
 
@@ -58,14 +58,14 @@ def to_zeropaddedhex(value: int, fixed_length: int) -> str:
     return f"{value:0{fixed_length}x}".upper()
 
 
-def decode_zip_filename(filename: str | bytes) -> Any:
+def decode_zip_filename(filename: Union[str, bytes]) -> Any:
 
     if isinstance(filename, str):
         return filename
     return filename.decode('cp437')
 
 
-def decode_zip_text(zip_text: str | bytes) -> str:
+def decode_zip_text(zip_text: Union[str, bytes]) -> str:
 
     if isinstance(zip_text, bytes):
         return zip_text.decode('cp437')
@@ -149,7 +149,7 @@ def as_datetime(value: Any) -> dt.datetime:
         f'Expected type "datetime" got "{type(value)}". \nValue: {value!r}')
 
 
-def get_text_hash(text: str | bytes) -> str:
+def get_text_hash(text: Union[str, bytes]) -> str:
     encoded_text: bytes
 
     if isinstance(text, str):

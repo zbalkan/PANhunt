@@ -5,7 +5,7 @@ import os
 import tarfile
 import zipfile
 from abc import ABC, abstractmethod
-from typing import IO, Optional, Type
+from typing import IO, Optional, Type, Union
 
 import gzinfo
 
@@ -123,7 +123,8 @@ class BasicScanner(ScannerBase):
 
 
 class AttachmentScanner(ScannerBase):
-    attachment: msgAttachment | pstAttachment | emlAttachment | mboxAttachment
+    attachment: Union[msgAttachment, pstAttachment,
+                      emlAttachment, mboxAttachment]
 
     # def scan(self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]) -> list[PAN]:
     def scan(self, excluded_pans_list: list) -> list:

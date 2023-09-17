@@ -19,8 +19,8 @@ import panutils
 from enums import PropIdEnum, PTypeEnum
 from exceptions import PANHuntException
 
-_FilePathOrFileObject = BufferedReader | int | str | bytes | os.PathLike[
-    str] | os.PathLike[bytes]
+_FilePathOrFileObject = Union[BufferedReader, int, str, bytes, os.PathLike[
+    str], os.PathLike[bytes]]
 
 _ValueType = Optional[Union[int, float, datetime, bool, str,
                             bytes, list]]

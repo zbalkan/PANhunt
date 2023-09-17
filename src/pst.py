@@ -87,7 +87,7 @@ class NID:
     is_hid: bool
     is_nid: bool
 
-    def __init__(self, bytes_or_nid: bytes | int) -> None:
+    def __init__(self, bytes_or_nid: Union[str, bytes]) -> None:
 
         if isinstance(bytes_or_nid, int):
             self.nid = bytes_or_nid
@@ -198,7 +198,7 @@ class Page:
             raise PANHuntException('Page Type does not match Page Type Repeat %s!=%s ' % (
                 hex(self.ptype), hex(self.ptypeRepeat)))
 
-        entry_type: Type[BBTENTRY] | Type[NBTENTRY] | Type[BTENTRY]
+        entry_type: Union[Type[BBTENTRY], Type[NBTENTRY], Type[BTENTRY]]
         if self.ptype in (Page.ptypeBBT, Page.ptypeNBT):
             cEnt: int
             cEntMax: int
@@ -579,7 +579,7 @@ class NBD:
         return subnodes
 
     # dict[int, NBTENTRY | BBTENTRY]:
-    def get_page_leaf_entries(self, entry_type: Type[NBTENTRY] | Type[BBTENTRY], page_offset: int) -> dict:
+    def get_page_leaf_entries(self, entry_type: Union[Type[NBTENTRY], Type[BBTENTRY]], page_offset: int) -> dict:
         """ entry type is NBTENTRY or BBTENTRY"""
 
         # dict[int, NBTENTRY | BBTENTRY]
@@ -815,7 +815,7 @@ class PCBTHData:
     wPropId: int
     wPropType: int
     dwValueHnid: bytes
-    value: _ValueType | 'EntryID'
+    value: Union[_ValueType, 'EntryID']
     hid: HID
     subnode_nid: NID
 
@@ -1106,7 +1106,7 @@ class TC:  # Table Context
     hn: HN
     bType: int
     cCols: int
-    hnidRows: HID | NID
+    hnidRows: Union[HID, NID]
     hidRowIndex: HID
     rgib: tuple  # tuple[int, int, int, int]
     rgTCOLDESC: list  # list[TCOLDESC]
