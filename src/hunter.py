@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Generator, Optional
 
@@ -38,6 +39,8 @@ class Hunter:
         docs_found = 0
         root_total_items: int = 0
 
+        logging.info(f"Search base: {self.__conf.search_dir}")
+
         for root, sub_ds, files in os.walk(top=self.__conf.search_dir):
             # list[str]
             sub_dirs: list = [check_dir for check_dir in sub_ds if os.path.join(
@@ -64,8 +67,10 @@ class Hunter:
                 yield docs_found, root_total_items, root_items_completed
 
         self.__all_files += doc_files
+        logging.info(f"Total number of files: {len(self.__all_files)}")
 
     # def scan_files(self) -> Generator[tuple[int, int], None, None]:
+
     def scan_files(self) -> Generator[tuple, None, None]:
         """ Searches files in doc_files list for regular expressions"""
 

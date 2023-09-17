@@ -24,6 +24,7 @@ from hunter import Hunter
 from pbar import DocProgressbar
 from report import Report
 
+APP_NAME: str = 'PANhunt'
 APP_VERSION: str = '1.4'
 
 
@@ -124,7 +125,7 @@ def main() -> None:
     #                     datefmt="%Y-%m-%dT%H:%M:%S%z",
     #                     level=logging.INFO)
 
-    logging.basicConfig(filename=os.path.join(panutils.get_root_dir(), 'PANhunt.log'),
+    logging.basicConfig(filename=os.path.join(panutils.get_root_dir(), f'{APP_NAME}.log'),
                         format='%(asctime)s:%(levelname)s:%(message)s',
                         datefmt="%Y-%m-%dT%H:%M:%S%z",
                         level=logging.INFO)
