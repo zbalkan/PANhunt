@@ -10,7 +10,7 @@ from typing import Optional, Sequence
 from genericpath import exists
 
 import panutils
-from enums import FileCategoryEnum
+from enums import ScanStatusEnum
 from PANFile import PANFile
 
 
@@ -49,7 +49,7 @@ class Report:
         self.matched_files = sorted(
             [pan_file for pan_file in all_files if pan_file.matches], key=lambda x: x.filename)
         self.interesting_files = sorted([
-            pan_file for pan_file in all_files if pan_file.file_category == FileCategoryEnum.Other], key=lambda x: x.path)
+            pan_file for pan_file in all_files if pan_file.file_category == ScanStatusEnum.NotScanned], key=lambda x: x.path)
 
     def create_text_report(self, path: str) -> None:
 
@@ -75,7 +75,7 @@ class Report:
             pan_report += pan_list.rstrip(pan_sep) + '\n\n'
 
         if len(self.interesting_files) != 0:
-            pan_report += 'Interesting Files to check separately:\n'
+            pan_report += 'Interesting Files to check separately, proably permission issue:\n'
         for pan_file in sorted(self.interesting_files, key=lambda x: x.filename):
             pan_report += f'{pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime("%d/%m/%Y")})\n'
 

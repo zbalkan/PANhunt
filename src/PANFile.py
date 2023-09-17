@@ -5,7 +5,7 @@ from typing import Optional
 
 import panutils
 from dispatcher import Dispatcher
-from enums import FileCategoryEnum
+from enums import ScanStatusEnum
 from PAN import PAN
 
 
@@ -15,7 +15,7 @@ class PANFile:
     filename: str
     dir: str
     path: str
-    file_category: Optional[FileCategoryEnum]
+    file_category: ScanStatusEnum
     # errors: Optional[list[str]] = None
     errors: Optional[list] = None
     # matches: list[PAN]
@@ -35,7 +35,7 @@ class PANFile:
         self.filename = filename
         self.dir = file_dir
         self.path = os.path.join(self.dir, self.filename)
-        self.file_category = None
+        self.file_category = ScanStatusEnum.Scannable
         self.matches = []
 
         self.extension = panutils.get_ext(self.path)
@@ -62,6 +62,10 @@ class PANFile:
             self.accessed = self.dtm_from_ts(stat.st_atime)
             self.modified = self.dtm_from_ts(stat.st_mtime)
             self.created = self.dtm_from_ts(stat.st_ctime)
+        except PermissionError as pex:
+            self.size = -1
+            self.set_error(str(pex))
+            self.file_category = ScanStatusEnum.NotScanned
         except IOError as ex:
             self.size = -1
             self.set_error(str(ex))

@@ -4,7 +4,6 @@ import time
 from typing import Optional
 
 import panutils
-from enums import FileCategoryEnum
 
 
 class PANHuntConfiguration:

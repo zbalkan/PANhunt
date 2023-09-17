@@ -135,13 +135,9 @@ class PropIdEnum(Enum):
     PidTagXOriginatingIp = 0x8028  # Non-standard X-Originating-IP
 
 
-class FileCategoryEnum(Enum):
-    Text = 0
-    Zip = 1
-    Mail = 2
-    MailArchive = 3
-    Pdf = 4
-    Other = 5
+class ScanStatusEnum(Enum):
+    Scannable = 0
+    NotScanned = 5
 
 
 class FileTypeEnum(Enum):

@@ -1,8 +1,6 @@
 from typing import Optional, Type
 
 import mappings
-from enums import FileCategoryEnum
-from PAN import PAN
 from patterns import CardPatterns
 from scanner import ScannerBase
 

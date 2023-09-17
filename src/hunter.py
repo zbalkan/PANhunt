@@ -4,8 +4,6 @@ from typing import Generator, Optional
 import panutils
 from config import PANHuntConfiguration
 from dispatcher import Dispatcher
-from enums import FileCategoryEnum
-from PAN import PAN
 from PANFile import PANFile
 from patterns import CardPatterns
 
