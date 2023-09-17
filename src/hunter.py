@@ -78,7 +78,8 @@ class Hunter:
 
         for pan_file in self.__all_files:
             # matches: list[PAN] = pan_file.scan_with(dispatcher=dispatcher)
-            matches: list = pan_file.scan_with(dispatcher=dispatcher)
+            matches: list = pan_file.scan_with(
+                dispatcher=dispatcher, verbose=self.__conf.verbose)
             matches_found += len(matches)
             files_completed += 1
             yield matches_found, files_completed

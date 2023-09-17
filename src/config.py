@@ -19,6 +19,7 @@ class PANHuntConfiguration:
     excluded_directories: list
     # excluded_pans: list[str]
     excluded_pans: list
+    verbose: bool
 
     def __init__(self) -> None:
         if os.name == 'nt':
@@ -43,7 +44,8 @@ class PANHuntConfiguration:
                   mask_pans: bool = False,
                   excluded_directories_string: Optional[str] = None,
                   excluded_pans_string: Optional[str] = None,
-                  json_dir: Optional[str] = None) -> None:
+                  json_dir: Optional[str] = None,
+                  verbose: bool = False) -> None:
         """If any parameter is provided, it overwrites the previous value
         """
 
@@ -53,7 +55,8 @@ class PANHuntConfiguration:
                       json_dir=json_dir,
                       mask_pans=mask_pans,
                       excluded_directories_string=excluded_directories_string,
-                      excluded_pans_string=excluded_pans_string)
+                      excluded_pans_string=excluded_pans_string,
+                      verbose=verbose)
 
     def with_file(self, config_file: str) -> None:
         """If a config file provided and it has specific values, they overwrite the previous values
@@ -81,6 +84,8 @@ class PANHuntConfiguration:
             config_from_file)
         excluded_pans_string: Optional[str] = PANHuntConfiguration.__try_parse(
             config_from_file=config_from_file, property='excludepans')
+        verbose: bool = PANHuntConfiguration.__check_verbose(
+            config_from_file=config_from_file)
 
         self.__update(search_dir=search_dir,
                       file_path=file_path,
@@ -88,7 +93,8 @@ class PANHuntConfiguration:
                       json_dir=json_dir,
                       mask_pans=mask_pans,
                       excluded_directories_string=excluded_directories_string,
-                      excluded_pans_string=excluded_pans_string)
+                      excluded_pans_string=excluded_pans_string,
+                      verbose=verbose)
 
     def get_json_path(self) -> Optional[str]:
         if self.json_dir:
@@ -117,11 +123,11 @@ class PANHuntConfiguration:
         return mask_pans
 
     @staticmethod
-    def __get_search_pdf(config_from_file) -> Optional[bool]:
-        mask_pans: Optional[bool] = None
-        if 'pdf' in config_from_file:
-            mask_pans = (config_from_file['pdf'].upper() == 'TRUE')
-        return mask_pans
+    def __check_verbose(config_from_file) -> bool:
+        is_verbose: bool = False
+        if 'verbose' in config_from_file:
+            is_verbose = (config_from_file['verbose'].upper() == 'TRUE')
+        return is_verbose
 
     @staticmethod
     def __try_parse(config_from_file: dict, property: str) -> Optional[str]:
@@ -136,7 +142,8 @@ class PANHuntConfiguration:
                  json_dir: Optional[str],
                  mask_pans: Optional[bool],
                  excluded_directories_string: Optional[str],
-                 excluded_pans_string: Optional[str]) -> None:
+                 excluded_pans_string: Optional[str],
+                 verbose: bool) -> None:
 
         if search_dir and search_dir != 'None':
             self.search_dir = os.path.abspath(path=search_dir)
@@ -165,3 +172,6 @@ class PANHuntConfiguration:
                 self.json_dir = panutils.get_root_dir()
             else:
                 self.json_dir = os.path.abspath(json_dir)
+
+        if verbose:
+            self.verbose = verbose

@@ -85,13 +85,12 @@ class PANFile:
             self.errors.append(error_msg)
         logging.error(f'{error_msg} ({self.path})')
 
-    # def scan_with(self, dispatcher: Dispatcher) -> list[PAN]:
-    def scan_with(self, dispatcher: Dispatcher) -> list:
+    def scan_with(self, dispatcher: Dispatcher, verbose: bool) -> list:
         """Checks the file for matching regular expressions: if a ZIP then each file in the ZIP (recursively) or the text in a document"""
+        if verbose:
+            logging.info(f'Scanning file: {self.path} ({self.mime_type})')
 
         try:
-            # match_list: list[PAN] = dispatcher.dispatch(
-            #     mime_type=self.mime_type, extension=self.extension, path=self.path, encoding=self.encoding)
             match_list: list = dispatcher.dispatch(
                 mime_type=self.mime_type, extension=self.extension, path=self.path, encoding=self.encoding)
             if len(match_list) > 0:

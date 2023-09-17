@@ -155,6 +155,8 @@ def main() -> None:
         '-X', dest='exclude_pan', help='PAN to exclude from search')
     arg_parser.add_argument('-q', dest='quiet', action='store_true',
                             default=False, help='No terminal output')
+    arg_parser.add_argument('-v', dest='verbose', action='store_true',
+                            default=False, help='Verbose logging')
     arg_parser.add_argument('-c', dest='check_file_hash',
                             help=argparse.SUPPRESS)  # hidden argument
 
@@ -173,6 +175,7 @@ def main() -> None:
     json_dir: Optional[str] = args.json_dir
     config_file: Optional[str] = args.config
     quiet: bool = args.quiet
+    verbose: bool = args.verbose
 
     # Initiated with default values
     config: PANHuntConfiguration = PANHuntConfiguration()
@@ -189,7 +192,8 @@ def main() -> None:
                          json_dir=json_dir,
                          mask_pans=mask_pans,
                          excluded_directories_string=excluded_directories_string,
-                         excluded_pans_string=excluded_pans_string)
+                         excluded_pans_string=excluded_pans_string,
+                         verbose=verbose)
 
     report: Report = hunt_pans(quiet=quiet, configuration=config)
 
