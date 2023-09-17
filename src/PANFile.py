@@ -6,7 +6,6 @@ from typing import Optional
 import panutils
 from dispatcher import Dispatcher
 from enums import ScanStatusEnum
-from PAN import PAN
 
 
 class PANFile:
@@ -62,13 +61,10 @@ class PANFile:
             self.accessed = self.dtm_from_ts(stat.st_atime)
             self.modified = self.dtm_from_ts(stat.st_mtime)
             self.created = self.dtm_from_ts(stat.st_ctime)
-        except PermissionError as pex:
-            self.size = -1
-            self.set_error(str(pex))
-            self.file_category = ScanStatusEnum.NotScanned
-        except IOError as ex:
+        except Exception as ex:
             self.size = -1
             self.set_error(str(ex))
+            self.file_category = ScanStatusEnum.NotScanned
 
     def dtm_from_ts(self, ts: float) -> datetime:
 
