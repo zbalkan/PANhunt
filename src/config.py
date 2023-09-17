@@ -154,7 +154,7 @@ class PANHuntConfiguration:
             self.mask_pans = mask_pans
 
         if excluded_directories_string and excluded_directories_string != 'None':
-            self.excluded_directories = [os.path.abspath(exc_dir.lower())
+            self.excluded_directories = [exc_dir.lower()
                                          for exc_dir in excluded_directories_string.split(',')]
 
         if excluded_pans_string and excluded_pans_string != excluded_pans_string and len(excluded_pans_string) > 0:
