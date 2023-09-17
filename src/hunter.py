@@ -7,8 +7,6 @@ from dispatcher import Dispatcher
 from PANFile import PANFile
 from patterns import CardPatterns
 
-TEXT_FILE_SIZE_LIMIT: int = 1_073_741_824  # 1Gb
-
 
 class Hunter:
 
@@ -25,7 +23,7 @@ class Hunter:
         return tuple(self.__all_files)
 
     def add_single_file(self, filename: str, dir: str) -> None:
-        file: PANFile = self.__try_init_PANfile(filename=filename, dir=dir)
+        file: PANFile = PANFile(filename=filename, file_dir=dir)
         self.__all_files.append(file)
 
     # def get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
@@ -57,8 +55,8 @@ class Hunter:
             for filename in files:
                 if root == self.__conf.search_dir:
                     root_items_completed += 1
-                    pan_file: PANFile = self.__try_init_PANfile(
-                        filename=filename, dir=root)
+                    pan_file: PANFile = PANFile(
+                        filename=filename, file_dir=root)
                     doc_files.append(pan_file)
                     if not pan_file.errors:
                         docs_found += 1
@@ -83,12 +81,3 @@ class Hunter:
             matches_found += len(matches)
             files_completed += 1
             yield matches_found, files_completed
-
-    def __try_init_PANfile(self, filename: str, dir: str) -> PANFile:
-        pan_file = PANFile(filename=filename, file_dir=dir)
-        pan_file.set_file_stats()
-        if pan_file.size > TEXT_FILE_SIZE_LIMIT:
-            pan_file.set_error(
-                error_msg=f'File size {panutils.size_friendly(size=pan_file.size)} over limit of {panutils.size_friendly(size=TEXT_FILE_SIZE_LIMIT)} for checking for file \"{filename}\"')
-
-        return pan_file

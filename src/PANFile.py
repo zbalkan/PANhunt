@@ -7,6 +7,8 @@ import panutils
 from dispatcher import Dispatcher
 from enums import ScanStatusEnum
 
+TEXT_FILE_SIZE_LIMIT: int = 1_073_741_824  # 1Gb
+
 
 class PANFile:
     """ PANFile: class for a file that can check itself for PANs"""
@@ -48,6 +50,12 @@ class PANFile:
             self.encoding = 'Unknown'
             self.set_error(
                 f'Failed to detect mimetype and encoding. Inner exception: {ex}')
+
+        self.set_file_stats()
+
+        if self.size > TEXT_FILE_SIZE_LIMIT:
+            self.set_error(
+                error_msg=f'File size {panutils.size_friendly(size=self.size)} over limit of {panutils.size_friendly(size=TEXT_FILE_SIZE_LIMIT)} for checking for file \"{self.filename}\"')
 
     def __cmp__(self, other: 'PANFile') -> bool:
 
