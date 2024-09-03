@@ -32,35 +32,35 @@ class Hunter:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
 
         doc_files: list[PANFile] = []
-        root_dir_dirs: Optional[list[str]] = None
-        root_items_completed = 0
-        docs_found = 0
-        root_total_items: int = 0
+        total_items: list[str] = []
 
         logging.info(f"Search base: {self.__conf.search_dir}")
 
-        for root, sub_ds, files in os.walk(top=self.__conf.search_dir):
-            sub_dirs: list[str] = [check_dir for check_dir in sub_ds if os.path.join(
-                root, check_dir)
-                .lower() not in self.__conf.excluded_directories]
-            if not root_dir_dirs:
-                root_dir_dirs = [os.path.join(root, sub_dir)
-                                 for sub_dir in sub_dirs]
-                root_total_items = len(root_dir_dirs) + len(files)
-            if root in root_dir_dirs:
-                root_items_completed += 1
+        # Precompute total items
+        for root, dirs, files in os.walk(self.__conf.search_dir):
+            dirs[:] = [d for d in dirs if os.path.join(
+                root, d).lower() not in self.__conf.excluded_directories]
+            total_items.extend([os.path.join(root, d) for d in dirs])
+            total_items.extend([os.path.join(root, f) for f in files])
 
+        root_total_items = len(total_items)
+        root_items_completed = 0
+        docs_found = 0
+
+        for root, dirs, files in os.walk(self.__conf.search_dir):
+            dirs[:] = [d for d in dirs if os.path.join(
+                root, d).lower() not in self.__conf.excluded_directories]
+
+            for directory in dirs:
+                root_items_completed += 1
                 yield docs_found, root_total_items, root_items_completed
 
             for filename in files:
-                if root == self.__conf.search_dir:
-                    root_items_completed += 1
-                    pan_file: PANFile = PANFile(
-                        filename=filename, file_dir=root)
+                root_items_completed += 1
+                pan_file = PANFile(filename=filename, file_dir=root)
+                if not pan_file.errors:
                     doc_files.append(pan_file)
-                    if not pan_file.errors:
-                        docs_found += 1
-
+                    docs_found += 1
                 yield docs_found, root_total_items, root_items_completed
 
         self.__all_files += doc_files
