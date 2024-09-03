@@ -50,23 +50,18 @@ class ScannerBase(ABC):
         self.value_bytes = buffer
 
     @abstractmethod
-    # list[PAN]:
-    def scan(self, excluded_pans_list: list) -> list:
-        # self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
         raise NotImplementedError()
 
 
 class SimpleTextScanner(ScannerBase):
     text: str
 
-    # def scan(self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]) -> list[PAN]:
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
-        # list[PAN]
-        matches: list = []
+        matches: list[PAN] = []
         for brand, regex in self.patterns.brands():
-            # list[str]
-            pans: list = regex.findall(self.text)
+            pans: list[str] = regex.findall(self.text)
             if pans:
                 for pan in pans:
                     if PAN.is_valid_luhn_checksum(pan=pan) and not PAN.is_excluded(pan=pan, excluded_pans=excluded_pans_list):
@@ -77,11 +72,9 @@ class SimpleTextScanner(ScannerBase):
 
 class BasicScanner(ScannerBase):
 
-    # def scan(self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]) -> list[PAN]:
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
-        # list[PAN]
-        matches: list = []
+        matches: list[PAN] = []
 
         text: str
         if self.value_bytes:
@@ -126,11 +119,9 @@ class AttachmentScanner(ScannerBase):
     attachment: Union[msgAttachment, pstAttachment,
                       emlAttachment, mboxAttachment]
 
-    # def scan(self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]) -> list[PAN]:
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
-        # list[PAN]
-        matches: list = []
+        matches: list[PAN] = []
 
         if self.attachment.BinaryData:
             mime_type, _ = panutils.get_mime_data_from_buffer(
@@ -146,8 +137,7 @@ class AttachmentScanner(ScannerBase):
                 path=self.filename, sub_path=self.attachment.Filename)
             scanner_instance.from_buffer(buffer=self.attachment.BinaryData)
 
-            # list[PAN]
-            res: list = scanner_instance.scan(
+            res: list[PAN] = scanner_instance.scan(
                 excluded_pans_list=excluded_pans_list)
             if len(res) > 0:
                 matches.extend(res)
@@ -159,8 +149,7 @@ class MsgScanner(ScannerBase):
 
     __msg: Optional[MSMSG] = None
 
-    # def scan(self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]) -> list[PAN]:
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.__msg is None:
             if self.value_bytes:
@@ -168,8 +157,7 @@ class MsgScanner(ScannerBase):
             else:
                 self.__msg = MSMSG(msg_file_path=self.filename)
 
-        # list[PAN]
-        matches: list = []
+        matches: list[PAN] = []
 
         if self.__msg.validMSG:
             if self.__msg.Body:
@@ -177,8 +165,7 @@ class MsgScanner(ScannerBase):
                 text_scanner.text = self.__msg.Body
                 text_scanner.filename = self.filename
 
-                # list[PAN]
-                body_matches: list = text_scanner.scan(
+                body_matches: list[PAN] = text_scanner.scan(
                     excluded_pans_list=excluded_pans_list)
                 if len(body_matches) > 0:
                     matches.extend(body_matches)
@@ -188,8 +175,7 @@ class MsgScanner(ScannerBase):
                     att_scanner.from_file(path=self.filename)
                     att_scanner.attachment = att
 
-                    # list[PAN]
-                    att_matches: list = att_scanner.scan(
+                    att_matches: list[PAN] = att_scanner.scan(
                         excluded_pans_list=excluded_pans_list)
                     if len(att_matches) > 0:
                         matches.extend(att_matches)
@@ -199,8 +185,7 @@ class MsgScanner(ScannerBase):
 class EmlScanner(ScannerBase):
     __eml: Optional[Eml] = None
 
-    # def scan(self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]) -> list[PAN]:
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.__eml is None:
             if self.value_bytes:
@@ -209,16 +194,14 @@ class EmlScanner(ScannerBase):
             else:
                 self.__eml = Eml(path=self.filename)
 
-        # list[PAN]
-        matches: list = []
+        matches: list[PAN] = []
 
         if self.__eml.body:
             text_scanner = SimpleTextScanner(patterns=self.patterns)
             text_scanner.from_file(path=self.filename)
             text_scanner.text = self.__eml.body
 
-            # list[PAN]
-            body_matches: list = text_scanner.scan(
+            body_matches: list[PAN] = text_scanner.scan(
                 excluded_pans_list=excluded_pans_list)
             if len(body_matches) > 0:
                 matches.extend(body_matches)
@@ -228,8 +211,7 @@ class EmlScanner(ScannerBase):
                 att_scanner.from_file(path=self.filename)
                 att_scanner.attachment = att
 
-                # list[PAN]
-                att_matches: list = att_scanner.scan(
+                att_matches: list[PAN] = att_scanner.scan(
                     excluded_pans_list=excluded_pans_list)
                 if len(att_matches) > 0:
                     matches.extend(att_matches)
@@ -239,8 +221,7 @@ class EmlScanner(ScannerBase):
 class MboxScanner(ScannerBase):
     __mbox: Optional[Mbox] = None
 
-    # def scan(self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]) -> list[PAN]:
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.__mbox is None:
             if self.value_bytes:
@@ -249,15 +230,13 @@ class MboxScanner(ScannerBase):
             else:
                 self.__mbox = Mbox(path=self.filename)
 
-        # list[PAN]
-        matches: list = []
+        matches: list[PAN] = []
 
         for mail in self.__mbox.mails:
             if mail.body:
                 text_scanner = SimpleTextScanner(patterns=self.patterns)
                 text_scanner.text = mail.body
-                # list[PAN]
-                body_matches: list = text_scanner.scan(
+                body_matches: list[PAN] = text_scanner.scan(
                     excluded_pans_list=excluded_pans_list)
                 if len(body_matches) > 0:
                     matches.extend(body_matches)
@@ -266,8 +245,7 @@ class MboxScanner(ScannerBase):
                     att_scanner = AttachmentScanner(patterns=self.patterns)
                     att_scanner.from_file(path=self.filename)
                     att_scanner.attachment = att
-                    # list[PAN]
-                    att_matches: list = att_scanner.scan(
+                    att_matches: list[PAN] = att_scanner.scan(
                         excluded_pans_list=excluded_pans_list)
                     if len(att_matches) > 0:
                         matches.extend(att_matches)
@@ -278,14 +256,12 @@ class MboxScanner(ScannerBase):
 class PstScanner(ScannerBase):
     pst: Optional[PST] = None
 
-    # def scan(self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]) -> list[PAN]:
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.pst is None:
             self.pst = PST(pst_file=self.filename)
 
-        # list[PAN]
-        matches: list = []
+        matches: list[PAN] = []
 
         if self.pst.header.validPST:
             for folder in self.pst.folder_generator():
@@ -304,8 +280,7 @@ class PstScanner(ScannerBase):
                         text_scanner.filename = self.filename
                         text_scanner.sub_path = message_path
 
-                        # list[PAN]
-                        body_matches: list = text_scanner.scan(
+                        body_matches: list[PAN] = text_scanner.scan(
                             excluded_pans_list=excluded_pans_list)
                         if len(body_matches) > 0:
                             matches.extend(body_matches)
@@ -321,8 +296,7 @@ class PstScanner(ScannerBase):
                                     att_scanner.from_file(path=self.filename)
                                     att_scanner.attachment = att
 
-                                    # list[PAN]
-                                    att_matches: list = att_scanner.scan(
+                                    att_matches: list[PAN] = att_scanner.scan(
                                         excluded_pans_list=excluded_pans_list)
                                     if len(att_matches) > 0:
                                         matches.extend(att_matches)
@@ -335,8 +309,7 @@ class ZipScanner(ScannerBase):
 
     __zip_file: Optional[zipfile.ZipFile] = None
 
-    # def scan(self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]) -> list[PAN]:
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.__zip_file is None:
             if self.value_bytes:
@@ -345,11 +318,9 @@ class ZipScanner(ScannerBase):
             else:
                 self.__zip_file = zipfile.ZipFile(file=self.filename)
 
-        # list[PAN]
-        matches: list = []
+        matches: list[PAN] = []
 
-        # list[str]
-        files_in_zip: list = [file_in_zip for file_in_zip in self.__zip_file.namelist(
+        files_in_zip: list[str] = [file_in_zip for file_in_zip in self.__zip_file.namelist(
         )]
 
         for file_in_zip in files_in_zip:
@@ -368,8 +339,7 @@ class ZipScanner(ScannerBase):
                     path=self.filename, sub_path=file_in_zip)
                 scanner_instance.from_buffer(buffer=b)
 
-                # list[PAN]
-                res: list = scanner_instance.scan(
+                res: list[PAN] = scanner_instance.scan(
                     excluded_pans_list=excluded_pans_list)
                 if len(res) > 0:
                     matches.extend(res)
@@ -380,7 +350,7 @@ class TarScanner(ScannerBase):
 
     __archive_file: Optional[tarfile.TarFile] = None
 
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.__archive_file is None:
             if self.value_bytes:
@@ -428,7 +398,7 @@ class GzipScanner(ScannerBase):
 
     __gz_file: Optional[gzip.GzipFile] = None
 
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.__gz_file is None:
             if self.value_bytes:
@@ -471,7 +441,7 @@ class XzScanner(ScannerBase):
 
     __xz_file: Optional[lzma.LZMAFile] = None
 
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.__xz_file is None:
             if self.value_bytes:
@@ -509,8 +479,7 @@ class XzScanner(ScannerBase):
 class PdfScanner(ScannerBase):
     pdf: Optional[Pdf] = None
 
-    # def scan(self, excluded_pans_list: list[str][FileCategoryEnum, list[str]]) -> list[PAN]:
-    def scan(self, excluded_pans_list: list) -> list:
+    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.pdf is None:
             if self.value_bytes:
@@ -523,7 +492,6 @@ class PdfScanner(ScannerBase):
         ifs.sub_path = self.sub_path
         ifs.text = self.pdf.get_text()
 
-        # list[PAN]
-        matches: list = ifs.scan(
+        matches: list[PAN] = ifs.scan(
             excluded_pans_list=excluded_pans_list)
         return matches

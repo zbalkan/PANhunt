@@ -8,7 +8,7 @@ from typing import IO, Any, Optional
 class Mbox:
 
     filename: str
-    mails: list  # list['Mail']
+    mails: list['Mail']
 
     def __init__(self, path: str, value_bytes: Optional[bytes] = None) -> None:
         self.filename = path
@@ -40,7 +40,7 @@ class Mbox:
 class Mail:
     subject: str
     body: str
-    attachments: list  # list['Attachment']
+    attachments: list['Attachment']
 
     def __init__(self, message: mailbox.mboxMessage) -> None:
         self.subject = self.get_subject(message)
@@ -92,8 +92,7 @@ class Mail:
         for bp in body_payload_list:
             headers: dict = dict(bp._headers)
 
-            # list[str]
-            content_type: list = str(
+            content_type: list[str] = str(
                 headers.get('Content-Type')).split(';')
 
             if content_type[0] == 'text/plain':

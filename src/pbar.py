@@ -19,7 +19,7 @@ class DocProgressbar:
         return self
 
     def __create__(self) -> None:
-        pbar_widgets: list = ['%s Hunt: ' % self.hunt_type, progressbar.Percentage(), ' ', progressbar.Bar(
+        pbar_widgets: list[progressbar.widgets.widgets.AbstractWidget] = ['%s Hunt: ' % self.hunt_type, progressbar.Percentage(), ' ', progressbar.Bar(
             marker=progressbar.RotatingMarker()), ' ', progressbar.ETA(), progressbar.FormatLabel(' %ss:0' % self.hunt_type)]
         self.pbar = progressbar.ProgressBar(widgets=pbar_widgets).start()
 

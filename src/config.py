@@ -15,10 +15,8 @@ class PANHuntConfiguration:
     json_file: str
     json_dir: Optional[str]
     mask_pans: bool
-    # excluded_directories: list[str]
-    excluded_directories: list
-    # excluded_pans: list[str]
-    excluded_pans: list
+    excluded_directories: list[str]
+    excluded_pans: list[str]
     verbose: bool
 
     def __init__(self) -> None:

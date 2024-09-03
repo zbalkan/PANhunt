@@ -10,7 +10,7 @@ class Eml:
 
     filename: str
     body: str
-    attachments: list  # list['Attachment']
+    attachments: list['Attachment']
 
     __text: str
 
@@ -55,8 +55,7 @@ class Eml:
     def parse_body(self, body_payload: Any) -> None:
         headers: dict = dict(body_payload._headers)
 
-        # list[str]
-        content_type: list = str(headers.get('Content-Type')).split(';')
+        content_type: list[str] = str(headers.get('Content-Type')).split(';')
 
         if content_type[0] == 'text/plain':
             charset: str = content_type[1].lstrip().removeprefix(

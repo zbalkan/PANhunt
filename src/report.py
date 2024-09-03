@@ -22,8 +22,8 @@ class Report:
     searched: str
     excluded: str
     pans_found: int
-    matched_files: list  # list[PANFile]
-    interesting_files: list  # list[PANFile]
+    matched_files: list[PANFile]
+    interesting_files: list[PANFile]
 
     __command: str
     __timestamp: str
@@ -108,12 +108,10 @@ class Report:
         report['total_files'] = self.total_files
         report['pans_found'] = self.pans_found
 
-        # dict[str, list[str]]
-        matched_items: dict = {}
+        matched_items: dict[str, list[str]] = {}
         for pan_file in self.matched_files:
 
-            # list[str]
-            items: list = []
+            items: list[str] = []
             for pan in pan_file.matches:
                 item: str = ''
                 if pan.filename != '':

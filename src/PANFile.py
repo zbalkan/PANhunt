@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 from typing import Optional
 
+from PAN import PAN
 import panutils
 from dispatcher import Dispatcher
 from enums import ScanStatusEnum
@@ -17,10 +18,8 @@ class PANFile:
     dir: str
     path: str
     file_category: ScanStatusEnum
-    # errors: Optional[list[str]] = None
-    errors: Optional[list] = None
-    # matches: list[PAN]
-    matches: list
+    errors: Optional[list[str]] = None
+    matches: list[PAN]
     size: int
     accessed: datetime
     modified: datetime
@@ -29,8 +28,7 @@ class PANFile:
     mime_type: str
     encoding: str
     extension: str
-    # extensions: list[str]
-    extensions: list
+    extensions: list[str]
 
     def __init__(self, filename: str, file_dir: str) -> None:
         self.filename = filename
@@ -93,13 +91,13 @@ class PANFile:
             self.errors.append(error_msg)
         logging.error(f'{error_msg} ({self.path})')
 
-    def scan_with(self, dispatcher: Dispatcher, verbose: bool) -> list:
+    def scan_with(self, dispatcher: Dispatcher, verbose: bool) -> list[PAN]:
         """Checks the file for matching regular expressions: if a ZIP then each file in the ZIP (recursively) or the text in a document"""
         if verbose:
             logging.info(f'Scanning file: {self.path} ({self.mime_type})')
 
         try:
-            match_list: list = dispatcher.dispatch(
+            match_list: list[PAN] = dispatcher.dispatch(
                 mime_type=self.mime_type, extension=self.extension, path=self.path, encoding=self.encoding)
             if len(match_list) > 0:
                 self.matches.extend(match_list)

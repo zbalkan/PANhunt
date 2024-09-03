@@ -23,22 +23,19 @@ internal_map = {
 
 
 def get_scanner_by_file(mime_type: str, extension: str) -> Optional[Type[ScannerBase]]:
-    # dict[FileTypeEnum, Type[ScannerBase]]
-    m: dict = __map_file_to_scanner_mapping()
+    m: dict[FileTypeEnum, Type[ScannerBase]] = __map_file_to_scanner_mapping()
     s: Optional[Type[ScannerBase]] = m.get(
         __map_file_to_filetype(mime_type_text=mime_type, extension=extension))
     return s
 
 
-# dict[FileTypeEnum, Type[ScannerBase]]:
-def __map_file_to_scanner_mapping() -> dict:
+def __map_file_to_scanner_mapping() -> dict[FileTypeEnum, Type[ScannerBase]]:
     return internal_map
 
 
 def __map_file_to_filetype(mime_type_text: str, extension: str) -> FileTypeEnum:
 
-    # list[str]
-    l: list = mime_type_text.split(sep='/')
+    l: list[str] = mime_type_text.split(sep='/')
     mime_type: str = l[0]
     mime_subtype: str = l[1]
 

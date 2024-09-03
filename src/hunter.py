@@ -2,6 +2,7 @@ import logging
 import os
 from typing import Generator, Optional
 
+from PAN import PAN
 import panutils
 from config import PANHuntConfiguration
 from dispatcher import Dispatcher
@@ -11,7 +12,7 @@ from patterns import CardPatterns
 
 class Hunter:
 
-    __all_files: list  # list[PANFile]
+    __all_files: list[PANFile]
     __conf: PANHuntConfiguration
     __patterns: CardPatterns
 
@@ -20,21 +21,18 @@ class Hunter:
         self.__all_files = []
         self.__patterns = CardPatterns()
 
-    def get_files(self) -> tuple:  # tuple[PANFile, ...]:
+    def get_files(self) -> tuple[PANFile, ...]:
         return tuple(self.__all_files)
 
     def add_single_file(self, filename: str, dir: str) -> None:
         file: PANFile = PANFile(filename=filename, file_dir=dir)
         self.__all_files.append(file)
 
-    # def get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
-    def get_scannable_files(self) -> Generator[tuple, None, None]:
+    def get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
         """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
 
-        # list[PANFile]
-        doc_files: list = []
-        # root_dir_dirs: Optional[list[str]] = None
-        root_dir_dirs: Optional[list] = None
+        doc_files: list[PANFile] = []
+        root_dir_dirs: Optional[list[str]] = None
         root_items_completed = 0
         docs_found = 0
         root_total_items: int = 0
@@ -42,8 +40,7 @@ class Hunter:
         logging.info(f"Search base: {self.__conf.search_dir}")
 
         for root, sub_ds, files in os.walk(top=self.__conf.search_dir):
-            # list[str]
-            sub_dirs: list = [check_dir for check_dir in sub_ds if os.path.join(
+            sub_dirs: list[str] = [check_dir for check_dir in sub_ds if os.path.join(
                 root, check_dir)
                 .lower() not in self.__conf.excluded_directories]
             if not root_dir_dirs:
@@ -69,9 +66,7 @@ class Hunter:
         self.__all_files += doc_files
         logging.info(f"Total number of files: {len(self.__all_files)}")
 
-    # def scan_files(self) -> Generator[tuple[int, int], None, None]:
-
-    def scan_files(self) -> Generator[tuple, None, None]:
+    def scan_files(self) -> Generator[tuple[int, int], None, None]:
         """ Searches files in doc_files list for regular expressions"""
 
         files_completed: int = 0
@@ -80,8 +75,7 @@ class Hunter:
             excluded_pans_list=self.__conf.excluded_pans, patterns=self.__patterns)
 
         for pan_file in self.__all_files:
-            # matches: list[PAN] = pan_file.scan_with(dispatcher=dispatcher)
-            matches: list = pan_file.scan_with(
+            matches: list[PAN] = pan_file.scan_with(
                 dispatcher=dispatcher, verbose=self.__conf.verbose)
             matches_found += len(matches)
             files_completed += 1

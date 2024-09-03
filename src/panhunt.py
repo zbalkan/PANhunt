@@ -14,7 +14,7 @@ import logging
 import os
 import sys
 from datetime import datetime
-from typing import Optional
+from typing import Final, Optional
 
 import colorama
 
@@ -24,8 +24,8 @@ from hunter import Hunter
 from pbar import DocProgressbar
 from report import Report
 
-APP_NAME: str = 'PANhunt'
-APP_VERSION: str = '1.4'
+APP_NAME: Final[str] = 'PANhunt'
+APP_VERSION: Final[str] = '1.5'
 
 
 def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
@@ -119,13 +119,8 @@ def check_file_hash(text_file: str) -> None:
 
 def main() -> None:
 
-    # logging.basicConfig(filename=os.path.join(panutils.get_root_dir(), 'PANhunt.log'),
-    #                     encoding='utf-8',
-    #                     format='%(asctime)s:%(levelname)s:%(message)s',
-    #                     datefmt="%Y-%m-%dT%H:%M:%S%z",
-    #                     level=logging.INFO)
-
     logging.basicConfig(filename=os.path.join(panutils.get_root_dir(), f'{APP_NAME}.log'),
+                        encoding='utf-8',
                         format='%(asctime)s:%(levelname)s:%(message)s',
                         datefmt="%Y-%m-%dT%H:%M:%S%z",
                         level=logging.INFO)
