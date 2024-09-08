@@ -1,3 +1,4 @@
+from gzip import FEXTRA, FNAME, GzipFile
 import datetime as dt
 import hashlib
 import os
@@ -178,3 +179,31 @@ def memoryview_to_bytes(mem_view: memoryview) -> Optional[bytes]:
     except Exception as e:
         print("An error occurred:", e)
         return None
+
+
+def get_compressed_filename(gf: GzipFile) -> str:
+    gf.seek(0)
+    magic: bytes = gf.read(2)
+    method, flag = struct.unpack("<BB", gf.read(2))
+
+    if not flag & FNAME:
+        # Filename is not stored in the header, use the filename minus .gz
+        fname = getattr(gf, 'name', 'unknown')
+        if fname.endswith('.gz'):
+            fname = fname[:-3]
+        return fname
+
+    if flag & FEXTRA:
+        # Read & discard the extra field, if present
+        extra_len = struct.unpack("<H", gf.read(2))[0]
+        gf.read(extra_len)
+
+    # Read a null-terminated string containing the original filename
+    filename: list[str] = []
+    while True:
+        s: bytes = gf.read(1)
+        if not s or s == b'\000':
+            break
+        filename.append(s.decode())
+
+    return ''.join(filename)

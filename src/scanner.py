@@ -30,7 +30,7 @@ LARGE_FILE_LIMIT_BYTES: int = 31_457_280  # 30MB
 class ScannerBase(ABC):
 
     filename: str
-    sub_path: str  # Only if it is a nested object
+    sub_path: str = ''  # Only if it is a nested object
     encoding: str
     value_bytes: Optional[bytes]
 
@@ -305,175 +305,175 @@ class PstScanner(ScannerBase):
         return matches
 
 
-class ZipScanner(ScannerBase):
+# class ZipScanner(ScannerBase):
 
-    __zip_file: Optional[zipfile.ZipFile] = None
+#     __zip_file: Optional[zipfile.ZipFile] = None
 
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
+#     def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
-        if self.__zip_file is None:
-            if self.value_bytes:
-                self.__zip_file = zipfile.ZipFile(
-                    file=io.BytesIO(initial_bytes=self.value_bytes))
-            else:
-                self.__zip_file = zipfile.ZipFile(file=self.filename)
+#         if self.__zip_file is None:
+#             if self.value_bytes:
+#                 self.__zip_file = zipfile.ZipFile(
+#                     file=io.BytesIO(initial_bytes=self.value_bytes))
+#             else:
+#                 self.__zip_file = zipfile.ZipFile(file=self.filename)
 
-        matches: list[PAN] = []
+#         matches: list[PAN] = []
 
-        files_in_zip: list[str] = [file_in_zip for file_in_zip in self.__zip_file.namelist(
-        )]
+#         files_in_zip: list[str] = [file_in_zip for file_in_zip in self.__zip_file.namelist(
+#         )]
 
-        for file_in_zip in files_in_zip:
-            b: bytes = self.__zip_file.open(name=file_in_zip).read()
-            if b:
-                mime_type, _ = panutils.get_mime_data_from_buffer(
-                    value_bytes=b)
+#         for file_in_zip in files_in_zip:
+#             b: bytes = self.__zip_file.open(name=file_in_zip).read()
+#             if b:
+#                 mime_type, _ = panutils.get_mime_data_from_buffer(
+#                     value_bytes=b)
 
-                scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
-                    mime_type=mime_type, extension=panutils.get_ext(file_name=file_in_zip))
-                if scanner_init is None:
-                    return []
+#                 scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
+#                     mime_type=mime_type, extension=panutils.get_ext(file_name=file_in_zip))
+#                 if scanner_init is None:
+#                     return []
 
-                scanner_instance = scanner_init(patterns=self.patterns)
-                scanner_instance.from_file(
-                    path=self.filename, sub_path=file_in_zip)
-                scanner_instance.from_buffer(buffer=b)
+#                 scanner_instance = scanner_init(patterns=self.patterns)
+#                 scanner_instance.from_file(
+#                     path=self.filename, sub_path=file_in_zip)
+#                 scanner_instance.from_buffer(buffer=b)
 
-                res: list[PAN] = scanner_instance.scan(
-                    excluded_pans_list=excluded_pans_list)
-                if len(res) > 0:
-                    matches.extend(res)
-        return matches
-
-
-class TarScanner(ScannerBase):
-
-    __archive_file: Optional[tarfile.TarFile] = None
-
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
-
-        if self.__archive_file is None:
-            if self.value_bytes:
-                file_like_object = io.BytesIO(initial_bytes=self.value_bytes)
-                self.__archive_file = tarfile.open(
-                    fileobj=file_like_object)
-            else:
-                self.__archive_file = tarfile.open(name=self.filename)
-
-        matches: list = []
-
-        files_in_archive: list[tarfile.TarInfo] = [
-            m for m in self.__archive_file.getmembers() if m.isfile()]
-
-        for member in files_in_archive:
-
-            extracted: Optional[IO[bytes]] = self.__archive_file.extractfile(
-                member=member)
-            if extracted is None:
-                continue
-            b: bytes = extracted.read()
-
-            if b:
-                mime_type, _ = panutils.get_mime_data_from_buffer(
-                    value_bytes=b)
-
-                scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
-                    mime_type=mime_type, extension=panutils.get_ext(file_name=member.name))
-                if scanner_init is None:
-                    return []
-
-                scanner_instance = scanner_init(patterns=self.patterns)
-                scanner_instance.from_file(
-                    path=self.filename, sub_path=member.name)
-                scanner_instance.from_buffer(buffer=b)
-
-                res: list = scanner_instance.scan(
-                    excluded_pans_list=excluded_pans_list)
-                if len(res) > 0:
-                    matches.extend(res)
-        return matches
+#                 res: list[PAN] = scanner_instance.scan(
+#                     excluded_pans_list=excluded_pans_list)
+#                 if len(res) > 0:
+#                     matches.extend(res)
+#         return matches
 
 
-class GzipScanner(ScannerBase):
+# class TarScanner(ScannerBase):
 
-    __gz_file: Optional[gzip.GzipFile] = None
+#     __archive_file: Optional[tarfile.TarFile] = None
 
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
+#     def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
-        if self.__gz_file is None:
-            if self.value_bytes:
-                file_like_object = io.BytesIO(initial_bytes=self.value_bytes)
-                self.__gz_file = gzip.GzipFile(
-                    fileobj=file_like_object)
-            else:
-                self.__gz_file = gzip.GzipFile(filename=self.filename)
+#         if self.__archive_file is None:
+#             if self.value_bytes:
+#                 file_like_object = io.BytesIO(initial_bytes=self.value_bytes)
+#                 self.__archive_file = tarfile.open(
+#                     fileobj=file_like_object)
+#             else:
+#                 self.__archive_file = tarfile.open(name=self.filename)
 
-        matches: list = []
-        b: bytes = self.__gz_file.read1()
-        gz_info = gzinfo.read_gz_info(filename=self.filename)
-        if gz_info:
-            compressed_filename: str = gz_info.fname
-        else:
-            compressed_filename = self.filename.replace('.gz', '')
+#         matches: list = []
 
-        if b:
-            mime_type, _ = panutils.get_mime_data_from_buffer(
-                value_bytes=b)
+#         files_in_archive: list[tarfile.TarInfo] = [
+#             m for m in self.__archive_file.getmembers() if m.isfile()]
 
-            scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
-                mime_type=mime_type, extension=panutils.get_ext(file_name=compressed_filename))
-            if scanner_init is None:
-                return []
+#         for member in files_in_archive:
 
-            scanner_instance = scanner_init(patterns=self.patterns)
-            scanner_instance.from_file(
-                path=self.filename, sub_path=compressed_filename)
-            scanner_instance.from_buffer(buffer=b)
+#             extracted: Optional[IO[bytes]] = self.__archive_file.extractfile(
+#                 member=member)
+#             if extracted is None:
+#                 continue
+#             b: bytes = extracted.read()
 
-            res: list = scanner_instance.scan(
-                excluded_pans_list=excluded_pans_list)
-            if len(res) > 0:
-                matches.extend(res)
-        return matches
+#             if b:
+#                 mime_type, _ = panutils.get_mime_data_from_buffer(
+#                     value_bytes=b)
+
+#                 scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
+#                     mime_type=mime_type, extension=panutils.get_ext(file_name=member.name))
+#                 if scanner_init is None:
+#                     return []
+
+#                 scanner_instance = scanner_init(patterns=self.patterns)
+#                 scanner_instance.from_file(
+#                     path=self.filename, sub_path=member.name)
+#                 scanner_instance.from_buffer(buffer=b)
+
+#                 res: list = scanner_instance.scan(
+#                     excluded_pans_list=excluded_pans_list)
+#                 if len(res) > 0:
+#                     matches.extend(res)
+#         return matches
 
 
-class XzScanner(ScannerBase):
+# class GzipScanner(ScannerBase):
 
-    __xz_file: Optional[lzma.LZMAFile] = None
+#     __gz_file: Optional[gzip.GzipFile] = None
 
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
+#     def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
-        if self.__xz_file is None:
-            if self.value_bytes:
-                file_like_object = io.BytesIO(initial_bytes=self.value_bytes)
-                self.__xz_file = lzma.LZMAFile(filename=file_like_object)
-            else:
-                self.__xz_file = lzma.LZMAFile(filename=self.filename)
+#         if self.__gz_file is None:
+#             if self.value_bytes:
+#                 file_like_object = io.BytesIO(initial_bytes=self.value_bytes)
+#                 self.__gz_file = gzip.GzipFile(
+#                     fileobj=file_like_object)
+#             else:
+#                 self.__gz_file = gzip.GzipFile(filename=self.filename)
 
-        matches: list = []
-        b: bytes = self.__xz_file.read1()
+#         matches: list = []
+#         b: bytes = self.__gz_file.read1()
+#         gz_info = gzinfo.read_gz_info(filename=self.filename)
+#         if gz_info:
+#             compressed_filename: str = gz_info.fname
+#         else:
+#             compressed_filename = self.filename.replace('.gz', '')
 
-        compressed_filename: str = self.filename.replace('.xz', '')
+#         if b:
+#             mime_type, _ = panutils.get_mime_data_from_buffer(
+#                 value_bytes=b)
 
-        if b:
-            mime_type, _ = panutils.get_mime_data_from_buffer(
-                value_bytes=b)
+#             scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
+#                 mime_type=mime_type, extension=panutils.get_ext(file_name=compressed_filename))
+#             if scanner_init is None:
+#                 return []
 
-            scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
-                mime_type=mime_type, extension=panutils.get_ext(file_name=compressed_filename))
-            if scanner_init is None:
-                return []
+#             scanner_instance = scanner_init(patterns=self.patterns)
+#             scanner_instance.from_file(
+#                 path=self.filename, sub_path=compressed_filename)
+#             scanner_instance.from_buffer(buffer=b)
 
-            scanner_instance = scanner_init(patterns=self.patterns)
-            scanner_instance.from_file(
-                path=self.filename, sub_path=compressed_filename)
-            scanner_instance.from_buffer(buffer=b)
+#             res: list = scanner_instance.scan(
+#                 excluded_pans_list=excluded_pans_list)
+#             if len(res) > 0:
+#                 matches.extend(res)
+#         return matches
 
-            res: list = scanner_instance.scan(
-                excluded_pans_list=excluded_pans_list)
-            if len(res) > 0:
-                matches.extend(res)
-        return matches
+
+# class XzScanner(ScannerBase):
+
+#     __xz_file: Optional[lzma.LZMAFile] = None
+
+#     def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
+
+#         if self.__xz_file is None:
+#             if self.value_bytes:
+#                 file_like_object = io.BytesIO(initial_bytes=self.value_bytes)
+#                 self.__xz_file = lzma.LZMAFile(filename=file_like_object)
+#             else:
+#                 self.__xz_file = lzma.LZMAFile(filename=self.filename)
+
+#         matches: list = []
+#         b: bytes = self.__xz_file.read1()
+
+#         compressed_filename: str = self.filename.replace('.xz', '')
+
+#         if b:
+#             mime_type, _ = panutils.get_mime_data_from_buffer(
+#                 value_bytes=b)
+
+#             scanner_init: Optional[Type[ScannerBase]] = mappings.get_scanner_by_file(
+#                 mime_type=mime_type, extension=panutils.get_ext(file_name=compressed_filename))
+#             if scanner_init is None:
+#                 return []
+
+#             scanner_instance = scanner_init(patterns=self.patterns)
+#             scanner_instance.from_file(
+#                 path=self.filename, sub_path=compressed_filename)
+#             scanner_instance.from_buffer(buffer=b)
+
+#             res: list = scanner_instance.scan(
+#                 excluded_pans_list=excluded_pans_list)
+#             if len(res) > 0:
+#                 matches.extend(res)
+#         return matches
 
 
 class PdfScanner(ScannerBase):

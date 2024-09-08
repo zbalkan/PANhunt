@@ -5,79 +5,83 @@ import platform
 import sys
 import time
 from datetime import datetime, timedelta
-from typing import Optional, Sequence
+from typing import Optional
 
 from genericpath import exists
 
 import panutils
-from enums import ScanStatusEnum
-from PANFile import PANFile
+from config import PANHuntConfiguration
+from scannable import ScannableFile
 
 
 class Report:
 
-    total_files: int
-    start: datetime
-    end: datetime
-    searched: str
-    excluded: str
-    pans_found: int
-    matched_files: list[PANFile]
-    interesting_files: list[PANFile]
+    __total_files: int
+    __start: datetime
+    __end: datetime
+    __searched: str
+    __excluded: str
+    pan_count: int
+    matched_files: list[ScannableFile]
+    interesting_files: list[ScannableFile]
+    __conf: PANHuntConfiguration
 
     __command: str
     __timestamp: str
     __elapsed: timedelta
 
     def __init__(self,
-                 search_dir: str,
-                 excluded_dirs: list,
-                 pans_found: int,
-                 all_files: Sequence[PANFile],
+                 configuration: PANHuntConfiguration,
+                 files_searched_count: int,
+                 matched_files: list[ScannableFile],
+                 interesting_files: list[ScannableFile],
                  start: datetime,
                  end: datetime) -> None:
         '''excluded_dirs: list[str]'''
-        self.total_files = len(all_files)
-        self.start = start
-        self.end = end
-        self.searched = search_dir
-        self.excluded = ','.join(excluded_dirs)
-        self.pans_found = pans_found
+        self.__total_files = files_searched_count
+        self.__start = start
+        self.__end = end
+        self.__conf = configuration
+        self.matched_files = matched_files
+        self.interesting_files = interesting_files
+        self.__searched = configuration.search_dir
+        self.__excluded = ','.join(configuration.excluded_directories)
         self.__command = ' '.join(sys.argv)
         self.__timestamp = time.strftime("%H:%M:%S %d/%m/%Y")
-        self.__elapsed = self.end - self.start
-        self.matched_files = sorted(
-            [pan_file for pan_file in all_files if pan_file.matches], key=lambda x: x.filename)
-        self.interesting_files = sorted([
-            pan_file for pan_file in all_files if pan_file.file_category == ScanStatusEnum.NotScanned], key=lambda x: x.path)
+        self.__elapsed = self.__end - self.__start
+        self.pan_count = len(
+            [pan for f in self.matched_files if f.matches for pan in f.matches])
 
-    def create_text_report(self, path: str) -> None:
+    def create_text_report(self) -> None:
 
+        path: str = self.__conf.get_report_path()
         logging.info("Creating TXT report.")
 
         pan_sep: str = '\n\t'
         pan_report: str = f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}\n{"=" * 100}\n'
-        pan_report += f'Searched {self.searched}\nExcluded {self.excluded}\n'
+        pan_report += f'Searched {self.__searched}\nExcluded {self.__excluded}\n'
         pan_report += f'Command: {self.__command}\n'
         pan_report += f'Uname: {" | ".join(platform.uname())}\n'
         pan_report += f'Elapsed time: {self.__elapsed}\n'
-        pan_report += f'Searched {self.total_files} files. Found {self.pans_found} possible PANs.\n{"=" * 100}\n\n'
+        pan_report += f'Searched {self.__total_files} files. Found {self.pan_count} possible PANs.\n{"=" * 100}\n\n'
 
-        for pan_file in sorted(self.matched_files, key=lambda x: x.path):
-            pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
+        for file in self.matched_files:
+            pan_header: str = f"FOUND PANs: {file.path}"
 
             pan_report += pan_header + '\n'
             pan_list: str = '\t'
-            for pan in pan_file.matches:
+
+            for pan in file.matches:
                 if pan.sub_path != '':
                     pan_list += f'{pan.sub_path} '
                 pan_list += f"{pan.get_masked_pan()}{pan_sep}"
             pan_report += pan_list.rstrip(pan_sep) + '\n\n'
 
         if len(self.interesting_files) != 0:
-            pan_report += 'Interesting Files to check separately, proably permission issue:\n'
-        for pan_file in sorted(self.interesting_files, key=lambda x: x.filename):
-            pan_report += f'{pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime("%d/%m/%Y")})\n'
+            pan_report += 'Interesting Files to check separately, probably a permission issue:\n'
+        for interesting in sorted(self.interesting_files, key=lambda x: x.filename):
+                pan_report += f'{interesting.path} ({panutils.size_friendly(interesting.size)})\n'
+                pan_report += f'Error: {interesting.errors}\n'
 
         pan_report = pan_report.replace('\n', os.linesep)
 
@@ -92,8 +96,9 @@ class Report:
 
         logging.info("Created TXT report.")
 
-    def create_json_report(self, path: Optional[str]) -> None:
+    def create_json_report(self) -> None:
 
+        path: Optional[str] = self.__conf.get_json_path()
         if path is None:
             return
 
@@ -101,32 +106,35 @@ class Report:
 
         report: dict = {}
         report['timestamp'] = self.__timestamp
-        report['searched'] = self.searched
-        report['excluded'] = self.excluded
+        report['searched'] = self.__searched
+        report['excluded'] = self.__excluded
         report['command'] = self.__command
         report['elapsed'] = str(self.__elapsed)
-        report['total_files'] = self.total_files
-        report['pans_found'] = self.pans_found
+        report['total_files'] = self.__total_files
+        report['pans_found'] = self.pan_count
 
         matched_items: dict[str, list[str]] = {}
-        for pan_file in self.matched_files:
+        for file in self.matched_files:
 
             items: list[str] = []
-            for pan in pan_file.matches:
+            for pan in file.matches:
                 item: str = ''
                 if pan.filename != '':
                     item += f"{pan.filename}\\{pan.sub_path} "
                 item += f"{pan.get_masked_pan()}"
                 items.append(item)
-            matched_items[pan_file.path] = items
+            matched_items[file.path] = items
 
         report['pans_found_results'] = matched_items
 
-        if len(self.interesting_files) != 0:
+        if len(self.interesting_files) > 0:
+            report['interesting_files'] = {}
             report['interesting_files']['total'] = len(self.interesting_files)
 
-            report['interesting_files']['files'] = [
-                f.path for f in self.interesting_files]
+            report['interesting_files']['files'] = []
+            for interesting in self.interesting_files:
+                report['interesting_files']['files'].append(
+                    {'path': interesting.path, 'size': interesting.size, 'errors': interesting.errors})
 
         initial_report: str = json.dumps(report, sort_keys=True)
         digest: str = panutils.get_text_hash(initial_report)
