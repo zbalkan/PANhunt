@@ -34,13 +34,6 @@ def hunt_pans(configuration: PANHuntConfiguration) -> Report:
     # Start timer
     start: datetime = datetime.now()
 
-    # Check if it is a single-file scan
-    path: Optional[str] = configuration.file_path
-    if path:
-        logging.info(f"Added file to list: \"{path}\"")
-
-        hunter.add_file(os.path.basename(path), os.path.dirname(path))
-
     logging.info("Started searching in file(s).")
 
     # check each file

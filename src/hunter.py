@@ -1,4 +1,6 @@
+from email.mime import base
 import logging
+import os
 import re
 import time
 
@@ -15,7 +17,6 @@ class Hunter:
     __conf: PANHuntConfiguration
     __patterns: CardPatterns
     __dispatcher: Dispatcher
-    __single_file: bool = False
     count: int = 0
 
     def __init__(self, configuration: PANHuntConfiguration) -> None:
@@ -24,12 +25,6 @@ class Hunter:
         self.__dispatcher = Dispatcher(
             excluded_pans_list=self.__conf.excluded_pans, patterns=self.__patterns)
 
-    def add_file(self, filename: str, dir: str) -> None:
-        """Create a Job and add to the list."""
-        if not self.__is_directory_excluded(dir):
-            JobQueue().enqueue(Job(filename=filename, file_dir=dir))
-            self.__single_file = True
-
     def hunt(self) -> None:
         """Enqueue all jobs into the job queue for processing by the dispatcher."""
 
@@ -37,7 +32,12 @@ class Hunter:
 
         logging.info(f"Search base: {self.__conf.search_dir}")
 
-        if not self.__single_file:
+        if self.__conf.file_path:
+            basename = os.path.basename(self.__conf.file_path)
+            dir = os.path.dirname(self.__conf.file_path)
+            if not self.__is_directory_excluded(dir):
+                JobQueue().enqueue(Job(basename, file_dir=dir))
+        else:
             root = Directory(path=self.__conf.search_dir)
             for file in root.get_children():
                 if not self.__is_directory_excluded(file.file_dir):
