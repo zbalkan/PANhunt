@@ -41,32 +41,24 @@ def hunt_pans(configuration: PANHuntConfiguration) -> Report:
 
         hunter.add_file(os.path.basename(path), os.path.dirname(path))
 
-    else:
-        logging.info("Started searching directories.")
-        # find all files to check
-        total_count = hunter.enumerate()
-        logging.info("Finished searching directories.")
-
     logging.info("Started searching in file(s).")
 
     # check each file
     hunter.hunt()
 
     results: list[Scannable] = hunter.get_results()
+    logging.info("Finished searching.")
+
+    end: datetime = datetime.now()
+
     interesting: list[Scannable] = [
         result for result in results if result.errors is not None and len(result.errors) > 0]
     matches: list[Scannable] = [
         result for result in results if result.matches is not None and len(result.matches) > 0]
 
-    logging.info("Finished searching in files.")
-
-    logging.info("Finished searching.")
-
-    end: datetime = datetime.now()
-
     return Report(
         configuration=configuration,
-        files_searched_count=total_count,
+        files_searched_count=hunter.count,
         matched_files=matches,
         interesting_files=interesting,
         start=start, end=end)
@@ -131,7 +123,7 @@ def main() -> None:
     arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog='panhunt', description=f'PAN Hunt v{APP_VERSION}: search directories and sub directories for documents containing PANs.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
-        '-s', dest='search_dir', help='base directory to search in', default='/')
+        '-s', dest='search_dir', help='base directory to search in')
     arg_parser.add_argument(
         '-f', dest='file_path', help='File path for single file scan')
     arg_parser.add_argument('-x', dest='exclude_dirs',
