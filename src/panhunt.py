@@ -153,6 +153,7 @@ def main() -> None:
     json_dir: Optional[str] = args.json_dir
     config_file: Optional[str] = args.config
     verbose: bool = args.verbose
+    quiet: bool = args.quiet
 
     # Initiated with default values
     config: PANHuntConfiguration = PANHuntConfiguration()
@@ -180,7 +181,8 @@ def main() -> None:
     if json_dir:
         report.create_json_report()
 
-    display_report(report=report, configuration=config)
+    if not quiet:
+        display_report(report=report, configuration=config)
 
 
 if __name__ == "__main__":
