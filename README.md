@@ -6,7 +6,7 @@
 
 ## Introduction
 
-```
+```shell
 NOTE: This is a fork of original PANHunt as an effort to migrate to Python 3.
 It is heavily modified and refactored. There may be issues with functionality. Do not use in production!
 ```
@@ -18,29 +18,6 @@ PANhunt is a tool that can be used to search drives for credit card numbers (PAN
 The script uses regular expressions to look for Visa, MasterCard or AMEX credit card numbers in document files. Zip files are recursed to look for document files. PST and MSG files are parsed and emails and attachments searched in.
 
 The script will list but does not yet search Access databases.
-## Breaking changes
-
-This for includes a full architectural change to allow extending the scanning capabilities by providing a new scanner. It is more modular and has more file searching capabilities. It means there is a performance impact for the sake of accuracy.
-
-With v1.3, breaking changes are implemented:
-
-- Migrated to Python 3
-- Used file type detection via `python-magic` instead of depending on file extensions only.
-- A default text log capability is added for the sake of accountability.
-- Text report now accepts only directory as an argument while the name is fixed.
-  - Text report filename template: `panhunt_<timestamp>.report`
-- An optional JSON formatted report generation capability is added for integration with 3rd parties. Parameter accepts the target directory.
-  - JSON report filename template: `panhunt_<timestamp>.json`
-- A flag `-q` (quiet) is added to disable terminal output be used when it is integrated with other tools.
-- A flag `-f` (filepath) is added to enable sigle-file scans. Great for FIM integration.
-- `.eml` and `.mbox` file scanning capability is added.
-- PDF file scanning capability is added. OCR is not working as expected yet.
-
-With v1.4, breaking changes are implemented:
-- Removed file extension based filtering. Now it relies on `magic` results.
-
-
-NB! There is at least 20% performance impact after refactoring. There are no performance improvements tried yet.
 
 ## Build
 
@@ -48,15 +25,14 @@ PANhunt is a Python script that can be easily converted to a standalone Windows 
 
 panhunt.py requires:
 
-	- Python 3.6+
-	- Colorama (https://pypi.python.org/pypi/colorama)
-	- Progressbar (https://pypi.python.org/pypi/progressbar)
+- Python 3.19
+- [Colorama](https://pypi.python.org/pypi/colorama)
 
 You can use `pip install -r requirements.txt` for usage and `pip install -r requirements.dev.txt` for development.
 
 To compile as an executable, it requires:
 
-	- PyInstaller (https://pypi.python.org/pypi/PyInstaller)
+- [PyInstaller](https://pypi.python.org/pypi/PyInstaller)
 
 In order to create panhunt as a standalone executable run (works in both Linux and Windows):
 
@@ -68,7 +44,7 @@ However, you are advised  use a virtual environment. Update the path on the `bui
 
 ## Usage
 
-```
+```shell
 usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
 
 PAN Hunt v1.3: search directories and sub directories for documents containing PANs.
@@ -90,183 +66,96 @@ Simply running it with no arguments will search the `C:\` drive on Windows and f
 
 ## Example Output
 
-```
-Doc Hunt: 100% |||||||||||||||||||||||||||||||||||||||||| Time: 0:00:00 Docs:11
-PAN Hunt: 100% ||||||||||||||||||||||||||||||||||||||||| Time: 0:00:00 PANs:592
-FOUND PANs: c:\TEST\PANhunt_Test_File.docx (37.1640625KB 06/04/2023)
-        word/document.xml Mastercard:541111******1115
-        word/document.xml Mastercard:551111******1114
-        word/document.xml Visa:453211******1112
-        word/document.xml Visa:475127******1118
-        word/document.xml AMEX:371111*****1114
-        word/document.xml AMEX:340000*****0108
+```shell
+FOUND PANs: D:\\test\office\test.rtf (40.79KB)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        Visa:4012 8*** **** 1881
+        Visa:4012-8***-****-1881
+        AMEX:371449*****8431
 
-FOUND PANs: c:\TEST\PANhunt_Test_File.eml (287.6552734375KB 11/04/2023)
-        PAN TEST.txt Mastercard:541111******1115
-        PAN TEST.txt Mastercard:551111******1114
-        PAN TEST.txt Visa:453211******1112
-        PAN TEST.txt Visa:475127******1118
-        PAN TEST.txt AMEX:371111*****1114
-        PAN TEST.txt AMEX:340000*****0108
-        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:541111******1115
-        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:551111******1114
-        PAN TEST.xlsx\xl/sharedStrings.xml Visa:453211******1112
-        PAN TEST.xlsx\xl/sharedStrings.xml Visa:475127******1118
-        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:371111*****1114
-        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:340000*****0108
-        TEST.zip\PAN TEST.docx\word/document.xml Mastercard:541111******1115
-        TEST.zip\PAN TEST.docx\word/document.xml Mastercard:551111******1114
-        TEST.zip\PAN TEST.docx\word/document.xml Visa:453211******1112
-        TEST.zip\PAN TEST.docx\word/document.xml Visa:475127******1118
-        TEST.zip\PAN TEST.docx\word/document.xml AMEX:371111*****1114
-        TEST.zip\PAN TEST.docx\word/document.xml AMEX:340000*****0108
-        TEST.zip\PAN TEST.rtf Mastercard:541111******1115
-        TEST.zip\PAN TEST.rtf Mastercard:551111******1114
-        TEST.zip\PAN TEST.rtf Visa:453211******1112
-        TEST.zip\PAN TEST.rtf Visa:475127******1118
-        TEST.zip\PAN TEST.rtf AMEX:371111*****1114
-        TEST.zip\PAN TEST.rtf AMEX:340000*****0108
-        TEST.zip\PAN TEST.txt Mastercard:541111******1115
-        TEST.zip\PAN TEST.txt Mastercard:551111******1114
-        TEST.zip\PAN TEST.txt Visa:453211******1112
-        TEST.zip\PAN TEST.txt Visa:475127******1118
-        TEST.zip\PAN TEST.txt AMEX:371111*****1114
-        TEST.zip\PAN TEST.txt AMEX:340000*****0108
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:541111******1115
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:551111******1114
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Visa:453211******1112
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Visa:475127******1118
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml AMEX:371111*****1114
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml AMEX:340000*****0108
-        PAN TEST.docx\word/document.xml Mastercard:541111******1115
-        PAN TEST.docx\word/document.xml Mastercard:551111******1114
-        PAN TEST.docx\word/document.xml Visa:453211******1112
-        PAN TEST.docx\word/document.xml Visa:475127******1118
-        PAN TEST.docx\word/document.xml AMEX:371111*****1114
-        PAN TEST.docx\word/document.xml AMEX:340000*****0108
-        PAN TEST.rtf Mastercard:541111******1115
-        PAN TEST.rtf Mastercard:551111******1114
-        PAN TEST.rtf Visa:453211******1112
-        PAN TEST.rtf Visa:475127******1118
-        PAN TEST.rtf AMEX:371111*****1114
-        PAN TEST.rtf AMEX:340000*****0108
+FOUND PANs: D:\\test\pdf\test.pdf (39.57KB)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        Visa:4012 8*** **** 1881
+        Visa:4012-8***-****-1881
+        AMEX:371449*****8431
 
-FOUND PANs: c:\TEST\PANhunt_Test_File.msg (207.0KB 06/04/2023)
-        PAN TEST.txt Mastercard:541111******1115
-        PAN TEST.txt Mastercard:551111******1114
-        PAN TEST.txt Visa:453211******1112
-        PAN TEST.txt Visa:475127******1118
-        PAN TEST.txt AMEX:371111*****1114
-        PAN TEST.txt AMEX:340000*****0108
-        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:541111******1115
-        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:551111******1114
-        PAN TEST.xlsx\xl/sharedStrings.xml Visa:453211******1112
-        PAN TEST.xlsx\xl/sharedStrings.xml Visa:475127******1118
-        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:371111*****1114
-        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:340000*****0108
-        TEST.zip\PAN TEST.docx\word/document.xml Mastercard:541111******1115
-        TEST.zip\PAN TEST.docx\word/document.xml Mastercard:551111******1114
-        TEST.zip\PAN TEST.docx\word/document.xml Visa:453211******1112
-        TEST.zip\PAN TEST.docx\word/document.xml Visa:475127******1118
-        TEST.zip\PAN TEST.docx\word/document.xml AMEX:371111*****1114
-        TEST.zip\PAN TEST.docx\word/document.xml AMEX:340000*****0108
-        TEST.zip\PAN TEST.rtf Mastercard:541111******1115
-        TEST.zip\PAN TEST.rtf Mastercard:551111******1114
-        TEST.zip\PAN TEST.rtf Visa:453211******1112
-        TEST.zip\PAN TEST.rtf Visa:475127******1118
-        TEST.zip\PAN TEST.rtf AMEX:371111*****1114
-        TEST.zip\PAN TEST.rtf AMEX:340000*****0108
-        TEST.zip\PAN TEST.txt Mastercard:541111******1115
-        TEST.zip\PAN TEST.txt Mastercard:551111******1114
-        TEST.zip\PAN TEST.txt Visa:453211******1112
-        TEST.zip\PAN TEST.txt Visa:475127******1118
-        TEST.zip\PAN TEST.txt AMEX:371111*****1114
-        TEST.zip\PAN TEST.txt AMEX:340000*****0108
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:541111******1115
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:551111******1114
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Visa:453211******1112
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml Visa:475127******1118
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml AMEX:371111*****1114
-        TEST.zip\PAN TEST.xlsx\xl/sharedStrings.xml AMEX:340000*****0108
-        PAN TEST.docx\word/document.xml Mastercard:541111******1115
-        PAN TEST.docx\word/document.xml Mastercard:551111******1114
-        PAN TEST.docx\word/document.xml Visa:453211******1112
-        PAN TEST.docx\word/document.xml Visa:475127******1118
-        PAN TEST.docx\word/document.xml AMEX:371111*****1114
-        PAN TEST.docx\word/document.xml AMEX:340000*****0108
-        PAN TEST.rtf Mastercard:541111******1115
-        PAN TEST.rtf Mastercard:551111******1114
-        PAN TEST.rtf Visa:453211******1112
-        PAN TEST.rtf Visa:475127******1118
-        PAN TEST.rtf AMEX:371111*****1114
-        PAN TEST.rtf AMEX:340000*****0108
+FOUND PANs: D:\\test\plain\test.txt (96.00B)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        Visa:4012 8*** **** 1881
+        Visa:4012-8***-****-1881
+        AMEX:371449*****8431
 
-FOUND PANs: c:\TEST\PANhunt_Test_File.ppt (84.5KB 11/04/2023)
-        Mastercard:541111******1115
-        Mastercard:551111******1114
-        Visa:453211******1112
-        Visa:475127******1118
-        AMEX:371111*****1114
-        AMEX:340000*****0108
+FOUND PANs: D:\\test\plain\dir2\test.txt (96.00B)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        Visa:4012 8*** **** 1881
+        Visa:4012-8***-****-1881
+        AMEX:371449*****8431
 
-FOUND PANs: c:\TEST\PANhunt_Test_File.pptx (36.0849609375KB 11/04/2023)
-        ppt/slides/slide1.xml Mastercard:541111******1115
-        ppt/slides/slide1.xml Mastercard:551111******1114
-        ppt/slides/slide1.xml Visa:453211******1112
-        ppt/slides/slide1.xml Visa:475127******1118
-        ppt/slides/slide1.xml AMEX:371111*****1114
-        ppt/slides/slide1.xml AMEX:340000*****0108
+FOUND PANs: D:\\test\gz\test.txt.gz\test.txt (54.00B)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        AMEX:371449*****8431
 
-FOUND PANs: c:\TEST\PANhunt_Test_File.rtf (42.98046875KB 06/04/2023)
-        Mastercard:541111******1115
-        Mastercard:551111******1114
-        Visa:453211******1112
-        Visa:475127******1118
-        AMEX:371111*****1114
-        AMEX:340000*****0108
+FOUND PANs: D:\\test\office\test.docx\word/document.xml (3.50KB)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        Visa:4012 8*** **** 1881
+        Visa:4012-8***-****-1881
+        AMEX:371449*****8431
 
-FOUND PANs: c:\TEST\PANhunt_Test_File.txt (685B 04/04/2023)
-        Mastercard:541111******1115
-        Mastercard:551111******1114
-        Visa:453211******1112
-        Visa:475127******1118
-        AMEX:371111*****1114
-        AMEX:340000*****0108
+FOUND PANs: D:\\test\office\test.pptx\ppt/slides/slide1.xml (1.68KB)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        Visa:4012 8*** **** 1881
+        Visa:4012-8***-****-1881
+        AMEX:371449*****8431
 
-FOUND PANs: c:\TEST\PANhunt_Test_File.xlsx (9.708984375KB 06/04/2023)
-        xl/sharedStrings.xml Mastercard:541111******1115
-        xl/sharedStrings.xml Mastercard:551111******1114
-        xl/sharedStrings.xml Visa:453211******1112
-        xl/sharedStrings.xml Visa:475127******1118
-        xl/sharedStrings.xml AMEX:371111*****1114
-        xl/sharedStrings.xml AMEX:340000*****0108
+FOUND PANs: D:\\test\office\test.xlsx\xl/sharedStrings.xml (328.00B)
+        Mastercard:5105-1***-****-5100
+        Visa:4012 8*** **** 1881
+        Visa:4012-8***-****-1881
+        Visa:401288******1881
+        AMEX:371449*****8431
 
-FOUND PANs: c:\TEST\PANhunt_Test_File.zip (49.619140625KB 06/04/2023)
-        PAN TEST.docx\word/document.xml Mastercard:541111******1115
-        PAN TEST.docx\word/document.xml Mastercard:551111******1114
-        PAN TEST.docx\word/document.xml Visa:453211******1112
-        PAN TEST.docx\word/document.xml Visa:475127******1118
-        PAN TEST.docx\word/document.xml AMEX:371111*****1114
-        PAN TEST.docx\word/document.xml AMEX:340000*****0108
-        PAN TEST.rtf Mastercard:541111******1115
-        PAN TEST.rtf Mastercard:551111******1114
-        PAN TEST.rtf Visa:453211******1112
-        PAN TEST.rtf Visa:475127******1118
-        PAN TEST.rtf AMEX:371111*****1114
-        PAN TEST.rtf AMEX:340000*****0108
-        PAN TEST.txt Mastercard:541111******1115
-        PAN TEST.txt Mastercard:551111******1114
-        PAN TEST.txt Visa:453211******1112
-        PAN TEST.txt Visa:475127******1118
-        PAN TEST.txt AMEX:371111*****1114
-        PAN TEST.txt AMEX:340000*****0108
-        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:541111******1115
-        PAN TEST.xlsx\xl/sharedStrings.xml Mastercard:551111******1114
-        PAN TEST.xlsx\xl/sharedStrings.xml Visa:453211******1112
-        PAN TEST.xlsx\xl/sharedStrings.xml Visa:475127******1118
-        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:371111*****1114
-        PAN TEST.xlsx\xl/sharedStrings.xml AMEX:340000*****0108
+FOUND PANs: D:\\test\tar\success.tar\dir2/test.txt (96.00B)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        Visa:4012 8*** **** 1881
+        Visa:4012-8***-****-1881
+        AMEX:371449*****8431
 
+FOUND PANs: D:\\test\xz\test.txt (54.00B)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\\test\zip\test.zip\dir2/test.txt (96.00B)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        Visa:4012 8*** **** 1881
+        Visa:4012-8***-****-1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\\test\zip\test.zip\test.txt (96.00B)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        Visa:4012 8*** **** 1881
+        Visa:4012-8***-****-1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\\test\tar\success.tar.gz\success.tar\dir2/test.txt (54.00B)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\\test\tar\success.tar\dir2/test.txt (54.00B)
+        Mastercard:5105-1***-****-5100
+        Visa:401288******1881
+        AMEX:371449*****8431
 Report written to panhunt_YYYY-MM-DD-HHMMSS.txt
 ```
 
@@ -274,3 +163,34 @@ Report written to panhunt_YYYY-MM-DD-HHMMSS.txt
 
 The script allows for a configuration to be written that will default the application with settings such that you don't need to
 repeatedly specify exclude/include paths or the test PANs to exclude.
+
+## Changelog
+
+This for includes a full architectural change to allow extending the scanning capabilities by providing a new scanner. It is more modular and has more file searching capabilities. It means there is a performance impact for the sake of accuracy.
+
+### v1.5
+
+- Python version is now minimum 3.9
+- The progress bars removed
+- Each file within a container now considered a separate file
+- Nested archive file handling problem fixed
+
+### v1.4
+
+- Removed file extension based filtering. Now it relies on `magic` results.
+
+### v1.3
+
+- Migrated to Python 3
+- Used file type detection via `python-magic` instead of depending on file extensions only.
+- A default text log capability is added for the sake of accountability.
+- Text report now accepts only directory as an argument while the name is fixed.
+  - Text report filename template: `panhunt_<timestamp>.report`
+- An optional JSON formatted report generation capability is added for integration with 3rd parties. Parameter accepts the target directory.
+  - JSON report filename template: `panhunt_<timestamp>.json`
+- A flag `-q` (quiet) is added to disable terminal output be used when it is integrated with other tools.
+- A flag `-f` (filepath) is added to enable sigle-file scans. Great for FIM integration.
+- `.eml` and `.mbox` file scanning capability is added.
+- PDF file scanning capability is added. OCR is not working as expected yet.
+
+**NB!** There is at least 20% performance impact after refactoring. There are no performance improvements tried yet.
