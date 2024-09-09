@@ -11,7 +11,7 @@ from genericpath import exists
 
 import panutils
 from config import PANHuntConfiguration
-from scannable import ScannableFile
+from scannable import Scannable
 
 
 class Report:
@@ -22,8 +22,8 @@ class Report:
     __searched: str
     __excluded: str
     pan_count: int
-    matched_files: list[ScannableFile]
-    interesting_files: list[ScannableFile]
+    matched_files: list[Scannable]
+    interesting_files: list[Scannable]
     __conf: PANHuntConfiguration
 
     __command: str
@@ -33,8 +33,8 @@ class Report:
     def __init__(self,
                  configuration: PANHuntConfiguration,
                  files_searched_count: int,
-                 matched_files: list[ScannableFile],
-                 interesting_files: list[ScannableFile],
+                 matched_files: list[Scannable],
+                 interesting_files: list[Scannable],
                  start: datetime,
                  end: datetime) -> None:
         '''excluded_dirs: list[str]'''
@@ -80,8 +80,8 @@ class Report:
         if len(self.interesting_files) != 0:
             pan_report += 'Interesting Files to check separately, probably a permission issue:\n'
         for interesting in sorted(self.interesting_files, key=lambda x: x.filename):
-                pan_report += f'{interesting.path} ({panutils.size_friendly(interesting.size)})\n'
-                pan_report += f'Error: {interesting.errors}\n'
+            pan_report += f'{interesting.path} ({panutils.size_friendly(interesting.size)})\n'
+            pan_report += f'Error: {interesting.errors}\n'
 
         pan_report = pan_report.replace('\n', os.linesep)
 

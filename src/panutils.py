@@ -21,7 +21,25 @@ def get_root_dir() -> str:
         return './'
 
 
-def get_mime_data_from_buffer(value_bytes: bytes) -> tuple[str, str]:
+def get_mimetype(path: Optional[str] = None, value_bytes: Optional[bytes] = None) -> tuple[str, str, Optional[Exception]]:
+
+    try:
+        error: Optional[Exception] = None
+        if value_bytes is not None:
+            mime_type, encoding = __get_mime_data_from_buffer(value_bytes)
+        elif path is not None:
+            mime_type, encoding = __get_mime_data_from_file(path)
+        else:
+            mime_type, encoding = 'Unknown/Unknown', 'Unknown'
+    except Exception as ex:
+        mime_type = 'Unknown/Unknown'
+        encoding = 'Unknown'
+        error = ex
+    finally:
+        return mime_type, encoding, error
+
+
+def __get_mime_data_from_buffer(value_bytes: bytes) -> tuple[str, str]:
     m = magic.Magic(mime=True, mime_encoding=True)
     buffer: bytes
     if (len(value_bytes) < 2048):
@@ -36,7 +54,7 @@ def get_mime_data_from_buffer(value_bytes: bytes) -> tuple[str, str]:
     return mime_type, encoding
 
 
-def get_mime_data_from_file(path: str) -> tuple[str, str]:
+def __get_mime_data_from_file(path: str) -> tuple[str, str]:
     m = magic.Magic(mime=True, mime_encoding=True)
     mime_data: list[str] = m.from_file(filename=path).split(';')
     mime_type: str = mime_data[0].strip().lower()
@@ -190,7 +208,7 @@ def get_compressed_filename(gf: GzipFile) -> str:
         # Filename is not stored in the header, use the filename minus .gz
         fname = getattr(gf, 'name', 'unknown')
         if fname.endswith('.gz'):
-            fname = fname[:-3]
+            fname = os.path.basename(fname)[:-3]
         return fname
 
     if flag & FEXTRA:

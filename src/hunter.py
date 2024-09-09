@@ -1,63 +1,74 @@
 import logging
+import re
+import time
 
 from config import PANHuntConfiguration
 from directory import Directory
 from dispatcher import Dispatcher
+from job import Job, JobQueue
 from patterns import CardPatterns
-from scannable import ScannableFile
+from scannable import Scannable
 
 
 class Hunter:
 
-    __all_files: list[ScannableFile]
-    __matched_files: list[ScannableFile]
-    __interesting_files: list[ScannableFile]
+    __all_files: list[Job]
     __conf: PANHuntConfiguration
     __patterns: CardPatterns
+    __dispatcher: Dispatcher
 
     def __init__(self, configuration: PANHuntConfiguration) -> None:
         self.__conf = configuration
         self.__all_files = []
-        self.__matched_files = []
-        self.__interesting_files = []
         self.__patterns = CardPatterns()
+        self.__dispatcher = Dispatcher(
+            excluded_pans_list=self.__conf.excluded_pans, patterns=self.__patterns)
 
     def add_file(self, filename: str, dir: str) -> None:
-        file: ScannableFile = ScannableFile(filename=filename, file_dir=dir)
-        self.__all_files.append(file)
+        """Create a Job instead of a ScannableFile and add to the list."""
+        job = Job(filename=filename, file_dir=dir)
+        self.__all_files.append(job)
 
     def enumerate(self) -> int:
-        """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
+        """Recursively searches a directory for files and adds them as jobs."""
 
-        file_list: list[ScannableFile] = []
+        file_list: list[Job] = []
 
         logging.info(f"Search base: {self.__conf.search_dir}")
 
         root = Directory(path=self.__conf.search_dir)
         for file in root.get_children():
-            if file.dir not in self.__conf.excluded_directories:
-                file_list.append(file)
+            if not self.__is_directory_excluded(file.file_dir):
+                # Create a Job instance for each file instead of ScannableFile
+                job = Job(filename=file.filename,
+                          file_dir=file.file_dir, value_bytes=file.value_bytes)
+                file_list.append(job)
+
         self.__all_files += file_list
-        logging.info(f"Total number of files: {len(self.__all_files)}")
+        logging.info(f"Total number of jobs (files): {len(self.__all_files)}")
         return len(self.__all_files)
 
-    def get_interesting_files(self) -> list[ScannableFile]:
-        return self.__interesting_files
+    def hunt(self) -> None:
+        """Enqueue all jobs into the job queue for processing by the dispatcher."""
 
-    def hunt(self) -> list[ScannableFile]:
-        """ Searches files in doc_files list for regular expressions"""
+        self.__dispatcher.start()
 
-        dispatcher = Dispatcher(
-            excluded_pans_list=self.__conf.excluded_pans, patterns=self.__patterns)
+        for job in self.__all_files:
+            JobQueue().enqueue(job)
 
-        for sf in self.__all_files:
-            sf_list: list[ScannableFile] = dispatcher.dispatch(sf)
+        # Mark the queue as finished so the dispatcher knows no more jobs are coming
+        JobQueue().mark_input_complete()
 
-            for f in sf_list:
-                if len(f.matches) > 0:
-                    self.__matched_files.append(f)
-                else:
-                    if f.errors is not None and len(f.errors) > 0:
-                        self.__interesting_files.append(f)
+        while (not JobQueue().is_finished()):
+            time.sleep(0.1)
 
-        return self.__matched_files
+    def get_results(self) -> list[Scannable]:
+        return self.__dispatcher.results
+
+    def __is_directory_excluded(self, file_dir: str) -> bool:
+        for excluded_dir in self.__conf.excluded_directories:
+            escaped_file_dir = re.escape(file_dir)
+            escaped_excluded_dir = re.escape(excluded_dir)
+            if re.match(f"{escaped_excluded_dir}/.*", escaped_file_dir):
+                return True
+        return False

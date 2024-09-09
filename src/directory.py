@@ -1,15 +1,21 @@
 import os
 
-from container import Container
-from scannable import ScannableFile
+from job import Job
 
 
-class Directory(Container):
-    def get_children(self) -> list[ScannableFile]:
-        searchables: list[ScannableFile] = []
+class Directory:
+
+    path: str
+
+    def __init__(self, path: str) -> None:
+        self.path = path
+
+    def get_children(self) -> list[Job]:
+        jobs: list[Job] = []
         for root, dirs, files in os.walk(self.path):
             for file in files:
-                searchables.append(ScannableFile(
+                file = os.path.join(root, file)
+                jobs.append(Job(
                     filename=file, file_dir=root))
 
-        return searchables
+        return jobs

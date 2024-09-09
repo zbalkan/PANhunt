@@ -34,8 +34,6 @@ class PANHuntConfiguration:
         self.json_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.json'
         self.json_dir = None
         self.mask_pans = False
-        self.excluded_directories = ['C:\\Windows',
-                                     'C:\\Program Files', 'C:\\Program Files(x86)', '/mnt', '/dev', '/proc']
         self.excluded_pans = []
 
     def with_args(self,

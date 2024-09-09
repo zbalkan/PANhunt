@@ -10,7 +10,7 @@ from PAN import PAN
 FILE_SIZE_LIMIT: int = 1_073_741_824  # 1Gb
 
 
-class ScannableFile:
+class Scannable:
     """ PANFile: class for a file that can check itself for PANs"""
 
     filename: str
@@ -28,7 +28,8 @@ class ScannableFile:
 
     value_bytes: Optional[bytes] = None
 
-    def __init__(self, filename: str, file_dir: str, value_bytes: Optional[bytes] = None) -> None:
+    def __init__(self, filename: str, file_dir: str, value_bytes: Optional[bytes] = None,
+                 mimetype: Optional[str] = None, encoding: Optional[str] = None, err: Optional[Exception] = None) -> None:
         self.filename = filename
         self.dir = file_dir
         self.path = os.path.join(self.dir, self.filename)
@@ -41,18 +42,20 @@ class ScannableFile:
         self.extension = panutils.get_ext(self.filename)
         self.extensions = panutils.get_exts(self.filename)
 
-        try:
-            if value_bytes:
-                self.mime_type, self.encoding = panutils.get_mime_data_from_buffer(
-                    value_bytes)
-            else:
-                self.mime_type, self.encoding = panutils.get_mime_data_from_file(
-                    self.path)
-        except Exception as ex:
-            self.mime_type = 'Unknown/Unknown'
-            self.encoding = 'Unknown'
-            self.set_error(
-                f'Failed to detect mimetype and encoding. Inner exception: {ex}')
+        if mimetype is not None:
+            self.mime_type = mimetype
+        if encoding is not None:
+            self.encoding = encoding
+
+        if err is not None:
+            self.set_error(str(err))
+
+        if mimetype is None or encoding is None:
+            self.mime_type, self.encoding, err = panutils.get_mimetype(self.path,
+                                                                       value_bytes)
+            if err:
+                self.set_error(
+                    f'Failed to detect mimetype and encoding. Inner exception: {err}')
 
         self.set_file_stats()
 
@@ -60,7 +63,7 @@ class ScannableFile:
             self.set_error(
                 error_msg=f'File size {panutils.size_friendly(size=self.size)} over limit of {panutils.size_friendly(size=FILE_SIZE_LIMIT)} for checking for file \"{self.filename}\"')
 
-    def __cmp__(self, other: 'ScannableFile') -> bool:
+    def __cmp__(self, other: 'Scannable') -> bool:
 
         return self.path.lower() == other.path.lower()
 

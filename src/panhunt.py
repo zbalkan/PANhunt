@@ -22,7 +22,7 @@ import panutils
 from config import PANHuntConfiguration
 from hunter import Hunter
 from report import Report
-from scannable import ScannableFile
+from scannable import Scannable
 
 APP_NAME: Final[str] = 'PANhunt'
 APP_VERSION: Final[str] = '1.5'
@@ -50,9 +50,13 @@ def hunt_pans(configuration: PANHuntConfiguration) -> Report:
     logging.info("Started searching in file(s).")
 
     # check each file
-    matches: list[ScannableFile] = hunter.hunt()
+    hunter.hunt()
 
-    interesting: list[ScannableFile] = hunter.get_interesting_files()
+    results: list[Scannable] = hunter.get_results()
+    interesting: list[Scannable] = [
+        result for result in results if result.errors is not None and len(result.errors) > 0]
+    matches: list[Scannable] = [
+        result for result in results if result.matches is not None and len(result.matches) > 0]
 
     logging.info("Finished searching in files.")
 
@@ -116,7 +120,7 @@ def main() -> None:
                         encoding='utf-8',
                         format='%(asctime)s:%(levelname)s:%(message)s',
                         datefmt="%Y-%m-%dT%H:%M:%S%z",
-                        level=logging.INFO)
+                        level=logging.DEBUG)
 
     excepthook = logging.error
     logging.info('Starting')
@@ -131,7 +135,7 @@ def main() -> None:
     arg_parser.add_argument(
         '-f', dest='file_path', help='File path for single file scan')
     arg_parser.add_argument('-x', dest='exclude_dirs',
-                            help='directories to exclude from the search (use absolute paths)', default='C:\\Windows,C:\\Program Files,C:\\Program Files (x86),/mnt,/dev,/proc')
+                            help='directories to exclude from the search (use absolute paths)')
     arg_parser.add_argument(
         '-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
     arg_parser.add_argument(
