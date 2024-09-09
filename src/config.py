@@ -22,8 +22,11 @@ class PANHuntConfiguration:
     def __init__(self) -> None:
         if os.name == 'nt':
             self.search_dir = 'C:\\'
+            self.excluded_directories = ['C:\\Windows',
+                                         'C:\\Program Files', 'C:\\Program Files(x86)']
         else:
             self.search_dir = '/'
+            self.excluded_directories = ['/mnt', '/dev', '/proc']
         self.file_path = None
         self.config_file = None
         self.report_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.report'
@@ -31,8 +34,6 @@ class PANHuntConfiguration:
         self.json_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.json'
         self.json_dir = None
         self.mask_pans = False
-        self.excluded_directories = ['C:\\Windows',
-                                     'C:\\Program Files', 'C:\\Program Files(x86)', '/mnt', '/dev', '/proc']
         self.excluded_pans = []
 
     def with_args(self,
@@ -166,7 +167,7 @@ class PANHuntConfiguration:
             self.excluded_pans = excluded_pans_string.split(',')
 
         if json_dir:
-            if json_dir != "./":
+            if json_dir == "./":
                 self.json_dir = panutils.get_root_dir()
             else:
                 self.json_dir = os.path.abspath(json_dir)

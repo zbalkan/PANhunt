@@ -1,82 +1,67 @@
+from email.mime import base
 import logging
 import os
-from typing import Generator, Optional
+import re
+import time
 
-from PAN import PAN
-import panutils
 from config import PANHuntConfiguration
+from directory import Directory
 from dispatcher import Dispatcher
-from PANFile import PANFile
+from job import Job, JobQueue
 from patterns import CardPatterns
+from scannable import Scannable
 
 
 class Hunter:
 
-    __all_files: list[PANFile]
     __conf: PANHuntConfiguration
     __patterns: CardPatterns
+    __dispatcher: Dispatcher
+    count: int = 0
 
     def __init__(self, configuration: PANHuntConfiguration) -> None:
         self.__conf = configuration
-        self.__all_files = []
         self.__patterns = CardPatterns()
+        self.__dispatcher = Dispatcher(
+            excluded_pans_list=self.__conf.excluded_pans, patterns=self.__patterns)
 
-    def get_files(self) -> tuple[PANFile, ...]:
-        return tuple(self.__all_files)
+    def hunt(self) -> None:
+        """Enqueue all jobs into the job queue for processing by the dispatcher."""
 
-    def add_single_file(self, filename: str, dir: str) -> None:
-        file: PANFile = PANFile(filename=filename, file_dir=dir)
-        self.__all_files.append(file)
-
-    def get_scannable_files(self) -> Generator[tuple[int, int, int], None, None]:
-        """Recursively searches a directory for files. search_extensions is a dictionary of extension lists"""
-
-        doc_files: list[PANFile] = []
-        total_items: list[str] = []
+        self.__dispatcher.start()
 
         logging.info(f"Search base: {self.__conf.search_dir}")
 
-        # Precompute total items
-        for root, dirs, files in os.walk(self.__conf.search_dir):
-            dirs[:] = [d for d in dirs if os.path.join(
-                root, d).lower() not in self.__conf.excluded_directories]
-            total_items.extend([os.path.join(root, d) for d in dirs])
-            total_items.extend([os.path.join(root, f) for f in files])
+        if self.__conf.file_path:
+            basename = os.path.basename(self.__conf.file_path)
+            dir = os.path.dirname(self.__conf.file_path)
+            if not self.__is_directory_excluded(dir):
+                JobQueue().enqueue(Job(basename, file_dir=dir))
+        else:
+            root = Directory(path=self.__conf.search_dir)
+            for file in root.get_children():
+                if not self.__is_directory_excluded(file.file_dir):
+                    # Create a Job instance for each file instead of ScannableFile
+                    job = Job(filename=file.filename,
+                              file_dir=file.file_dir, value_bytes=file.value_bytes)
+                    JobQueue().enqueue(job)
+                    self.count += 1
 
-        root_total_items = len(total_items)
-        root_items_completed = 0
-        docs_found = 0
+        # Mark the queue as finished so the dispatcher knows no more jobs are coming
+        JobQueue().mark_input_complete()
 
-        for root, dirs, files in os.walk(self.__conf.search_dir):
-            dirs[:] = [d for d in dirs if os.path.join(
-                root, d).lower() not in self.__conf.excluded_directories]
+        while (not JobQueue().is_finished()):
+            time.sleep(0.1)
 
-            for directory in dirs:
-                root_items_completed += 1
-                yield docs_found, root_total_items, root_items_completed
+        logging.info(f"Total number of jobs (files): {self.count}")
 
-            for filename in files:
-                root_items_completed += 1
-                pan_file = PANFile(filename=filename, file_dir=root)
-                if not pan_file.errors:
-                    doc_files.append(pan_file)
-                    docs_found += 1
-                yield docs_found, root_total_items, root_items_completed
+    def get_results(self) -> list[Scannable]:
+        return self.__dispatcher.results
 
-        self.__all_files += doc_files
-        logging.info(f"Total number of files: {len(self.__all_files)}")
-
-    def scan_files(self) -> Generator[tuple[int, int], None, None]:
-        """ Searches files in doc_files list for regular expressions"""
-
-        files_completed: int = 0
-        matches_found: int = 0
-        dispatcher = Dispatcher(
-            excluded_pans_list=self.__conf.excluded_pans, patterns=self.__patterns)
-
-        for pan_file in self.__all_files:
-            matches: list[PAN] = pan_file.scan_with(
-                dispatcher=dispatcher, verbose=self.__conf.verbose)
-            matches_found += len(matches)
-            files_completed += 1
-            yield matches_found, files_completed
+    def __is_directory_excluded(self, file_dir: str) -> bool:
+        for excluded_dir in self.__conf.excluded_directories:
+            escaped_file_dir = re.escape(file_dir)
+            escaped_excluded_dir = re.escape(excluded_dir)
+            if re.match(f"{escaped_excluded_dir}/.*", escaped_file_dir):
+                return True
+        return False

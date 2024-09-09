@@ -21,82 +21,64 @@ import colorama
 import panutils
 from config import PANHuntConfiguration
 from hunter import Hunter
-from pbar import DocProgressbar
 from report import Report
+from scannable import Scannable
 
 APP_NAME: Final[str] = 'PANhunt'
 APP_VERSION: Final[str] = '1.5'
 
 
-def hunt_pans(quiet: bool, configuration: PANHuntConfiguration) -> Report:
+def hunt_pans(configuration: PANHuntConfiguration) -> Report:
 
     hunter = Hunter(configuration=configuration)
     # Start timer
     start: datetime = datetime.now()
 
-    # Check if it is a single-file scan
-    path: Optional[str] = configuration.file_path
-    if path:
-        logging.info(f"Added file to list: \"{path}\"")
-
-        hunter.add_single_file(os.path.basename(path), os.path.dirname(path))
-
-    else:
-        logging.info("Started searching directories.")
-
-        # find all files to check
-        if quiet:
-            # Wait until generator finishes
-            for _ in hunter.get_scannable_files():
-                ...
-        else:
-            with DocProgressbar('Doc') as pbar:
-                for docs_found, root_total_items, root_items_completed in hunter.get_scannable_files():
-                    pbar.update(items_found=docs_found,
-                                items_total=root_total_items, items_completed=root_items_completed)
-
-        logging.info("Finished searching directories.")
-
     logging.info("Started searching in file(s).")
 
     # check each file
-    pans_found: int = 0
+    hunter.hunt()
 
-    if quiet:
-        for pans_found, files_completed in hunter.scan_files():
-            ...
-    else:
-        with DocProgressbar(hunt_type='PAN') as pbar:
-            for pans_found, files_completed in hunter.scan_files():
-                pbar.update(items_found=pans_found,
-                            items_total=len(hunter.get_files()), items_completed=files_completed)
-
-    logging.info("Finished searching in files.")
-
+    results: list[Scannable] = hunter.get_results()
     logging.info("Finished searching.")
 
-    # Stop timer
     end: datetime = datetime.now()
 
-    return Report(search_dir=configuration.search_dir, excluded_dirs=configuration.excluded_directories, pans_found=pans_found, all_files=hunter.get_files(), start=start, end=end)
+    interesting: list[Scannable] = [
+        result for result in results if result.errors is not None and len(result.errors) > 0]
+    matches: list[Scannable] = [
+        result for result in results if result.matches is not None and len(result.matches) > 0]
+
+    return Report(
+        configuration=configuration,
+        files_searched_count=hunter.count,
+        matched_files=matches,
+        interesting_files=interesting,
+        start=start, end=end)
 
 
-def print_report(report: Report, configuration: PANHuntConfiguration) -> None:
+def display_report(report: Report, configuration: PANHuntConfiguration) -> None:
 
-    logging.info("Creating TXT report.")
     pan_sep: str = '\n\t'
-    for pan_file in report.matched_files:
-        pan_header: str = f"FOUND PANs: {pan_file.path} ({panutils.size_friendly(pan_file.size)} {pan_file.modified.strftime('%d/%m/%Y')})"
+    for sf in report.matched_files:
+        pan_header: str = f"FOUND PANs: {sf.path} ({panutils.size_friendly(sf.size)})"
 
         print(colorama.Fore.RED + panutils.unicode_to_ascii(pan_header))
         pan_list: str = '\t'
-        for pan in pan_file.matches:
+        for pan in sf.matches:
             if pan.sub_path != '':
                 pan_list += f'{pan.sub_path} '
             pan_list += f"{pan.get_masked_pan()}{pan_sep}"
 
         print(colorama.Fore.YELLOW +
               panutils.unicode_to_ascii(pan_list))
+
+    if len(report.interesting_files) > 0:
+        print(colorama.Fore.RED +
+              'Interesting Files to check separately, probably a permission issue:')
+        for interesting in report.interesting_files:
+            print(colorama.Fore.YELLOW + '\t- ' +
+                  f'{panutils.unicode_to_ascii(interesting.path)} ({panutils.unicode_to_ascii(panutils.size_friendly(interesting.size))})')
 
     print(colorama.Fore.WHITE +
           f'Report written to {panutils.unicode_to_ascii(configuration.get_report_path())}')
@@ -123,7 +105,7 @@ def main() -> None:
                         encoding='utf-8',
                         format='%(asctime)s:%(levelname)s:%(message)s',
                         datefmt="%Y-%m-%dT%H:%M:%S%z",
-                        level=logging.INFO)
+                        level=logging.DEBUG)
 
     excepthook = logging.error
     logging.info('Starting')
@@ -134,11 +116,11 @@ def main() -> None:
     arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog='panhunt', description=f'PAN Hunt v{APP_VERSION}: search directories and sub directories for documents containing PANs.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
-        '-s', dest='search_dir', help='base directory to search in', default='/')
+        '-s', dest='search_dir', help='base directory to search in')
     arg_parser.add_argument(
         '-f', dest='file_path', help='File path for single file scan')
     arg_parser.add_argument('-x', dest='exclude_dirs',
-                            help='directories to exclude from the search (use absolute paths)', default='C:\\Windows,C:\\Program Files,C:\\Program Files (x86),/mnt,/dev,/proc')
+                            help='directories to exclude from the search (use absolute paths)')
     arg_parser.add_argument(
         '-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
     arg_parser.add_argument(
@@ -170,7 +152,6 @@ def main() -> None:
     excluded_pans_string = str(args.exclude_pan)
     json_dir: Optional[str] = args.json_dir
     config_file: Optional[str] = args.config
-    quiet: bool = args.quiet
     verbose: bool = args.verbose
 
     # Initiated with default values
@@ -191,16 +172,15 @@ def main() -> None:
                          excluded_pans_string=excluded_pans_string,
                          verbose=verbose)
 
-    report: Report = hunt_pans(quiet=quiet, configuration=config)
+    report: Report = hunt_pans(configuration=config)
 
     # report findings
-    report.create_text_report(path=config.get_report_path())
+    report.create_text_report()
 
     if json_dir:
-        report.create_json_report(path=config.get_json_path())
+        report.create_json_report()
 
-    if not quiet:
-        print_report(report=report, configuration=config)
+    display_report(report=report, configuration=config)
 
 
 if __name__ == "__main__":
