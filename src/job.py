@@ -8,13 +8,13 @@ class Job:
 
     filename: str
     file_dir: str
-    value_bytes: Optional[bytes]
+    payload: Optional[bytes]
     path: str
 
-    def __init__(self, filename: str, file_dir: str, value_bytes: Optional[bytes] = None) -> None:
+    def __init__(self, filename: str, file_dir: str, payload: Optional[bytes] = None) -> None:
         self.filename = filename
         self.file_dir = file_dir
-        self.value_bytes = value_bytes
+        self.payload = payload
         self.path = os.path.join(self.file_dir, self.filename)
 
 

@@ -1,6 +1,5 @@
 import logging
 import os
-from datetime import datetime
 from typing import Optional
 
 import panutils
@@ -10,8 +9,7 @@ from PAN import PAN
 FILE_SIZE_LIMIT: int = 1_073_741_824  # 1Gb
 
 
-class Scannable:
-    """ PANFile: class for a file that can check itself for PANs"""
+class Document:
 
     filename: str
     dir: str
@@ -26,16 +24,16 @@ class Scannable:
     extension: str
     extensions: list[str]
 
-    value_bytes: Optional[bytes] = None
+    payload: Optional[bytes] = None
 
-    def __init__(self, filename: str, file_dir: str, value_bytes: Optional[bytes] = None,
+    def __init__(self, filename: str, file_dir: str, payload: Optional[bytes] = None,
                  mimetype: Optional[str] = None, encoding: Optional[str] = None, err: Optional[Exception] = None) -> None:
         self.filename = filename
         self.dir = file_dir
         self.path = os.path.join(self.dir, self.filename)
         self.file_category = ScanStatusEnum.Scannable
 
-        self.value_bytes = value_bytes
+        self.payload = payload
 
         self.matches = []
 
@@ -52,26 +50,27 @@ class Scannable:
 
         if mimetype is None or encoding is None:
             self.mime_type, self.encoding, err = panutils.get_mimetype(self.path,
-                                                                       value_bytes)
+                                                                       payload)
             if err:
                 self.set_error(
                     f'Failed to detect mimetype and encoding. Inner exception: {err}')
 
         self.set_file_stats()
+        self.payload = None
 
         if self.size > FILE_SIZE_LIMIT:
             self.set_error(
                 error_msg=f'File size {panutils.size_friendly(size=self.size)} over limit of {panutils.size_friendly(size=FILE_SIZE_LIMIT)} for checking for file \"{self.filename}\"')
 
-    def __cmp__(self, other: 'Scannable') -> bool:
+    def __cmp__(self, other: 'Document') -> bool:
 
         return self.path.lower() == other.path.lower()
 
     def set_file_stats(self) -> None:
 
         try:
-            if self.value_bytes:
-                self.size = len(self.value_bytes)
+            if self.payload:
+                self.size = len(self.payload)
             else:
                 stat: os.stat_result = os.stat(self.path)
                 self.size = stat.st_size

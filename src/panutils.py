@@ -21,12 +21,12 @@ def get_root_dir() -> str:
         return './'
 
 
-def get_mimetype(path: Optional[str] = None, value_bytes: Optional[bytes] = None) -> tuple[str, str, Optional[Exception]]:
+def get_mimetype(path: Optional[str] = None, payload: Optional[bytes] = None) -> tuple[str, str, Optional[Exception]]:
 
     try:
         error: Optional[Exception] = None
-        if value_bytes is not None:
-            mime_type, encoding = __get_mime_data_from_buffer(value_bytes)
+        if payload is not None:
+            mime_type, encoding = __get_mime_data_from_buffer(payload)
         elif path is not None:
             mime_type, encoding = __get_mime_data_from_file(path)
         else:
@@ -39,13 +39,13 @@ def get_mimetype(path: Optional[str] = None, value_bytes: Optional[bytes] = None
         return mime_type, encoding, error
 
 
-def __get_mime_data_from_buffer(value_bytes: bytes) -> tuple[str, str]:
+def __get_mime_data_from_buffer(payload: bytes) -> tuple[str, str]:
     m = magic.Magic(mime=True, mime_encoding=True)
     buffer: bytes
-    if (len(value_bytes) < 2048):
-        buffer = value_bytes
+    if (len(payload) < 2048):
+        buffer = payload
     else:
-        buffer = value_bytes[:2048]
+        buffer = payload[:2048]
 
     mime_data: list[str] = m.from_buffer(buffer).split(';')
     mime_type: str = mime_data[0].strip().lower()
@@ -194,8 +194,7 @@ def memoryview_to_bytes(mem_view: memoryview) -> Optional[bytes]:
         # Convert memory view to bytes using bytes()
         bytes_data = bytes(mem_view)
         return bytes_data
-    except Exception as e:
-        print("An error occurred:", e)
+    except Exception:
         return None
 
 

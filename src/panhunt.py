@@ -22,7 +22,7 @@ import panutils
 from config import PANHuntConfiguration
 from hunter import Hunter
 from report import Report
-from scannable import Scannable
+from doc import Document
 
 APP_NAME: Final[str] = 'PANhunt'
 APP_VERSION: Final[str] = '1.5'
@@ -39,14 +39,14 @@ def hunt_pans(configuration: PANHuntConfiguration) -> Report:
     # check each file
     hunter.hunt()
 
-    results: list[Scannable] = hunter.get_results()
+    results: list[Document] = hunter.get_results()
     logging.info("Finished searching.")
 
     end: datetime = datetime.now()
 
-    interesting: list[Scannable] = [
+    interesting: list[Document] = [
         result for result in results if result.errors is not None and len(result.errors) > 0]
-    matches: list[Scannable] = [
+    matches: list[Document] = [
         result for result in results if result.matches is not None and len(result.matches) > 0]
 
     return Report(

@@ -20,7 +20,7 @@ from pst import Attachment as pstAttachment
 ''' If file size is 30MB or bigger, read line by line for better memory management '''
 LARGE_FILE_LIMIT_BYTES: int = 31_457_280  # 30MB
 # TODO: Return ScannableFile instead of PAN
-# TODO: Accept Job as input instead of filename and value_bytes
+# TODO: Accept Job as input instead of filename and payload
 
 
 class ScannerBase(ABC):
@@ -28,7 +28,7 @@ class ScannerBase(ABC):
     filename: str
     sub_path: str = ''  # Only if it is a nested object
     encoding: str
-    value_bytes: Optional[bytes]
+    payload: Optional[bytes]
 
     patterns: CardPatterns
 
@@ -36,14 +36,14 @@ class ScannerBase(ABC):
         self.encoding = encoding
         self.filename = ''
         self.patterns = patterns
-        self.value_bytes = None
+        self.payload = None
 
     def from_file(self, path: str, sub_path: str = '') -> None:
         self.filename = path
         self.sub_path = sub_path
 
     def from_buffer(self, buffer: bytes) -> None:
-        self.value_bytes = buffer
+        self.payload = buffer
 
     @abstractmethod
     def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
@@ -66,16 +66,16 @@ class SimpleTextScanner(ScannerBase):
         return matches
 
 
-class BasicScanner(ScannerBase):
+class BasicFileScanner(ScannerBase):
 
     def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         matches: list[PAN] = []
 
         text: str
-        if self.value_bytes:
+        if self.payload:
 
-            text = self.value_bytes.decode(
+            text = self.payload.decode(
                 encoding=self.encoding, errors='backslashreplace')
             ifs = SimpleTextScanner(patterns=self.patterns)
             ifs.from_file(path=self.filename, sub_path=self.sub_path)
@@ -147,8 +147,8 @@ class MsgScanner(ScannerBase):
     def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.__msg is None:
-            if self.value_bytes:
-                self.__msg = MSMSG(msg_file_path=self.value_bytes)
+            if self.payload:
+                self.__msg = MSMSG(msg_file_path=self.payload)
             else:
                 self.__msg = MSMSG(msg_file_path=self.filename)
 
@@ -183,9 +183,9 @@ class EmlScanner(ScannerBase):
     def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.__eml is None:
-            if self.value_bytes:
+            if self.payload:
                 self.__eml = Eml(path=self.filename,
-                                 value_bytes=self.value_bytes)
+                                 payload=self.payload)
             else:
                 self.__eml = Eml(path=self.filename)
 
@@ -219,9 +219,9 @@ class MboxScanner(ScannerBase):
     def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.__mbox is None:
-            if self.value_bytes:
+            if self.payload:
                 self.__mbox = Mbox(path=self.filename,
-                                   value_bytes=self.value_bytes)
+                                   payload=self.payload)
             else:
                 self.__mbox = Mbox(path=self.filename)
 
@@ -306,8 +306,8 @@ class PdfScanner(ScannerBase):
     def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
 
         if self.pdf is None:
-            if self.value_bytes:
-                self.pdf = Pdf(file=io.BytesIO(initial_bytes=self.value_bytes))
+            if self.payload:
+                self.pdf = Pdf(file=io.BytesIO(initial_bytes=self.payload))
             else:
                 self.pdf = Pdf(file=self.filename)
 

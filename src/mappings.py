@@ -2,15 +2,15 @@ from typing import Optional, Type
 
 from archive import Archive, GzipArchive, TarArchive, XzArchive, ZipArchive
 from enums import FileTypeEnum
-from scanner import BasicScanner, EmlScanner, MboxScanner, MsgScanner, PdfScanner, PstScanner, ScannerBase
+from scanner import BasicFileScanner, EmlScanner, MboxScanner, MsgScanner, PdfScanner, PstScanner, ScannerBase
 
 # This dictionary is defined at the module level to ensure that only one instance
 # of internal_map exists throughout the program's runtime. This prevents unnecessary
 # re-creation of the dictionary on each function call, optimizing both memory usage
 # and performance.
 file_type_to_scanner_map: dict[FileTypeEnum, Type[ScannerBase]] = {
-    FileTypeEnum.Plaintext: BasicScanner,
-    FileTypeEnum.Rtf: BasicScanner,
+    FileTypeEnum.Plaintext: BasicFileScanner,
+    FileTypeEnum.Rtf: BasicFileScanner,
     FileTypeEnum.MsMsg: MsgScanner,
     FileTypeEnum.MsPst: PstScanner,
     FileTypeEnum.Eml: EmlScanner,

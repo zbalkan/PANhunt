@@ -11,7 +11,7 @@ from genericpath import exists
 
 import panutils
 from config import PANHuntConfiguration
-from scannable import Scannable
+from doc import Document
 
 
 class Report:
@@ -22,8 +22,8 @@ class Report:
     __searched: str
     __excluded: str
     pan_count: int
-    matched_files: list[Scannable]
-    interesting_files: list[Scannable]
+    matched_files: list[Document]
+    interesting_files: list[Document]
     __conf: PANHuntConfiguration
 
     __command: str
@@ -33,8 +33,8 @@ class Report:
     def __init__(self,
                  configuration: PANHuntConfiguration,
                  files_searched_count: int,
-                 matched_files: list[Scannable],
-                 interesting_files: list[Scannable],
+                 matched_files: list[Document],
+                 interesting_files: list[Document],
                  start: datetime,
                  end: datetime) -> None:
         '''excluded_dirs: list[str]'''

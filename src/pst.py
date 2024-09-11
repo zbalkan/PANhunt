@@ -108,12 +108,12 @@ class BID:
     bid: int
     is_internal: bool
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
 
-        if len(value_bytes) == 4:  # ansi
-            self.bid = panutils.unpack_integer('I', value_bytes)
+        if len(payload) == 4:  # ansi
+            self.bid = panutils.unpack_integer('I', payload)
         else:  # unicode (8)
-            self.bid = panutils.unpack_integer('Q', value_bytes)
+            self.bid = panutils.unpack_integer('Q', payload)
         if self.bid % 2 == 1:  # A
             self.bid -= 1
         self.is_internal = (self.bid & 2 == 2)  # B
@@ -130,13 +130,13 @@ class BREF:
     bid: BID
     ib: int
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
         bid: bytes
         ib: int
-        if len(value_bytes) == 8:  # ansi
-            bid, ib = struct.unpack('4sI', value_bytes)
+        if len(payload) == 8:  # ansi
+            bid, ib = struct.unpack('4sI', payload)
         else:  # unicode (16)
-            bid, ib = struct.unpack('8sQ', value_bytes)
+            bid, ib = struct.unpack('8sQ', payload)
         self.bid = BID(bid)
         self.ib = ib
 
@@ -166,10 +166,10 @@ class Page:
     cLevel: int
     rgEntries: list[Union['BTENTRY', 'NBTENTRY', 'BBTENTRY']]
 
-    def __init__(self, value_bytes: bytes, is_ansi: bool) -> None:
+    def __init__(self, payload: bytes, is_ansi: bool) -> None:
 
         # fixed 512 bytes
-        if len(value_bytes) != Page.PAGE_SIZE:
+        if len(payload) != Page.PAGE_SIZE:
             raise PANHuntException('Invalid Page size')
 
         ptype: int
@@ -180,11 +180,11 @@ class Page:
 
         if is_ansi:
             ptype, ptypeRepeat, wSig, bid, dwCRC = struct.unpack(
-                'BBHII', value_bytes[-12:])
+                'BBHII', payload[-12:])
 
         else:  # unicode
             ptype, ptypeRepeat, wSig, dwCRC, bid = struct.unpack(
-                'BBHIQ', value_bytes[-16:])
+                'BBHIQ', payload[-16:])
 
         self.ptype = ptype
         self.ptypeRepeat = ptypeRepeat
@@ -208,12 +208,12 @@ class Page:
 
             if is_ansi:
                 cEnt, cEntMax, cbEnt, cLevel = struct.unpack(
-                    'BBBB', value_bytes[-16:-12])
+                    'BBBB', payload[-16:-12])
                 # rgEntries 492 (cLevel>0) or 496 bytes (cLevel=0)
                 entry_size = 12
             else:  # unicode
                 cEnt, cEntMax, cbEnt, cLevel = struct.unpack(
-                    'BBBB', value_bytes[-24:-20])
+                    'BBBB', payload[-24:-20])
                 # rgEntries 488 bytes
                 entry_size = 24
 
@@ -235,7 +235,7 @@ class Page:
             # self.cbEnt is size of each entry which may be different to entry_size
             for i in range(self.cEnt):
                 self.rgEntries.append(entry_type(
-                    value_bytes[i * self.cbEnt:i * self.cbEnt + entry_size]))
+                    payload[i * self.cbEnt:i * self.cbEnt + entry_size]))
 
     def __repr__(self) -> str:
 
@@ -246,15 +246,15 @@ class BTENTRY:
     BREF: 'BREF'
     btkey: int
 
-    def __init__(self, value_bytes: bytes
+    def __init__(self, payload: bytes
                  ) -> None:
 
-        if len(value_bytes) == 12:  # ansi
-            self.btkey = panutils.unpack_integer('I', value_bytes[:4])
-            self.BREF = BREF(value_bytes[4:])
+        if len(payload) == 12:  # ansi
+            self.btkey = panutils.unpack_integer('I', payload[:4])
+            self.BREF = BREF(payload[4:])
         else:  # unicode 24
-            self.btkey = panutils.unpack_integer('Q', value_bytes[:8])
-            self.BREF = BREF(value_bytes[8:])
+            self.btkey = panutils.unpack_integer('Q', payload[:8])
+            self.BREF = BREF(payload[8:])
 
     def __repr__(self) -> str:
 
@@ -266,14 +266,14 @@ class BBTENTRY:
     cb: int
     cRef: int
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
 
-        if len(value_bytes) == 12:  # ansi
-            self.BREF = BREF(value_bytes[:8])
-            self.cb, self.cRef = struct.unpack('HH', value_bytes[8:12])
+        if len(payload) == 12:  # ansi
+            self.BREF = BREF(payload[:8])
+            self.cb, self.cRef = struct.unpack('HH', payload[8:12])
         else:  # unicode (24)
-            self.BREF = BREF(value_bytes[:16])
-            self.cb, self.cRef = struct.unpack('HH', value_bytes[16:20])
+            self.BREF = BREF(payload[:16])
+            self.cb, self.cRef = struct.unpack('HH', payload[16:20])
 
     def __repr__(self) -> str:
 
@@ -286,14 +286,14 @@ class NBTENTRY:
     bidSub: BID
     nidParent: NID
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
 
-        if len(value_bytes) == 16:  # ansi
+        if len(payload) == 16:  # ansi
             nid, bidData, bidSub, nidParent = struct.unpack(
-                '4s4s4s4s', value_bytes)
+                '4s4s4s4s', payload)
         else:  # unicode (32)
             nid, padding, bidData, bidSub, nidParent = struct.unpack(
-                '4s4s8s8s4s', value_bytes[:-4])
+                '4s4s8s8s4s', payload[:-4])
         self.nid = NID(nid)
         self.bidData = BID(bidData)
         self.bidSub = BID(bidSub)
@@ -309,14 +309,14 @@ class SLENTRY:
     bidData: BID
     bidSub: BID
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
 
-        if len(value_bytes) == 12:  # ansi
+        if len(payload) == 12:  # ansi
             nid, bidData, bidSub = struct.unpack(
-                '4s4s4s', value_bytes)
+                '4s4s4s', payload)
         else:  # unicode 24
             nid, padding, bidData, bidSub = struct.unpack(
-                '4s4s8s8s', value_bytes)
+                '4s4s8s8s', payload)
         self.nid = NID(nid)
         self.bidData = BID(bidData)
         self.bidSub = BID(bidSub)
@@ -331,14 +331,14 @@ class SIENTRY:
     nid: NID
     bid: BID
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
         nid: bytes
         bid: bytes
 
-        if len(value_bytes) == 8:  # ansi
-            nid, bid = struct.unpack('4s4s', value_bytes)
+        if len(payload) == 8:  # ansi
+            nid, bid = struct.unpack('4s4s', payload)
         else:  # unicode 16
-            nid, padding, bid = struct.unpack('4s4s8s', value_bytes)
+            nid, padding, bid = struct.unpack('4s4s8s', payload)
         self.nid = NID(nid)
         self.bid = BID(bid)
 
@@ -382,7 +382,7 @@ class Block:
     lcbTotal: int
     rgbid: list[BID]
 
-    def __init__(self, value_bytes: bytes, offset: int, data_size: int, is_ansi: bool, bid_check, bCryptMethod: CryptMethodEnum) -> None:
+    def __init__(self, payload: bytes, offset: int, data_size: int, is_ansi: bool, bid_check, bCryptMethod: CryptMethodEnum) -> None:
 
         self.is_ansi = is_ansi
         self.offset = offset  # for debugging
@@ -394,7 +394,7 @@ class Block:
 
         if self.is_ansi:  # 12
             cb, wSig, bid, dwCRC = struct.unpack(
-                'HH4sI', value_bytes[-12:])
+                'HH4sI', payload[-12:])
             bid_size = 4
             slentry_size = 12
             sientry_size = 8
@@ -402,7 +402,7 @@ class Block:
             sl_si_entries_offset = 4
         else:  # unicode 16
             cb, wSig, dwCRC, bid = struct.unpack(
-                'HHI8s', value_bytes[-16:])
+                'HHI8s', payload[-16:])
             bid_size = 8
             slentry_size = 24
             sientry_size = 16
@@ -427,23 +427,23 @@ class Block:
             self.cLevel = 0
             if bCryptMethod == CryptMethodEnum.NDB_CRYPT_PERMUTE:  # NDB_CRYPT_PERMUTE
                 io = BytesIO(Block.decrypt_table)
-                self.data_block = value_bytes[:data_size].translate(
+                self.data_block = payload[:data_size].translate(
                     io.read())
             elif bCryptMethod == CryptMethodEnum.Unencoded:
-                self.data_block = value_bytes[:data_size]  # data block
+                self.data_block = payload[:data_size]  # data block
             else:
                 raise RuntimeError("Unsupported encryption method.")
 
         else:  # XBLOCK, XXBLOCK, SLBLOCK or SIBLOCK
 
             btype, cLevel, cEnt = struct.unpack(
-                'BBH', value_bytes[:4])
+                'BBH', payload[:4])
             self.btype = int(btype)
             self.cLevel = int(cLevel)
             self.cEnt = int(cEnt)
 
             if self.btype == 1:  # XBLOCK, XXBLOCK
-                self.lcbTotal = panutils.unpack_integer('I', value_bytes[4:8])
+                self.lcbTotal = panutils.unpack_integer('I', payload[4:8])
                 if self.cLevel == 1:  # XBLOCK
                     self.block_type = Block.btypeXBLOCK
                 elif self.cLevel == 2:  # XXBLOCK
@@ -454,7 +454,7 @@ class Block:
                 self.rgbid = []
                 for i in range(self.cEnt):
                     self.rgbid.append(
-                        BID(value_bytes[8 + i * bid_size:8 + (i + 1) * bid_size]))
+                        BID(payload[8 + i * bid_size:8 + (i + 1) * bid_size]))
 
             elif self.btype == 2:  # SLBLOCK, SIBLOCK
 
@@ -464,12 +464,12 @@ class Block:
                     self.block_type = Block.btypeSLBLOCK
                     for i in range(self.cEnt):
                         self.rgentries.append(SLENTRY(
-                            value_bytes[sl_si_entries_offset + i * slentry_size:sl_si_entries_offset + (i + 1) * slentry_size]))
+                            payload[sl_si_entries_offset + i * slentry_size:sl_si_entries_offset + (i + 1) * slentry_size]))
                 elif self.cLevel == 1:  # SIBLOCK
                     self.block_type = Block.btypeSIBLOCK
                     for i in range(self.cEnt):
                         self.rgentries.append(SIENTRY(
-                            value_bytes[sl_si_entries_offset + i * sientry_size:sl_si_entries_offset + (i + 1) * sientry_size]))
+                            payload[sl_si_entries_offset + i * sientry_size:sl_si_entries_offset + (i + 1) * sientry_size]))
                 else:
                     raise PANHuntException(
                         'Invalid Block Level %s' % self.cLevel)
@@ -620,10 +620,10 @@ class HID:
     is_hid: bool
     is_nid: bool
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
 
         # hidIndex cannot be zero, first 5 bits must be zero (hidType)
-        hidIndex, hidBlockIndex = struct.unpack('HH', value_bytes)
+        hidIndex, hidBlockIndex = struct.unpack('HH', payload)
         self.hidBlockIndex = int(hidBlockIndex)
         self.hidType = int(hidIndex) & 0x1F
         self.hidIndex = (int(hidIndex) >> 5) & 0x7FF
@@ -636,13 +636,13 @@ class HNPAGEMAP:
     cFree: int
     rgibAlloc: list[int]
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
 
-        self.cAlloc, self.cFree = struct.unpack('HH', value_bytes[:4])
+        self.cAlloc, self.cFree = struct.unpack('HH', payload[:4])
         self.rgibAlloc = []
         for i in range(self.cAlloc + 1):  # cAlloc+1 is next free
             self.rgibAlloc.append(struct.unpack(
-                'H', value_bytes[4 + i * 2:4 + (i + 1) * 2])[0])
+                'H', payload[4 + i * 2:4 + (i + 1) * 2])[0])
 
 
 class HN:
@@ -755,10 +755,10 @@ class BTH:
         bth_working_stack: list[BTHIntermediate] = []
 
         if self.hidRoot.hidIndex != 0:
-            value_bytes: bytes = hn.get_hid_data(self.hidRoot)
+            payload: bytes = hn.get_hid_data(self.hidRoot)
 
             bth_record_list: list[BTHData | BTHIntermediate] = self.get_bth_records(
-                value_bytes, self.bIdxLevels)
+                payload, self.bIdxLevels)
 
             bth_data_list: list[BTHData] = [
                 bthdata for bthdata in bth_record_list if isinstance(bthdata, BTHData)]
@@ -772,33 +772,33 @@ class BTH:
                 bth_working_stack = bth_intermediate_list
                 while bth_working_stack:
                     bth_intermediate: BTHIntermediate = bth_working_stack.pop()
-                    value_bytes = hn.get_hid_data(
+                    payload = hn.get_hid_data(
                         bth_intermediate.hidNextLevel)
                     bth_record_list = self.get_bth_records(
-                        value_bytes, bth_intermediate.bIdxLevel - 1)
+                        payload, bth_intermediate.bIdxLevel - 1)
                     if bth_intermediate.bIdxLevel - 1 == 0:  # leafs
                         self.bth_data_list.extend(bth_data_list)
                     else:
                         bth_working_stack.extend(bth_intermediate_list)
 
-    def get_bth_records(self, value_bytes: bytes, bIdxLevel: int) -> list[BTHData | BTHIntermediate]:
+    def get_bth_records(self, payload: bytes, bIdxLevel: int) -> list[BTHData | BTHIntermediate]:
 
         bth_record_list: list[BTHData | BTHIntermediate] = []
 
         if bIdxLevel == 0:  # leaf
             record_size: int = self.cbKey + self.cbEnt
-            records: int = len(value_bytes) // record_size
+            records: int = len(payload) // record_size
             for i in range(records):
                 key, data = struct.unpack('%ss%ss' % (
-                    self.cbKey, self.cbEnt), value_bytes[i * record_size:(i + 1) * record_size])
+                    self.cbKey, self.cbEnt), payload[i * record_size:(i + 1) * record_size])
 
                 bth_record_list.append(BTHData(key, data))
         else:  # intermediate
             record_size = self.cbKey + 4
-            records = len(value_bytes) // record_size
+            records = len(payload) // record_size
             for i in range(records):
                 key, hidNextLevel = struct.unpack(
-                    '%ss4s' % self.cbKey, value_bytes[i * record_size:(i + 1) * record_size])
+                    '%ss4s' % self.cbKey, payload[i * record_size:(i + 1) * record_size])
                 hidNextLevel = HID(hidNextLevel)
                 bth_record_list.append(BTHIntermediate(
                     key, hidNextLevel, bIdxLevel))
@@ -865,48 +865,48 @@ class PstPTypeWrapper:
 
         self.ptype, self.byte_count, self.is_variable, self.is_multi = ptype, byte_count, is_variable, is_multi
 
-    def value(self, value_bytes: bytes) -> _ValueType:
-        """value_bytes is normally a string of bytes, but if multi and variable, bytes is a list of bytes"""
+    def value(self, payload: bytes) -> _ValueType:
+        """payload is normally a string of bytes, but if multi and variable, bytes is a list of bytes"""
 
         ul_count: int
         rgul_data_offsets: list[int]
         data_list: list[bytes]
 
         if self.ptype == PTypeEnum.PtypInteger16:
-            return panutils.unpack_integer('h', value_bytes)
+            return panutils.unpack_integer('h', payload)
         if self.ptype == PTypeEnum.PtypInteger32:
-            return panutils.unpack_integer('i', value_bytes)
+            return panutils.unpack_integer('i', payload)
         if self.ptype == PTypeEnum.PtypFloating32:
-            return panutils.unpack_float('f', value_bytes)
+            return panutils.unpack_float('f', payload)
         if self.ptype == PTypeEnum.PtypFloating64:
-            return panutils.unpack_float('d', value_bytes)
+            return panutils.unpack_float('d', payload)
         if self.ptype == PTypeEnum.PtypCurrency:
             raise NotImplementedError('PtypCurrency')
         if self.ptype == PTypeEnum.PtypFloatingTime:
-            return self.get_floating_time(value_bytes)
+            return self.get_floating_time(payload)
         if self.ptype == PTypeEnum.PtypErrorCode:
-            return panutils.unpack_integer('I', value_bytes)
+            return panutils.unpack_integer('I', payload)
         if self.ptype == PTypeEnum.PtypBoolean:
-            return panutils.unpack_integer('B', value_bytes) != 0
+            return panutils.unpack_integer('B', payload) != 0
         if self.ptype == PTypeEnum.PtypInteger64:
-            return panutils.unpack_integer('q', value_bytes)
+            return panutils.unpack_integer('q', payload)
         if self.ptype == PTypeEnum.PtypString:
             # Preventing the error:
             # UnicodeDecodeError: 'utf16' codec can't decode bytes in position 0 - 1:
             # illegal UTF - 16 surrogate
             try:
-                return value_bytes.decode('utf-16-le')  # unicode
+                return payload.decode('utf-16-le')  # unicode
             except UnicodeDecodeError:
                 PANHuntException(
                     'String property not correctly utf-16-le encoded, ignoring errors')
                 # unicode
-                return value_bytes.decode('utf-16-le', errors='ignore')
+                return payload.decode('utf-16-le', errors='ignore')
         if self.ptype == PTypeEnum.PtypString8:
-            return value_bytes
+            return payload
         if self.ptype == PTypeEnum.PtypTime:
-            return self.get_time(value_bytes)
+            return self.get_time(payload)
         if self.ptype == PTypeEnum.PtypGuid:
-            return value_bytes
+            return payload
         if self.ptype == PTypeEnum.PtypServerId:
             raise NotImplementedError('PtypServerId')
         if self.ptype == PTypeEnum.PtypRestriction:
@@ -914,78 +914,78 @@ class PstPTypeWrapper:
         if self.ptype == PTypeEnum.PtypRuleAction:
             raise NotImplementedError('PtypRuleAction')
         if self.ptype == PTypeEnum.PtypBinary:
-            return value_bytes
+            return payload
         if self.ptype == PTypeEnum.PtypMultipleInteger16:
-            return self.unpack_list_int(value_bytes, 16)
+            return self.unpack_list_int(payload, 16)
         if self.ptype == PTypeEnum.PtypMultipleInteger32:
-            return self.unpack_list_int(value_bytes, 32)
+            return self.unpack_list_int(payload, 32)
         if self.ptype == PTypeEnum.PtypMultipleFloating32:
-            return self.unpack_list_float(value_bytes, 32)
+            return self.unpack_list_float(payload, 32)
         if self.ptype == PTypeEnum.PtypMultipleFloating64:
-            return self.unpack_list_float(value_bytes, 64)
+            return self.unpack_list_float(payload, 64)
         if self.ptype == PTypeEnum.PtypMultipleCurrency:
             raise NotImplementedError('PtypMultipleCurrency')
         if self.ptype == PTypeEnum.PtypMultipleFloatingTime:
-            count: int = len(value_bytes) // 8
-            return [self.get_floating_time(value_bytes[i * 8:(i + 1) * 8]) for i in range(count)]
+            count: int = len(payload) // 8
+            return [self.get_floating_time(payload[i * 8:(i + 1) * 8]) for i in range(count)]
         if self.ptype == PTypeEnum.PtypMultipleInteger64:
-            self.unpack_list_int(value_bytes=value_bytes, bit_size=64)
+            self.unpack_list_int(payload=payload, bit_size=64)
         if self.ptype == PTypeEnum.PtypMultipleString:
             ul_count, rgul_data_offsets = self.get_multi_value_offsets(
-                value_bytes)
+                payload)
             s: list[str] = []
 
             for i in range(ul_count):
                 s.append(
-                    value_bytes[rgul_data_offsets[i]:rgul_data_offsets[i + 1]].decode('utf-16-le'))
+                    payload[rgul_data_offsets[i]:rgul_data_offsets[i + 1]].decode('utf-16-le'))
             return s
         if self.ptype == PTypeEnum.PtypMultipleString8:
             ul_count, rgul_data_offsets = self.get_multi_value_offsets(
-                value_bytes)
+                payload)
             data_list = []
             for i in range(ul_count):
                 data_list.append(
-                    value_bytes[rgul_data_offsets[i]:rgul_data_offsets[i + 1]])
+                    payload[rgul_data_offsets[i]:rgul_data_offsets[i + 1]])
             return data_list
         if self.ptype == PTypeEnum.PtypMultipleTime:
-            count = len(value_bytes) // 8
-            return [self.get_time(value_bytes[i * 8:(i + 1) * 8]) for i in range(count)]
+            count = len(payload) // 8
+            return [self.get_time(payload[i * 8:(i + 1) * 8]) for i in range(count)]
         if self.ptype == PTypeEnum.PtypMultipleGuid:
-            count = len(value_bytes) // 16
-            return [value_bytes[i * 16:(i + 1) * 16] for i in range(count)]
+            count = len(payload) // 16
+            return [payload[i * 16:(i + 1) * 16] for i in range(count)]
         if self.ptype == PTypeEnum.PtypMultipleBinary:
             ul_count, rgul_data_offsets = self.get_multi_value_offsets(
-                value_bytes)
+                payload)
             data_list = []
             for i in range(ul_count):
                 data_list.append(
-                    value_bytes[rgul_data_offsets[i]:rgul_data_offsets[i + 1]])
+                    payload[rgul_data_offsets[i]:rgul_data_offsets[i + 1]])
             return data_list
         if self.ptype == PTypeEnum.PtypUnspecified:
-            return value_bytes
+            return payload
         if self.ptype == PTypeEnum.PtypNull:
             return None
         if self.ptype == PTypeEnum.PtypObject:
-            return value_bytes[:4]
+            return payload[:4]
         return None
 
-    def unpack_list_int(self, value_bytes: bytes, bit_size: int) -> list[int]:
+    def unpack_list_int(self, payload: bytes, bit_size: int) -> list[int]:
         '''bit_size: Literal[16, 32, 64]'''
 
         format_dict: dict[int, str] = {16: 'h', 32: 'i', 64: 'q'}
         buffer_size = (bit_size // 8)
-        count: int = len(value_bytes) // buffer_size
+        count: int = len(payload) // buffer_size
         return [panutils.unpack_integer(
-            format_dict[bit_size], value_bytes[i * buffer_size:(i + 1) * buffer_size]) for i in range(count)]
+            format_dict[bit_size], payload[i * buffer_size:(i + 1) * buffer_size]) for i in range(count)]
 
-    def unpack_list_float(self, value_bytes: bytes, bit_size: int) -> list[float]:
+    def unpack_list_float(self, payload: bytes, bit_size: int) -> list[float]:
         '''bit_size: Literal[32, 64]'''
 
         format_dict: dict[int, str] = {32: 'f', 64: 'd'}
         buffer_size = (bit_size // 8)
-        count: int = len(value_bytes) // buffer_size
+        count: int = len(payload) // buffer_size
         return [panutils.unpack_float(
-            format_dict[bit_size], value_bytes[i * buffer_size:(i + 1) * buffer_size]) for i in range(count)]
+            format_dict[bit_size], payload[i * buffer_size:(i + 1) * buffer_size]) for i in range(count)]
 
     def get_floating_time(self, time_bytes: bytes) -> datetime:
 
@@ -995,14 +995,14 @@ class PstPTypeWrapper:
 
         return datetime(year=1601, month=1, day=1) + timedelta(microseconds=panutils.unpack_integer('q', time_bytes) / 10.0)
 
-    def get_multi_value_offsets(self, value_bytes: bytes) -> tuple[int, list[int]]:
+    def get_multi_value_offsets(self, payload: bytes) -> tuple[int, list[int]]:
 
-        ul_count: int = panutils.unpack_integer('I', value_bytes[:4])
+        ul_count: int = panutils.unpack_integer('I', payload[:4])
 
         rgul_data_offsets: list[int] = [panutils.unpack_integer(
-            'I', value_bytes[(i + 1) * 4:(i + 2) * 4]) for i in range(ul_count)]
+            'I', payload[(i + 1) * 4:(i + 2) * 4]) for i in range(ul_count)]
 
-        rgul_data_offsets.append(len(value_bytes))
+        rgul_data_offsets.append(len(payload))
         return ul_count, rgul_data_offsets
 
 
@@ -1056,11 +1056,11 @@ class TCOLDESC:
     cbData: int
     iBit: int
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
 
         # self.tag is 4 byte (self.wPropId, self.wPropType): where is documentation MS?
         self.wPropType, self.wPropId, self.ibData, self.cbData, self.iBit = struct.unpack(
-            'HHHBB', value_bytes)
+            'HHHBB', payload)
 
     def __repr__(self) -> str:
 
@@ -1356,15 +1356,15 @@ class EntryID:
     uid: bytes
     nid: NID
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
 
-        if len(value_bytes) > 24:
+        if len(payload) > 24:
             # Invalid data
             return
 
         nid_bytes: bytes
         self.rgbFlags, self.uid, nid_bytes = struct.unpack(
-            '4s16s4s', value_bytes)
+            '4s16s4s', payload)
         self.nid = NID(nid_bytes)
 
     def __repr__(self) -> str:
@@ -1732,8 +1732,8 @@ class Message:
                 eid: _ValueType = self.tc_recipients.get_context_value(
                     i, PropIdEnum.PidTagEntryID)
                 if eid:
-                    value_bytes: bytes = panutils.as_binary(eid)
-                    entryId = EntryID(value_bytes)
+                    payload: bytes = panutils.as_binary(eid)
+                    entryId = EntryID(payload)
 
                 display_type: Optional[int] = None
                 dst: _ValueType = self.tc_recipients.get_context_value(
@@ -1858,7 +1858,8 @@ class Attachment:
             if ado:
                 self.BinaryData = panutils.as_binary(ado.value)
 
-        amt: Optional[PCBTHData] = self.pc.get_raw_data(PropIdEnum.PidTagAttachMimeTag.value)
+        amt: Optional[PCBTHData] = self.pc.get_raw_data(
+            PropIdEnum.PidTagAttachMimeTag.value)
         if amt:
             self.AttachMimeTag = panutils.as_str(amt.value)
 
@@ -1882,10 +1883,10 @@ class NAMEID:
     N: int
     NPID: int
 
-    def __init__(self, value_bytes: bytes) -> None:
+    def __init__(self, payload: bytes) -> None:
 
         property_id, guid, prop_idx = struct.unpack(
-            'IHH', value_bytes)
+            'IHH', payload)
 
         if not isinstance(property_id, int):
             raise TypeError(property_id)
@@ -2430,14 +2431,14 @@ class Header:
 
 class Root:
 
-    def __init__(self, value_bytes: bytes, is_ansi: bool) -> None:
+    def __init__(self, payload: bytes, is_ansi: bool) -> None:
 
         if is_ansi:  # 40
             self.ibFileEof, self.ibAMapLast, self.cbAMapFree, self.cbPMapFree, BREFNBT, BREFBBT, self.fAMapValid = \
-                struct.unpack('IIII8s8sB', value_bytes[4:-3])
+                struct.unpack('IIII8s8sB', payload[4:-3])
         else:  # unicode #72
             self.ibFileEof, self.ibAMapLast, self.cbAMapFree, self.cbPMapFree, BREFNBT, BREFBBT, self.fAMapValid = \
-                struct.unpack('QQQQ16s16sB', value_bytes[4:-3])
+                struct.unpack('QQQQ16s16sB', payload[4:-3])
         self.BREFNBT: BREF = BREF(BREFNBT)
         self.BREFBBT: BREF = BREF(BREFBBT)
 

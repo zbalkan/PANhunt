@@ -10,12 +10,12 @@ class Mbox:
     filename: str
     mails: list['Mail']
 
-    def __init__(self, path: str, value_bytes: Optional[bytes] = None) -> None:
+    def __init__(self, path: str, payload: Optional[bytes] = None) -> None:
         self.filename = path
         self.mails = []
         mbox: mailbox.mbox
         mbox = mailbox.mbox(path)
-        if value_bytes:
+        if payload:
             mailbox.mbox(path=path,
                          factory=self.__from_buffer)
 
@@ -123,7 +123,7 @@ class Mail:
             raw = str(attachment_payload.get_payload())
             binary_data: bytes = base64.b64decode(raw)
             self.attachments.append(Attachment(
-                filename=filename, value_bytes=binary_data))
+                filename=filename, payload=binary_data))
         elif encoding == "7bit" or encoding == 'quoted-printable' or encoding == 'None':
             if str(headers.get('Content-Type')).split(';')[0] == 'application/pgp-signature':
                 # Ignore signatures
@@ -132,7 +132,7 @@ class Mail:
                 raw = str(attachment_payload.get_payload())
                 decoded: bytes = quopri.decodestring(raw)
                 self.attachments.append(Attachment(
-                    filename=filename, value_bytes=decoded))
+                    filename=filename, payload=decoded))
         else:
             raise NotImplementedError(encoding)
 
@@ -152,7 +152,7 @@ class Attachment:
     Filename: str
     BinaryData: Optional[bytes] = None
 
-    def __init__(self, filename: str, value_bytes: bytes) -> None:
+    def __init__(self, filename: str, payload: bytes) -> None:
         self.Filename = filename
-        if len(value_bytes) > 0:
-            self.BinaryData = value_bytes
+        if len(payload) > 0:
+            self.BinaryData = payload

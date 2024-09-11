@@ -1,4 +1,3 @@
-from email.mime import base
 import logging
 import os
 import re
@@ -9,7 +8,7 @@ from directory import Directory
 from dispatcher import Dispatcher
 from job import Job, JobQueue
 from patterns import CardPatterns
-from scannable import Scannable
+from doc import Document
 
 
 class Hunter:
@@ -43,7 +42,7 @@ class Hunter:
                 if not self.__is_directory_excluded(file.file_dir):
                     # Create a Job instance for each file instead of ScannableFile
                     job = Job(filename=file.filename,
-                              file_dir=file.file_dir, value_bytes=file.value_bytes)
+                              file_dir=file.file_dir, payload=file.payload)
                     JobQueue().enqueue(job)
                     self.count += 1
 
@@ -55,7 +54,7 @@ class Hunter:
 
         logging.info(f"Total number of jobs (files): {self.count}")
 
-    def get_results(self) -> list[Scannable]:
+    def get_results(self) -> list[Document]:
         return self.__dispatcher.results
 
     def __is_directory_excluded(self, file_dir: str) -> bool:
