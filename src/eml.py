@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import logging
 import quopri
 from email import message, parser
 from typing import Any, Optional
@@ -35,8 +36,8 @@ class Eml:
             raise TypeError(msg)
 
     def extract_body_parts(self, payloads) -> None:
-        body_data: Any = payloads[0]
-        body_payloads: Any = body_data.get_payload()
+        body_data: message.Message = payloads[0]
+        body_payloads = body_data.get_payload()
         if isinstance(body_payloads, list):
             for body_payload in body_payloads:
                 self.parse_body(body_payload)
@@ -53,19 +54,25 @@ class Eml:
                 self.parse_attachment(attachment)
 
     def parse_body(self, body_payload: Any) -> None:
-        headers: dict = dict(body_payload._headers)
+        if isinstance(body_payload, message.Message):
+            headers: dict = dict(body_payload._headers)  # type: ignore
 
-        content_type: list[str] = str(headers.get('Content-Type')).split(';')
+            content_type: list[str] = str(
+                headers.get('Content-Type')).split(';')
 
-        if content_type[0] == 'text/plain':
-            charset: str = content_type[1].lstrip().removeprefix(
-                'charset=\"').removesuffix('\"').lower()
-            if charset == "utf-8":
-                self.body += str(body_payload.get_payload())
-            else:
-                utf8_text: str = str(body_payload.get_payload()).encode(
-                    charset).decode('utf-8')
-                self.body += utf8_text
+            if content_type[0] == 'text/plain':
+                charset: str = content_type[1].lstrip().removeprefix(
+                    'charset=\"').removesuffix('\"').lower()
+                if charset == "utf-8":
+                    self.body += str(body_payload.get_payload())
+                else:
+                    utf8_text: str = str(body_payload.get_payload()).encode(
+                        charset).decode('utf-8')
+                    self.body += utf8_text
+        elif isinstance(body_payload, str):
+            self.body += body_payload
+        else:
+            logging.error(f"Unknown body type: {type(body_payload)}")
 
     def parse_attachment(self, attachment_payload: Any) -> None:
         headers = dict(attachment_payload._headers)

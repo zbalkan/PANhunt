@@ -1,7 +1,9 @@
+import os
+import tarfile
 from gzip import GzipFile
 from io import BytesIO
 from lzma import LZMAFile
-from tarfile import TarFile, open
+from tarfile import TarFile
 from typing import Optional
 from zipfile import ZipFile
 
@@ -50,10 +52,10 @@ class TarArchive(Archive):
 
         tar_ref: TarFile
         if self.payload is not None:
-            tar_ref = open(
+            tar_ref = tarfile.open(
                 fileobj=BytesIO(self.payload), mode='r')
         else:
-            tar_ref = open(self.path, 'r')
+            tar_ref = tarfile.open(self.path, 'r')
         for file_info in [m for m in tar_ref.getmembers() if m.isfile()]:
             extracted = tar_ref.extractfile(file_info)
             if extracted is not None:
@@ -75,6 +77,7 @@ class GzipArchive(Archive):
         if self.payload is not None:
             gz_file = GzipFile(
                 fileobj=BytesIO(self.payload), mode='r')
+            gz_file.name = self.path
         else:
             gz_file = GzipFile(filename=self.path, mode='r')
 
@@ -99,7 +102,8 @@ class XzArchive(Archive):
         else:
             xz_file = LZMAFile(filename=self.path, mode='r')
 
-        compressed_filename: str = self.path.replace('.xz', '')
+        compressed_filename: str = os.path.basename(
+            self.path).replace('.xz', '')
         xz_file.seek(0)
         file_data: bytes = xz_file.read1()
         x = Job(

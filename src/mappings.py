@@ -64,7 +64,7 @@ def __get_filetype(mime_type_text: str, extension: str) -> FileTypeEnum:
 
     # Possible extensions for message: .eml, .mht, .mhtml,.mime,.nws
     if mime_type in ['text', 'message']:
-        if mime_subtype in ['plain'] and extension in [".eml"]:
+        if mime_subtype in ['plain', 'rfc822'] and extension in [".eml"]:
             return FileTypeEnum.Eml
         elif mime_subtype in ['plain'] and extension in [".mbox"]:
             return FileTypeEnum.Mbox
