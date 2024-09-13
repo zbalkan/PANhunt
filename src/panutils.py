@@ -1,4 +1,3 @@
-from gzip import FEXTRA, FNAME, GzipFile
 import datetime as dt
 import hashlib
 import os
@@ -7,6 +6,7 @@ import re
 import struct
 import sys
 import unicodedata
+from gzip import FEXTRA, FNAME, GzipFile
 from typing import Any, Optional, Union
 
 import magic

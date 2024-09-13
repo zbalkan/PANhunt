@@ -61,6 +61,10 @@ class Hunter:
         for excluded_dir in self.__conf.excluded_directories:
             escaped_file_dir = re.escape(file_dir)
             escaped_excluded_dir = re.escape(excluded_dir)
-            if re.match(f"{escaped_excluded_dir}/.*", escaped_file_dir):
-                return True
+            if os.name == 'nt':
+                if re.match(f"{escaped_excluded_dir}\\.*", escaped_file_dir):
+                    return True
+            else:
+                if re.match(f"{escaped_excluded_dir}/.*", escaped_file_dir):
+                    return True
         return False
