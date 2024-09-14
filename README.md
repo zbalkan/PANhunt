@@ -25,10 +25,11 @@ PANhunt is a Python script that can be easily converted to a standalone Windows 
 
 panhunt.py requires:
 
-- Python 3.19
-- [Colorama](https://pypi.python.org/pypi/colorama)
+- Python 3.9
 
 You can use `pip install -r requirements.txt` for usage and `pip install -r requirements.dev.txt` for development.
+
+## Build executable
 
 To compile as an executable, it requires:
 
@@ -36,11 +37,7 @@ To compile as an executable, it requires:
 
 In order to create panhunt as a standalone executable run (works in both Linux and Windows):
 
-```bash
-pyinstaller panhunt.py -F
-```
-
-However, you are advised  use a virtual environment. Update the path on the `build.sh` or `build.bat` file and run. With the short scripts, you can clean the cache, include the original icon and the dependencies (works in both Linux and Windows). The example uses a virtual environment in a folder called `.venv`.
+However, you are advised  use a virtual environment. Update the path on the `build.sh` or `build.ps1` file and run. With the short scripts, you can clean the cache, include the original icon and the dependencies (works in both Linux and Windows). The example uses a virtual environment in a folder called `.venv`.
 
 ## Usage
 
