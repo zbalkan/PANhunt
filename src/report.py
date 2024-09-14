@@ -11,7 +11,7 @@ from genericpath import exists
 
 import panutils
 from config import PANHuntConfiguration
-from doc import Document
+from finding import Finding
 
 
 class Report:
@@ -22,30 +22,27 @@ class Report:
     __searched: str
     __excluded: str
     pan_count: int
-    matched_files: list[Document]
-    interesting_files: list[Document]
-    __conf: PANHuntConfiguration
+    matched_files: list[Finding]
+    interesting_files: list[Finding]
 
     __command: str
     __timestamp: str
     __elapsed: timedelta
 
     def __init__(self,
-                 configuration: PANHuntConfiguration,
                  files_searched_count: int,
-                 matched_files: list[Document],
-                 interesting_files: list[Document],
+                 matched_files: list[Finding],
+                 interesting_files: list[Finding],
                  start: datetime,
                  end: datetime) -> None:
         '''excluded_dirs: list[str]'''
         self.__total_files = files_searched_count
         self.__start = start
         self.__end = end
-        self.__conf = configuration
         self.matched_files = matched_files
         self.interesting_files = interesting_files
-        self.__searched = configuration.search_dir
-        self.__excluded = ','.join(configuration.excluded_directories)
+        self.__searched = PANHuntConfiguration().search_dir
+        self.__excluded = ','.join(PANHuntConfiguration().excluded_directories)
         self.__command = ' '.join(sys.argv)
         self.__timestamp = time.strftime("%H:%M:%S %d/%m/%Y")
         self.__elapsed = self.__end - self.__start
@@ -54,7 +51,7 @@ class Report:
 
     def create_text_report(self) -> None:
 
-        path: str = self.__conf.get_report_path()
+        path: str = PANHuntConfiguration().get_report_path()
         logging.info("Creating TXT report.")
 
         pan_sep: str = '\n\t'
@@ -72,8 +69,6 @@ class Report:
             pan_list: str = '\t'
 
             for pan in file.matches:
-                if pan.sub_path != '':
-                    pan_list += f'{pan.sub_path} '
                 pan_list += f"{pan.get_masked_pan()}{pan_sep}"
             pan_report += pan_list.rstrip(pan_sep) + '\n\n'
 
@@ -98,7 +93,7 @@ class Report:
 
     def create_json_report(self) -> None:
 
-        path: Optional[str] = self.__conf.get_json_path()
+        path: Optional[str] = PANHuntConfiguration().get_json_path()
         if path is None:
             return
 
@@ -119,8 +114,6 @@ class Report:
             items: list[str] = []
             for pan in file.matches:
                 item: str = ''
-                if pan.filename != '':
-                    item += f"{pan.filename}\\{pan.sub_path} "
                 item += f"{pan.get_masked_pan()}"
                 items.append(item)
             matched_items[file.path] = items

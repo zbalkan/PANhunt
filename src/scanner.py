@@ -8,133 +8,82 @@ from job import Job, JobQueue
 from mbox import Mbox
 from msmsg import MSMSG
 from PAN import PAN
-from patterns import CardPatterns
+from PanFinder import PanFinder
 from pdf import Pdf
 from pst import PST
 from pst import Attachment as pstAttachment
 
 ''' If file size is 30MB or bigger, read line by line for better memory management '''
-LARGE_FILE_LIMIT_BYTES: int = 31_457_280  # 30MB
+BLOCK_SIZE: int = 31_457_280  # 30MB
 
 
 class ScannerBase(ABC):
 
-    filename: str
-    sub_path: str = ''  # Only if it is a nested object
-    encoding: str
-    payload: Optional[bytes]
-
-    patterns: CardPatterns
-
-    def __init__(self, patterns: CardPatterns, encoding: str = 'utf8') -> None:
-        self.encoding = encoding
-        self.filename = ''
-        self.patterns = patterns
-        self.payload = None
-
-    def from_file(self, path: str, sub_path: str = '') -> None:
-        self.filename = path
-        self.sub_path = sub_path
-
-    def from_buffer(self, buffer: bytes) -> None:
-        self.payload = buffer
-
     @abstractmethod
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
+    def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
         raise NotImplementedError()
 
 
-class SimpleTextScanner(ScannerBase):
-    text: str
+class PlainTextFileScanner(ScannerBase):
 
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
-
-        matches: list[PAN] = []
-        for brand, regex in self.patterns.brands():
-            pans: list[str] = regex.findall(self.text)
-            if pans:
-                for pan in pans:
-                    if PAN.is_valid_luhn_checksum(pan=pan) and not PAN.is_excluded(pan=pan, excluded_pans=excluded_pans_list):
-                        matches.append(
-                            PAN(filename=os.path.basename(self.filename), sub_path=self.sub_path, brand=brand, pan=pan))
-        return matches
-
-
-class BasicFileScanner(ScannerBase):
-
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
+    def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
 
         matches: list[PAN] = []
 
         text: str
-        if self.payload:
+        if job.payload:
 
-            text = self.payload.decode(
-                encoding=self.encoding, errors='backslashreplace')
-            ifs = SimpleTextScanner(patterns=self.patterns)
-            ifs.from_file(path=self.filename, sub_path=self.sub_path)
-            ifs.text = text
-            matches.extend(ifs.scan(
-                excluded_pans_list=excluded_pans_list))
+            before = len(job.payload)
+            text = job.payload.decode(
+                encoding=encoding, errors='backslashreplace')
+            after = len(text)
+            finder = PanFinder()
+            matches.extend(finder.find(text))
         else:
-            s: os.stat_result = os.stat(path=self.filename)
+            s: os.stat_result = os.stat(path=job.path)
             file_size: int = s.st_size
 
             if file_size == 0:
                 return []
 
-            if 0 < file_size < LARGE_FILE_LIMIT_BYTES:
-                with open(file=self.filename, mode='r', encoding=self.encoding, errors='backslashreplace') as f:
+            if 0 < file_size < BLOCK_SIZE:
+                with open(file=job.path, mode='r', encoding=encoding, errors='backslashreplace') as f:
                     text = f.read()
 
-                ifs = SimpleTextScanner(patterns=self.patterns)
-                ifs.from_file(path=self.filename, sub_path=self.sub_path)
-                ifs.text = text
-                matches.extend(ifs.scan(
-                    excluded_pans_list=excluded_pans_list))
+                finder = PanFinder()
+                matches.extend(finder.find(text))
             else:
-                with open(file=self.filename, mode='r', encoding=self.encoding, errors='backslashreplace') as f:
+                with open(file=job.path, mode='r', encoding=encoding, errors='backslashreplace') as f:
                     for line in f:
-                        ifs = SimpleTextScanner(patterns=self.patterns)
-                        ifs.from_file(path=self.filename,
-                                      sub_path=self.sub_path)
-                        ifs.text = line
-                        matches.extend(ifs.scan(
-                            excluded_pans_list=excluded_pans_list))
+                        finder = PanFinder()
+                        matches.extend(finder.find(line))
         return matches
 
 
 class MsgScanner(ScannerBase):
 
-    __msg: Optional[MSMSG] = None
+    def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
 
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
-
-        if self.__msg is None:
-            if self.payload:
-                self.__msg = MSMSG(msg_file_path=self.payload)
-            else:
-                self.__msg = MSMSG(msg_file_path=self.filename)
+        msg: MSMSG
+        if job.payload:
+            msg = MSMSG(msg_file_path=job.payload)
+        else:
+            msg = MSMSG(msg_file_path=job.path)
 
         matches: list[PAN] = []
 
-        if self.__msg.validMSG:
-            if self.__msg.Body:
-                text_scanner = SimpleTextScanner(patterns=self.patterns)
-                text_scanner.text = self.__msg.Body
-                text_scanner.filename = self.filename
-
-                body_matches: list[PAN] = text_scanner.scan(
-                    excluded_pans_list=excluded_pans_list)
+        if msg.validMSG:
+            if msg.Body:
+                text_scanner = PanFinder()
+                body_matches: list[PAN] = text_scanner.find(msg.Body)
                 if len(body_matches) > 0:
                     matches.extend(body_matches)
-            if self.__msg.attachments:
-                for _, att in enumerate(iterable=self.__msg.attachments):
-                    # Create a job for the attachment and add it to the JobQueue
+            if msg.attachments:
+                for _, att in enumerate(iterable=msg.attachments):
                     job = Job(
-                        filename=att.Filename,  # Use the attachment filename
-                        file_dir=self.filename,  # The parent filename
-                        payload=att.BinaryData  # Pass the binary content directly
+                        filename=att.Filename,
+                        file_dir=job.filename,
+                        payload=att.BinaryData
                     )
                     JobQueue().enqueue(job)
 
@@ -142,34 +91,29 @@ class MsgScanner(ScannerBase):
 
 
 class EmlScanner(ScannerBase):
-    __eml: Optional[Eml] = None
 
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
+    def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
+        eml: Eml
 
-        if self.__eml is None:
-            if self.payload:
-                self.__eml = Eml(path=self.filename,
-                                 payload=self.payload)
-            else:
-                self.__eml = Eml(path=self.filename)
+        if job.payload:
+            eml = Eml(path=job.path,
+                      payload=job.payload)
+        else:
+            eml = Eml(path=job.path)
 
         matches: list[PAN] = []
 
-        if self.__eml.body:
-            text_scanner = SimpleTextScanner(patterns=self.patterns)
-            text_scanner.from_file(path=self.filename)
-            text_scanner.text = self.__eml.body
-
-            body_matches: list[PAN] = text_scanner.scan(
-                excluded_pans_list=excluded_pans_list)
+        if eml.body:
+            text_scanner = PanFinder()
+            body_matches: list[PAN] = text_scanner.find(eml.body)
             if len(body_matches) > 0:
                 matches.extend(body_matches)
-        if self.__eml.attachments:
-            for _, att in enumerate(iterable=self.__eml.attachments):
+        if eml.attachments:
+            for _, att in enumerate(iterable=eml.attachments):
                 # Create a job for the attachment and add it to the JobQueue
                 job = Job(
                     filename=att.Filename,  # Use the attachment filename
-                    file_dir=self.filename,  # The parent filename
+                    file_dir=job.filename,  # The parent filename
                     payload=att.BinaryData  # Pass the binary content directly
                 )
                 JobQueue().enqueue(job)
@@ -178,25 +122,22 @@ class EmlScanner(ScannerBase):
 
 
 class MboxScanner(ScannerBase):
-    __mbox: Optional[Mbox] = None
 
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
+    def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
+        mbox: Mbox
 
-        if self.__mbox is None:
-            if self.payload:
-                self.__mbox = Mbox(path=self.filename,
-                                   payload=self.payload)
-            else:
-                self.__mbox = Mbox(path=self.filename)
+        if job.payload:
+            mbox = Mbox(path=job.filename,
+                        payload=job.payload)
+        else:
+            mbox = Mbox(path=job.path)
 
         matches: list[PAN] = []
 
-        for mail in self.__mbox.mails:
+        for mail in mbox.mails:
             if mail.body:
-                text_scanner = SimpleTextScanner(patterns=self.patterns)
-                text_scanner.text = mail.body
-                body_matches: list[PAN] = text_scanner.scan(
-                    excluded_pans_list=excluded_pans_list)
+                text_scanner = PanFinder()
+                body_matches: list[PAN] = text_scanner.find(mail.body)
                 if len(body_matches) > 0:
                     matches.extend(body_matches)
             if mail.attachments:
@@ -204,7 +145,7 @@ class MboxScanner(ScannerBase):
                     # Create a job for the attachment and add it to the JobQueue
                     job = Job(
                         filename=att.Filename,  # Use the attachment filename
-                        file_dir=self.filename,  # The parent filename
+                        file_dir=job.filename,  # The parent filename
                         payload=att.BinaryData  # Pass the binary content directly
                     )
                     JobQueue().enqueue(job)
@@ -215,10 +156,10 @@ class MboxScanner(ScannerBase):
 class PstScanner(ScannerBase):
     pst: Optional[PST] = None
 
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
+    def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
 
         if self.pst is None:
-            self.pst = PST(pst_file=self.filename)
+            self.pst = PST(pst_file=job.path)
 
         matches: list[PAN] = []
 
@@ -233,14 +174,10 @@ class PstScanner(ScannerBase):
                             folder.path, '[NoSubject]')
 
                     if message.Body:
-                        text_scanner = SimpleTextScanner(
-                            patterns=self.patterns)
-                        text_scanner.text = message.Body
-                        text_scanner.filename = self.filename
-                        text_scanner.sub_path = message_path
-
-                        body_matches: list[PAN] = text_scanner.scan(
-                            excluded_pans_list=excluded_pans_list)
+                        text_scanner = PanFinder(
+                        )
+                        body_matches: list[PAN] = text_scanner.find(
+                            message.Body)
                         if len(body_matches) > 0:
                             matches.extend(body_matches)
 
@@ -253,7 +190,7 @@ class PstScanner(ScannerBase):
                                     # Create a job for the attachment and add it to the JobQueue
                                     job = Job(
                                         filename=att.Filename,  # Use the attachment filename
-                                        file_dir=self.filename,  # The parent filename
+                                        file_dir=job.filename,  # The parent filename
                                         payload=att.BinaryData  # Pass the binary content directly
                                     )
                                     JobQueue().enqueue(job)
@@ -263,21 +200,14 @@ class PstScanner(ScannerBase):
 
 
 class PdfScanner(ScannerBase):
-    pdf: Optional[Pdf] = None
+    pdf: Pdf
 
-    def scan(self, excluded_pans_list: list[str]) -> list[PAN]:
+    def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
 
-        if self.pdf is None:
-            if self.payload:
-                self.pdf = Pdf(file=io.BytesIO(initial_bytes=self.payload))
-            else:
-                self.pdf = Pdf(file=self.filename)
+        if job.payload:
+            self.pdf = Pdf(file=io.BytesIO(initial_bytes=job.payload))
+        else:
+            self.pdf = Pdf(file=job.path)
 
-        ifs = SimpleTextScanner(patterns=self.patterns)
-        ifs.filename = self.filename
-        ifs.sub_path = self.sub_path
-        ifs.text = self.pdf.get_text()
-
-        matches: list[PAN] = ifs.scan(
-            excluded_pans_list=excluded_pans_list)
-        return matches
+        finder = PanFinder()
+        return finder.find(self.pdf.get_text())

@@ -4,4 +4,4 @@
 
 PATHS=".venv/Lib/site-packages"
 
-pyinstaller src/panhunt.py -F --clean -i dionach.ico --paths="${PATHS}" --hidden-import=appdirs --hidden-import=pyparsing
+pyinstaller src/panhunt.py -F --clean -i dionach.ico --paths="${PATHS}"

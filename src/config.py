@@ -7,6 +7,8 @@ import panutils
 
 
 class PANHuntConfiguration:
+    __instance = None  # Class-level variable to store the singleton instance
+
     search_dir: str
     file_path: Optional[str]
     config_file: Optional[str]
@@ -17,24 +19,34 @@ class PANHuntConfiguration:
     mask_pans: bool
     excluded_directories: list[str]
     excluded_pans: list[str]
+    size_limit: int
     verbose: bool
 
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super(PANHuntConfiguration,
+                                   cls).__new__(cls, *args, **kwargs)
+        return cls.__instance
+
     def __init__(self) -> None:
-        if os.name == 'nt':
-            self.search_dir = 'C:\\'
-            self.excluded_directories = ['C:\\Windows',
-                                         'C:\\Program Files', 'C:\\Program Files(x86)']
-        else:
-            self.search_dir = '/'
-            self.excluded_directories = ['/mnt', '/dev', '/proc']
-        self.file_path = None
-        self.config_file = None
-        self.report_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.report'
-        self.report_dir = panutils.get_root_dir()
-        self.json_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.json'
-        self.json_dir = None
-        self.mask_pans = False
-        self.excluded_pans = []
+        if not hasattr(self, '_initialized'):  # Ensure init is called only once
+            if os.name == 'nt':
+                self.search_dir = 'C:\\'
+                self.excluded_directories = ['C:\\Windows',
+                                             'C:\\Program Files', 'C:\\Program Files(x86)']
+            else:
+                self.search_dir = '/'
+                self.excluded_directories = ['/mnt', '/dev', '/proc']
+            self.file_path = None
+            self.config_file = None
+            self.report_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.report'
+            self.report_dir = panutils.get_root_dir()
+            self.json_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.json'
+            self.json_dir = None
+            self.mask_pans = False
+            self.excluded_pans = []
+            self.size_limit = 1_073_741_824  # 1Gb
+            self._initialized = True  # Mark as initialized to prevent re-init
 
     def with_args(self,
                   search_dir: Optional[str] = None,
@@ -44,7 +56,8 @@ class PANHuntConfiguration:
                   excluded_directories_string: Optional[str] = None,
                   excluded_pans_string: Optional[str] = None,
                   json_dir: Optional[str] = None,
-                  verbose: bool = False) -> None:
+                  verbose: bool = False,
+                  size_limit: Optional[int] = None) -> None:
         """If any parameter is provided, it overwrites the previous value
         """
 
@@ -55,7 +68,8 @@ class PANHuntConfiguration:
                       mask_pans=mask_pans,
                       excluded_directories_string=excluded_directories_string,
                       excluded_pans_string=excluded_pans_string,
-                      verbose=verbose)
+                      verbose=verbose,
+                      size_limit=size_limit)
 
     def with_file(self, config_file: str) -> None:
         """If a config file provided and it has specific values, they overwrite the previous values
@@ -85,6 +99,8 @@ class PANHuntConfiguration:
             config_from_file=config_from_file, property='excludepans')
         verbose: bool = PANHuntConfiguration.__check_verbose(
             config_from_file=config_from_file)
+        size_limit = PANHuntConfiguration.__try_parse_int(
+            config_from_file=config_from_file, property='sizelimit')
 
         self.__update(search_dir=search_dir,
                       file_path=file_path,
@@ -93,7 +109,8 @@ class PANHuntConfiguration:
                       mask_pans=mask_pans,
                       excluded_directories_string=excluded_directories_string,
                       excluded_pans_string=excluded_pans_string,
-                      verbose=verbose)
+                      verbose=verbose,
+                      size_limit=size_limit)
 
     def get_json_path(self) -> Optional[str]:
         if self.json_dir:
@@ -103,6 +120,12 @@ class PANHuntConfiguration:
 
     def get_report_path(self) -> str:
         return os.path.join(self.report_dir, self.report_file)
+
+    def is_excluded(self, pan: str) -> bool:
+        for excluded_pan in self.excluded_pans:
+            if pan == excluded_pan:
+                return True
+        return False
 
     @staticmethod
     def __parse_file(config_file) -> dict:
@@ -134,6 +157,14 @@ class PANHuntConfiguration:
             return str(config_from_file[property])
         return None
 
+    @staticmethod
+    def __try_parse_int(config_from_file: dict, property: str) -> Optional[int]:
+        s: Optional[str] = PANHuntConfiguration.__try_parse(
+            config_from_file, property)
+        if s:
+            return int(s)
+        return None
+
     def __update(self,
                  search_dir: Optional[str],
                  file_path: Optional[str],
@@ -142,7 +173,8 @@ class PANHuntConfiguration:
                  mask_pans: Optional[bool],
                  excluded_directories_string: Optional[str],
                  excluded_pans_string: Optional[str],
-                 verbose: bool) -> None:
+                 verbose: bool,
+                 size_limit: Optional[int]) -> None:
 
         if search_dir and search_dir != 'None':
             self.search_dir = os.path.abspath(path=search_dir)
@@ -174,3 +206,6 @@ class PANHuntConfiguration:
 
         if verbose:
             self.verbose = verbose
+
+        if size_limit:
+            self.size_limit = size_limit

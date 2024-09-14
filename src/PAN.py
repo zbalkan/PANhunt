@@ -2,30 +2,22 @@ import re
 
 
 class PAN:
-    """PAN: A class for recording PANs, their brand and where they were found"""
+    """PAN: A class for recording PANs and their brand"""
 
-    filename: str
-    sub_path: str
     brand: str
 
     __pan: str
 
-    def __init__(self, filename: str, sub_path: str, brand: str, pan: str) -> None:
+    def __init__(self, brand: str, pan: str) -> None:
 
-        self.filename, self.sub_path, self.brand, self.__pan = filename, sub_path, brand, pan
+        self.brand, self.__pan = brand, pan
 
     def get_masked_pan(self) -> str:
         """The first six and last four digits are the maximum number of digits that may be displayed"""
-        pan_out: str = self.__pan[0:6] + \
-            re.sub(r'\d', '*', self.__pan[6:-4]) + self.__pan[-4:]
+        standardized = self.__pan.replace(' ', '').replace('-', '')
+        pan_out: str = standardized[0:6] + \
+            re.sub(r'\d', '*', standardized[6:-4]) + standardized[-4:]
         return f'{self.brand}:{pan_out}'
-
-    @staticmethod
-    def is_excluded(pan: str, excluded_pans: list[str]) -> bool:
-        for excluded_pan in excluded_pans:
-            if pan == excluded_pan:
-                return True
-        return False
 
     @staticmethod
     def is_valid_luhn_checksum(pan: str) -> bool:

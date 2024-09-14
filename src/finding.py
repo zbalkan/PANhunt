@@ -6,10 +6,8 @@ import panutils
 from enums import ScanStatusEnum
 from PAN import PAN
 
-FILE_SIZE_LIMIT: int = 1_073_741_824  # 1Gb
 
-
-class Document:
+class Finding:
 
     filename: str
     dir: str
@@ -58,11 +56,7 @@ class Document:
         self.set_file_stats()
         self.payload = None
 
-        if self.size > FILE_SIZE_LIMIT:
-            self.set_error(
-                error_msg=f'File size {panutils.size_friendly(size=self.size)} over limit of {panutils.size_friendly(size=FILE_SIZE_LIMIT)} for checking for file \"{self.filename}\"')
-
-    def __cmp__(self, other: 'Document') -> bool:
+    def __cmp__(self, other: 'Finding') -> bool:
 
         return self.path.lower() == other.path.lower()
 
