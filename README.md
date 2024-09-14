@@ -42,118 +42,205 @@ However, you are advised  use a virtual environment. Update the path on the `bui
 ## Usage
 
 ```shell
-usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
+usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG] [-X EXCLUDE_PAN] [-q] [-v]
 
-PAN Hunt v1.3: search directories and sub directories for documents containing PANs.
+PAN Hunt v1.5: search directories and sub directories for documents containing PANs.
 
 options:
-  -h, --help        show this help message and exit
-  -s SEARCH_DIR     base directory to search in (default: /)
-  -f FILE_PATH      File path for single file scan (default: None)
-  -x EXCLUDE_DIRS   directories to exclude from the search (default: C:\Windows,C:\Program Files,C:\Program Files (x86),/mnt,/dev,/proc)
-  -o REPORT_DIR     Report file directory for TXT formatted PAN report (default: ./)
-  -j JSON_DIR       Report file directory for JSON formatted PAN report (default: None)
-  -u                unmask PANs in output (default: False)
-  -C CONFIG         configuration file to use (default: None)
-  -X EXCLUDE_PAN    PAN to exclude from search (default: None)
-  -q                No terminal output (default: False)
+  -h, --help       show this help message and exit
+  -s SEARCH_DIR    base directory to search in (default: None)
+  -f FILE_PATH     File path for single file scan (default: None)
+  -x EXCLUDE_DIRS  directories to exclude from the search (use absolute paths) (default: None)
+  -o REPORT_DIR    Report file directory for TXT formatted PAN report (default: ./)
+  -j JSON_DIR      Report file directory for JSON formatted PAN report (default: None)
+  -u               unmask PANs in output (default: False)
+  -C CONFIG        configuration file to use (default: None)
+  -X EXCLUDE_PAN   PAN to exclude from search (default: None)
+  -q               No terminal output (default: False)
+  -v               Verbose logging (default: False)
 ```
 
 Simply running it with no arguments will search the `C:\` drive on Windows and filesystem under `/` on Linux, for documents containing PANs, and output to panhunt_<timestamp>.txt.
 
 ## Example Output
 
-```shell
-FOUND PANs: D:\\test\office\test.rtf (40.79KB)
-        Mastercard:5105-1***-****-5100
-        Visa:401288******1881
-        Visa:4012 8*** **** 1881
-        Visa:4012-8***-****-1881
-        AMEX:371449*****8431
-
-FOUND PANs: D:\\test\pdf\test.pdf (39.57KB)
-        Mastercard:5105-1***-****-5100
-        Visa:401288******1881
-        Visa:4012 8*** **** 1881
-        Visa:4012-8***-****-1881
-        AMEX:371449*****8431
-
-FOUND PANs: D:\\test\plain\test.txt (96.00B)
-        Mastercard:5105-1***-****-5100
-        Visa:401288******1881
-        Visa:4012 8*** **** 1881
-        Visa:4012-8***-****-1881
-        AMEX:371449*****8431
-
-FOUND PANs: D:\\test\plain\dir2\test.txt (96.00B)
-        Mastercard:5105-1***-****-5100
-        Visa:401288******1881
-        Visa:4012 8*** **** 1881
-        Visa:4012-8***-****-1881
-        AMEX:371449*****8431
-
-FOUND PANs: D:\\test\gz\test.txt.gz\test.txt (54.00B)
-        Mastercard:5105-1***-****-5100
+```yaml
+FOUND PANs: D:\PANhunt\test\eml\test with attachments.eml (176.91KB)
+        Mastercard:510510******5100
         Visa:401288******1881
         AMEX:371449*****8431
 
-FOUND PANs: D:\\test\office\test.docx\word/document.xml (3.50KB)
-        Mastercard:5105-1***-****-5100
-        Visa:401288******1881
-        Visa:4012 8*** **** 1881
-        Visa:4012-8***-****-1881
-        AMEX:371449*****8431
-
-FOUND PANs: D:\\test\office\test.pptx\ppt/slides/slide1.xml (1.68KB)
-        Mastercard:5105-1***-****-5100
-        Visa:401288******1881
-        Visa:4012 8*** **** 1881
-        Visa:4012-8***-****-1881
-        AMEX:371449*****8431
-
-FOUND PANs: D:\\test\office\test.xlsx\xl/sharedStrings.xml (328.00B)
-        Mastercard:5105-1***-****-5100
-        Visa:4012 8*** **** 1881
-        Visa:4012-8***-****-1881
+FOUND PANs: D:\PANhunt\test\eml\test.eml (41.87KB)
+        Mastercard:510510******5100
         Visa:401288******1881
         AMEX:371449*****8431
 
-FOUND PANs: D:\\test\tar\success.tar\dir2/test.txt (96.00B)
-        Mastercard:5105-1***-****-5100
-        Visa:401288******1881
-        Visa:4012 8*** **** 1881
-        Visa:4012-8***-****-1881
-        AMEX:371449*****8431
-
-FOUND PANs: D:\\test\xz\test.txt (54.00B)
-        Mastercard:5105-1***-****-5100
+FOUND PANs: D:\PANhunt\test\msg\test with attachments.msg (169.50KB)
+        Mastercard:510510******5100
         Visa:401288******1881
         AMEX:371449*****8431
 
-FOUND PANs: D:\\test\zip\test.zip\dir2/test.txt (96.00B)
-        Mastercard:5105-1***-****-5100
-        Visa:401288******1881
-        Visa:4012 8*** **** 1881
-        Visa:4012-8***-****-1881
-        AMEX:371449*****8431
-
-FOUND PANs: D:\\test\zip\test.zip\test.txt (96.00B)
-        Mastercard:5105-1***-****-5100
-        Visa:401288******1881
-        Visa:4012 8*** **** 1881
-        Visa:4012-8***-****-1881
-        AMEX:371449*****8431
-
-FOUND PANs: D:\\test\tar\success.tar.gz\success.tar\dir2/test.txt (54.00B)
-        Mastercard:5105-1***-****-5100
+FOUND PANs: D:\PANhunt\test\msg\test.msg (22.50KB)
+        Mastercard:510510******5100
         Visa:401288******1881
         AMEX:371449*****8431
 
-FOUND PANs: D:\\test\tar\success.tar\dir2/test.txt (54.00B)
-        Mastercard:5105-1***-****-5100
+FOUND PANs: D:\PANhunt\test\office\test.rtf (40.79KB)
+        Mastercard:510510******5100
         Visa:401288******1881
         AMEX:371449*****8431
-Report written to panhunt_YYYY-MM-DD-HHMMSS.txt
+
+FOUND PANs: D:\PANhunt\test\pdf\test.pdf (39.57KB)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\plain\test.txt (96.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\plain\dir2\test.txt (96.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test with attachments.eml\test.txt (96.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: success.tar\test.rtf (40.79KB)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.eml\None (36.77KB)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\gz\test.txt.gz\test.txt (54.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test with attachments.msg\test.txt (96.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: success.tar\test.rtf (40.79KB)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\office\test.docx\word/document.xml (3.50KB)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\office\test.pptx\ppt/slides/slide1.xml (1.68KB)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\office\test.xlsx\xl/sharedStrings.xml (328.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\tar\success.tar\dir2/test.txt (96.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\xz\test.txt.xz\test.txt (54.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\zip\test.zip\dir2/test.txt (96.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\zip\test.zip\test.txt (96.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.txt\test.docx\word/document.xml (3.50KB)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.docx\test.pptx\ppt/slides/slide1.xml (1.68KB)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.pptx\test.txt.gz\test.txt (54.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.txt.gz\test.txt.xz\test.txt (54.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.txt.xz\success.tar\dir2/test.txt (96.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.rtf\test.xlsx\xl/sharedStrings.xml (328.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.txt\test.docx\word/document.xml (3.50KB)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.docx\test.pptx\ppt/slides/slide1.xml (1.68KB)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.pptx\test.txt.gz\test.txt (54.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.txt.gz\test.txt.xz\test.txt (54.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.txt.xz\success.tar\dir2/test.txt (96.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: test.rtf\test.xlsx\xl/sharedStrings.xml (328.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\tar\success.tar.gz\success.tar\dir2/test.txt (54.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+FOUND PANs: D:\PANhunt\test\tar\success.tar.xz\success.tar\dir2/test.txt (54.00B)
+        Mastercard:510510******5100
+        Visa:401288******1881
+        AMEX:371449*****8431
+
+Report written to D:\PANhunt\out\panhunt_2024-09-14-221629.report
 ```
 
 ## Configuration
