@@ -141,16 +141,7 @@ def main() -> None:
         check_file_hash(args.check_file_hash)
         sys.exit()
 
-    search_dir = str(args.search_dir)
-    file_path = str(args.file_path)
-    report_dir = str(args.report_dir)
-    excluded_directories_string = str(args.exclude_dirs)
-    mask_pans: bool = not args.unmask
-    excluded_pans_string = str(args.exclude_pan)
-    json_dir: Optional[str] = args.json_dir
     config_file: Optional[str] = args.config
-    verbose: bool = args.verbose
-    quiet: bool = args.quiet
 
     # If exists, read the config file
     if config_file:
@@ -158,6 +149,26 @@ def main() -> None:
             config_file=config_file)
     else:
         # Else, read the CLI parameters
+        # Ask the user if they want to scan the root directory if no search directory or file path is provided
+        if args.search_dir is None and args.file_path is None:
+            print('No search directory or single file path specified.')
+            print(
+                'The default search target is the root directory ("/" for *Nix, "C:\\" for Windows).')
+            response = input(
+                'Do you want to search the root directory? (y/N): ')
+            if response.lower() != 'y':
+                sys.exit()
+
+        search_dir = str(args.search_dir)
+        file_path = str(args.file_path)
+        report_dir = str(args.report_dir)
+        excluded_directories_string = str(args.exclude_dirs)
+        mask_pans: bool = not args.unmask
+        excluded_pans_string = str(args.exclude_pan)
+        json_dir: Optional[str] = args.json_dir
+        verbose: bool = args.verbose
+        quiet: bool = args.quiet
+
         PANHuntConfiguration().with_args(search_dir=search_dir,
                                          file_path=file_path,
                                          report_dir=report_dir,
