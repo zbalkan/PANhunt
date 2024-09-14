@@ -14,7 +14,7 @@ class Directory:
         jobs: list[Job] = []
         for root, dirs, files in os.walk(self.path):
             for file in files:
-                file = os.path.join(root, file)
+                # file = os.path.join(root, file)
                 jobs.append(Job(
                     filename=file, file_dir=root))
 

@@ -3,8 +3,8 @@ import tarfile
 from gzip import GzipFile
 from io import BytesIO
 from lzma import LZMAFile
-from tarfile import TarFile
-from typing import Optional
+from tarfile import TarFile, TarInfo
+from typing import IO, Optional
 from zipfile import ZipFile
 
 import panutils
@@ -56,8 +56,10 @@ class TarArchive(Archive):
                 fileobj=BytesIO(self.payload), mode='r')
         else:
             tar_ref = tarfile.open(self.path, 'r')
-        for file_info in [m for m in tar_ref.getmembers() if m.isfile()]:
-            extracted = tar_ref.extractfile(file_info)
+
+        members: list[TarInfo] = tar_ref.getmembers()
+        for file_info in [m for m in members if m.isfile()]:
+            extracted: Optional[IO[bytes]] = tar_ref.extractfile(file_info)
             if extracted is not None:
                 extracted.seek(0)
                 file_data: bytes = extracted.read()
@@ -66,6 +68,7 @@ class TarArchive(Archive):
 
                 children.append(x)
         tar_ref.close()
+
         return children
 
 
