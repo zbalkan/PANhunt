@@ -6,38 +6,34 @@ import time
 from config import PANHuntConfiguration
 from directory import Directory
 from dispatcher import Dispatcher
+from finding import Finding
 from job import Job, JobQueue
-from patterns import CardPatterns
-from doc import Document
 
 
 class Hunter:
 
-    __conf: PANHuntConfiguration
-    __patterns: CardPatterns
     __dispatcher: Dispatcher
     count: int = 0
 
-    def __init__(self, configuration: PANHuntConfiguration) -> None:
-        self.__conf = configuration
-        self.__patterns = CardPatterns()
-        self.__dispatcher = Dispatcher(
-            excluded_pans_list=self.__conf.excluded_pans, patterns=self.__patterns)
+    def __init__(self) -> None:
+        self.__dispatcher = Dispatcher()
 
     def hunt(self) -> None:
         """Enqueue all jobs into the job queue for processing by the dispatcher."""
 
         self.__dispatcher.start()
 
-        logging.info(f"Search base: {self.__conf.search_dir}")
+        logging.info(f"Search base: {PANHuntConfiguration().search_dir}")
 
-        if self.__conf.file_path:
-            basename = os.path.basename(self.__conf.file_path)
-            dir = os.path.dirname(self.__conf.file_path)
+        if PANHuntConfiguration().file_path is not None:
+            # To silence the type checker
+            p = str(PANHuntConfiguration().file_path)
+            basename: str = os.path.basename(p)
+            dir: str = os.path.dirname(p)
             if not self.__is_directory_excluded(dir):
                 JobQueue().enqueue(Job(basename, file_dir=dir))
         else:
-            root = Directory(path=self.__conf.search_dir)
+            root = Directory(path=PANHuntConfiguration().search_dir)
             for file in root.get_children():
                 if not self.__is_directory_excluded(file.file_dir):
                     # Create a Job instance for each file instead of ScannableFile
@@ -54,13 +50,17 @@ class Hunter:
 
         logging.info(f"Total number of jobs (files): {self.count}")
 
-    def get_results(self) -> list[Document]:
+    def get_results(self) -> list[Finding]:
         return self.__dispatcher.results
 
     def __is_directory_excluded(self, file_dir: str) -> bool:
-        for excluded_dir in self.__conf.excluded_directories:
+        for excluded_dir in PANHuntConfiguration().excluded_directories:
             escaped_file_dir = re.escape(file_dir)
             escaped_excluded_dir = re.escape(excluded_dir)
-            if re.match(f"{escaped_excluded_dir}/.*", escaped_file_dir):
-                return True
+            if os.name == 'nt':
+                if re.match(f"{escaped_excluded_dir}\\.*", escaped_file_dir):
+                    return True
+            else:
+                if re.match(f"{escaped_excluded_dir}/.*", escaped_file_dir):
+                    return True
         return False

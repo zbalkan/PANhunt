@@ -20,17 +20,17 @@ import colorama
 
 import panutils
 from config import PANHuntConfiguration
+from finding import Finding
 from hunter import Hunter
 from report import Report
-from doc import Document
 
 APP_NAME: Final[str] = 'PANhunt'
 APP_VERSION: Final[str] = '1.5'
 
 
-def hunt_pans(configuration: PANHuntConfiguration) -> Report:
+def hunt_pans() -> Report:
 
-    hunter = Hunter(configuration=configuration)
+    hunter = Hunter()
     # Start timer
     start: datetime = datetime.now()
 
@@ -39,25 +39,24 @@ def hunt_pans(configuration: PANHuntConfiguration) -> Report:
     # check each file
     hunter.hunt()
 
-    results: list[Document] = hunter.get_results()
+    results: list[Finding] = hunter.get_results()
     logging.info("Finished searching.")
 
     end: datetime = datetime.now()
 
-    interesting: list[Document] = [
+    interesting: list[Finding] = [
         result for result in results if result.errors is not None and len(result.errors) > 0]
-    matches: list[Document] = [
+    matches: list[Finding] = [
         result for result in results if result.matches is not None and len(result.matches) > 0]
 
     return Report(
-        configuration=configuration,
         files_searched_count=hunter.count,
         matched_files=matches,
         interesting_files=interesting,
         start=start, end=end)
 
 
-def display_report(report: Report, configuration: PANHuntConfiguration) -> None:
+def display_report(report: Report) -> None:
 
     pan_sep: str = '\n\t'
     for sf in report.matched_files:
@@ -66,8 +65,6 @@ def display_report(report: Report, configuration: PANHuntConfiguration) -> None:
         print(colorama.Fore.RED + panutils.unicode_to_ascii(pan_header))
         pan_list: str = '\t'
         for pan in sf.matches:
-            if pan.sub_path != '':
-                pan_list += f'{pan.sub_path} '
             pan_list += f"{pan.get_masked_pan()}{pan_sep}"
 
         print(colorama.Fore.YELLOW +
@@ -81,7 +78,7 @@ def display_report(report: Report, configuration: PANHuntConfiguration) -> None:
                   f'{panutils.unicode_to_ascii(interesting.path)} ({panutils.unicode_to_ascii(panutils.size_friendly(interesting.size))})')
 
     print(colorama.Fore.WHITE +
-          f'Report written to {panutils.unicode_to_ascii(configuration.get_report_path())}')
+          f'Report written to {panutils.unicode_to_ascii(PANHuntConfiguration().get_report_path())}')
 
 
 def check_file_hash(text_file: str) -> None:
@@ -144,36 +141,44 @@ def main() -> None:
         check_file_hash(args.check_file_hash)
         sys.exit()
 
-    search_dir = str(args.search_dir)
-    file_path = str(args.file_path)
-    report_dir = str(args.report_dir)
-    excluded_directories_string = str(args.exclude_dirs)
-    mask_pans: bool = not args.unmask
-    excluded_pans_string = str(args.exclude_pan)
-    json_dir: Optional[str] = args.json_dir
     config_file: Optional[str] = args.config
-    verbose: bool = args.verbose
-    quiet: bool = args.quiet
-
-    # Initiated with default values
-    config: PANHuntConfiguration = PANHuntConfiguration()
 
     # If exists, read the config file
     if config_file:
-        config.with_file(
+        PANHuntConfiguration().with_file(
             config_file=config_file)
     else:
         # Else, read the CLI parameters
-        config.with_args(search_dir=search_dir,
-                         file_path=file_path,
-                         report_dir=report_dir,
-                         json_dir=json_dir,
-                         mask_pans=mask_pans,
-                         excluded_directories_string=excluded_directories_string,
-                         excluded_pans_string=excluded_pans_string,
-                         verbose=verbose)
+        # Ask the user if they want to scan the root directory if no search directory or file path is provided
+        if args.search_dir is None and args.file_path is None:
+            print('No search directory or single file path specified.')
+            print(
+                'The default search target is the root directory ("/" for *Nix, "C:\\" for Windows).')
+            response = input(
+                'Do you want to search the root directory? (y/N): ')
+            if response.lower() != 'y':
+                sys.exit()
 
-    report: Report = hunt_pans(configuration=config)
+        search_dir = str(args.search_dir)
+        file_path = str(args.file_path)
+        report_dir = str(args.report_dir)
+        excluded_directories_string = str(args.exclude_dirs)
+        mask_pans: bool = not args.unmask
+        excluded_pans_string = str(args.exclude_pan)
+        json_dir: Optional[str] = args.json_dir
+        verbose: bool = args.verbose
+        quiet: bool = args.quiet
+
+        PANHuntConfiguration().with_args(search_dir=search_dir,
+                                         file_path=file_path,
+                                         report_dir=report_dir,
+                                         json_dir=json_dir,
+                                         mask_pans=mask_pans,
+                                         excluded_directories_string=excluded_directories_string,
+                                         excluded_pans_string=excluded_pans_string,
+                                         verbose=verbose)
+
+    report: Report = hunt_pans()
 
     # report findings
     report.create_text_report()
@@ -182,7 +187,7 @@ def main() -> None:
         report.create_json_report()
 
     if not quiet:
-        display_report(report=report, configuration=config)
+        display_report(report=report)
 
 
 if __name__ == "__main__":
