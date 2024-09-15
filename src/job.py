@@ -6,16 +6,16 @@ from typing import Optional
 
 class Job:
 
-    filename: str
-    file_dir: str
+    basename: str
+    dirname: str
     payload: Optional[bytes]
-    path: str
+    abspath: str
 
-    def __init__(self, filename: str, file_dir: str, payload: Optional[bytes] = None) -> None:
-        self.filename = filename
-        self.file_dir = file_dir
+    def __init__(self, basename: str, dirname: str, payload: Optional[bytes] = None) -> None:
+        self.basename = basename
+        self.dirname = dirname
         self.payload = payload
-        self.path = os.path.join(self.file_dir, self.filename)
+        self.abspath = os.path.join(self.dirname, self.basename)
 
 
 class JobQueue:

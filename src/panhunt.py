@@ -60,7 +60,7 @@ def display_report(report: Report) -> None:
 
     pan_sep: str = '\n\t'
     for sf in report.matched_files:
-        pan_header: str = f"FOUND PANs: {sf.path} ({panutils.size_friendly(sf.size)})"
+        pan_header: str = f"FOUND PANs: {sf.abspath} ({panutils.size_friendly(sf.size)})"
 
         print(colorama.Fore.RED + panutils.unicode_to_ascii(pan_header))
         pan_list: str = '\t'
@@ -75,7 +75,7 @@ def display_report(report: Report) -> None:
               'Interesting Files to check separately, probably a permission issue:')
         for interesting in report.interesting_files:
             print(colorama.Fore.YELLOW + '\t- ' +
-                  f'{panutils.unicode_to_ascii(interesting.path)} ({panutils.unicode_to_ascii(panutils.size_friendly(interesting.size))})')
+                  f'{panutils.unicode_to_ascii(interesting.abspath)} ({panutils.unicode_to_ascii(panutils.size_friendly(interesting.size))})')
 
     print(colorama.Fore.WHITE +
           f'Report written to {panutils.unicode_to_ascii(PANHuntConfiguration().get_report_path())}')

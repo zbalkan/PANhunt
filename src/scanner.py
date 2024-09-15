@@ -40,20 +40,20 @@ class PlainTextFileScanner(ScannerBase):
             finder = PanFinder()
             matches.extend(finder.find(text))
         else:
-            s: os.stat_result = os.stat(path=job.path)
+            s: os.stat_result = os.stat(path=job.abspath)
             file_size: int = s.st_size
 
             if file_size == 0:
                 return []
 
             if 0 < file_size < BLOCK_SIZE:
-                with open(file=job.path, mode='r', encoding=encoding, errors='backslashreplace') as f:
+                with open(file=job.abspath, mode='r', encoding=encoding, errors='backslashreplace') as f:
                     text = f.read()
 
                 finder = PanFinder()
                 matches.extend(finder.find(text))
             else:
-                with open(file=job.path, mode='r', encoding=encoding, errors='backslashreplace') as f:
+                with open(file=job.abspath, mode='r', encoding=encoding, errors='backslashreplace') as f:
                     for line in f:
                         finder = PanFinder()
                         matches.extend(finder.find(line))
@@ -68,7 +68,7 @@ class MsgScanner(ScannerBase):
         if job.payload:
             msg = MSMSG(msg_file_path=job.payload)
         else:
-            msg = MSMSG(msg_file_path=job.path)
+            msg = MSMSG(msg_file_path=job.abspath)
 
         matches: list[PAN] = []
 
@@ -81,8 +81,8 @@ class MsgScanner(ScannerBase):
             if msg.attachments:
                 for _, att in enumerate(iterable=msg.attachments):
                     job = Job(
-                        filename=att.Filename,
-                        file_dir=job.filename,
+                        basename=att.Filename,
+                        dirname=job.basename,
                         payload=att.BinaryData
                     )
                     JobQueue().enqueue(job)
@@ -96,10 +96,10 @@ class EmlScanner(ScannerBase):
         eml: Eml
 
         if job.payload:
-            eml = Eml(path=job.path,
+            eml = Eml(path=job.abspath,
                       payload=job.payload)
         else:
-            eml = Eml(path=job.path)
+            eml = Eml(path=job.abspath)
 
         matches: list[PAN] = []
 
@@ -112,8 +112,8 @@ class EmlScanner(ScannerBase):
             for _, att in enumerate(iterable=eml.attachments):
                 # Create a job for the attachment and add it to the JobQueue
                 job = Job(
-                    filename=att.Filename,  # Use the attachment filename
-                    file_dir=job.filename,  # The parent filename
+                    basename=att.Filename,  # Use the attachment filename
+                    dirname=job.basename,  # The parent filename
                     payload=att.BinaryData  # Pass the binary content directly
                 )
                 JobQueue().enqueue(job)
@@ -127,10 +127,10 @@ class MboxScanner(ScannerBase):
         mbox: Mbox
 
         if job.payload:
-            mbox = Mbox(path=job.filename,
+            mbox = Mbox(path=job.basename,
                         payload=job.payload)
         else:
-            mbox = Mbox(path=job.path)
+            mbox = Mbox(path=job.abspath)
 
         matches: list[PAN] = []
 
@@ -144,8 +144,8 @@ class MboxScanner(ScannerBase):
                 for _, att in enumerate(iterable=mail.attachments):
                     # Create a job for the attachment and add it to the JobQueue
                     job = Job(
-                        filename=att.Filename,  # Use the attachment filename
-                        file_dir=job.filename,  # The parent filename
+                        basename=att.Filename,  # Use the attachment filename
+                        dirname=job.basename,  # The parent filename
                         payload=att.BinaryData  # Pass the binary content directly
                     )
                     JobQueue().enqueue(job)
@@ -159,7 +159,7 @@ class PstScanner(ScannerBase):
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
 
         if self.pst is None:
-            self.pst = PST(pst_file=job.path)
+            self.pst = PST(pst_file=job.abspath)
 
         matches: list[PAN] = []
 
@@ -189,8 +189,8 @@ class PstScanner(ScannerBase):
                                 if att:
                                     # Create a job for the attachment and add it to the JobQueue
                                     job = Job(
-                                        filename=att.Filename,  # Use the attachment filename
-                                        file_dir=job.filename,  # The parent filename
+                                        basename=att.Filename,  # Use the attachment filename
+                                        dirname=job.basename,  # The parent filename
                                         payload=att.BinaryData  # Pass the binary content directly
                                     )
                                     JobQueue().enqueue(job)
@@ -207,7 +207,7 @@ class PdfScanner(ScannerBase):
         if job.payload:
             self.pdf = Pdf(file=io.BytesIO(initial_bytes=job.payload))
         else:
-            self.pdf = Pdf(file=job.path)
+            self.pdf = Pdf(file=job.abspath)
 
         finder = PanFinder()
         return finder.find(self.pdf.get_text())

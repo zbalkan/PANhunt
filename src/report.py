@@ -63,7 +63,7 @@ class Report:
         pan_report += f'Searched {self.__total_files} files. Found {self.pan_count} possible PANs.\n{"=" * 100}\n\n'
 
         for file in self.matched_files:
-            pan_header: str = f"FOUND PANs: {file.path}"
+            pan_header: str = f"FOUND PANs: {file.abspath}"
 
             pan_report += pan_header + '\n'
             pan_list: str = '\t'
@@ -74,8 +74,8 @@ class Report:
 
         if len(self.interesting_files) != 0:
             pan_report += 'Interesting Files to check separately, probably a permission issue:\n'
-        for interesting in sorted(self.interesting_files, key=lambda x: x.filename):
-            pan_report += f'{interesting.path} ({panutils.size_friendly(interesting.size)})\n'
+        for interesting in sorted(self.interesting_files, key=lambda x: x.basename):
+            pan_report += f'{interesting.abspath} ({panutils.size_friendly(interesting.size)})\n'
             pan_report += f'Error: {interesting.errors}\n'
 
         pan_report = pan_report.replace('\n', os.linesep)
@@ -116,7 +116,7 @@ class Report:
                 item: str = ''
                 item += f"{pan.get_masked_pan()}"
                 items.append(item)
-            matched_items[file.path] = items
+            matched_items[file.abspath] = items
 
         report['pans_found_results'] = matched_items
 
@@ -127,7 +127,7 @@ class Report:
             report['interesting_files']['files'] = []
             for interesting in self.interesting_files:
                 report['interesting_files']['files'].append(
-                    {'path': interesting.path, 'size': interesting.size, 'errors': interesting.errors})
+                    {'path': interesting.abspath, 'size': interesting.size, 'errors': interesting.errors})
 
         initial_report: str = json.dumps(report, sort_keys=True)
         digest: str = panutils.get_text_hash(initial_report)

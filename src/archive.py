@@ -37,9 +37,9 @@ class ZipArchive(Archive):
         for file_info in zip_ref.infolist():
             with zip_ref.open(file_info) as file:
                 file.seek(0)
-                file_data: bytes = file.read()
+                payload: bytes = file.read()
                 x = Job(
-                    filename=file_info.filename, file_dir=self.path, payload=file_data)
+                    basename=file_info.filename, dirname=self.path, payload=payload)
                 children.append(x)
         zip_ref.close()
         return children
@@ -62,9 +62,9 @@ class TarArchive(Archive):
             extracted: Optional[IO[bytes]] = tar_ref.extractfile(file_info)
             if extracted is not None:
                 extracted.seek(0)
-                file_data: bytes = extracted.read()
+                payload: bytes = extracted.read()
                 x = Job(
-                    filename=file_info.path, file_dir=self.path, payload=file_data)
+                    basename=file_info.path, dirname=self.path, payload=payload)
 
                 children.append(x)
         tar_ref.close()
@@ -87,9 +87,9 @@ class GzipArchive(Archive):
         compressed_filename: str = panutils.get_compressed_filename(
             gz_file)
         gz_file.seek(0)
-        file_data: bytes = gz_file.read1()
+        payload: bytes = gz_file.read1()
         x = Job(
-            filename=compressed_filename, file_dir=self.path, payload=file_data)
+            basename=compressed_filename, dirname=self.path, payload=payload)
         gz_file.close()
         return [x]
 
@@ -108,8 +108,8 @@ class XzArchive(Archive):
         compressed_filename: str = os.path.basename(
             self.path).replace('.xz', '')
         xz_file.seek(0)
-        file_data: bytes = xz_file.read1()
+        payload: bytes = xz_file.read1()
         x = Job(
-            filename=compressed_filename, file_dir=self.path, payload=file_data)
+            basename=compressed_filename, dirname=self.path, payload=payload)
         xz_file.close()
         return [x]

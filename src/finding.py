@@ -9,9 +9,9 @@ from PAN import PAN
 
 class Finding:
 
-    filename: str
-    dir: str
-    path: str
+    basename: str
+    dirname: str
+    abspath: str
     file_category: ScanStatusEnum
     errors: Optional[list[str]] = None
     matches: list[PAN]
@@ -24,19 +24,19 @@ class Finding:
 
     payload: Optional[bytes] = None
 
-    def __init__(self, filename: str, file_dir: str, payload: Optional[bytes] = None,
+    def __init__(self, basename: str, dirname: str, payload: Optional[bytes] = None,
                  mimetype: Optional[str] = None, encoding: Optional[str] = None, err: Optional[Exception] = None) -> None:
-        self.filename = filename
-        self.dir = file_dir
-        self.path = os.path.join(self.dir, self.filename)
+        self.basename = basename
+        self.dirname = dirname
+        self.abspath = os.path.join(self.dirname, self.basename)
         self.file_category = ScanStatusEnum.Scannable
 
         self.payload = payload
 
         self.matches = []
 
-        self.extension = panutils.get_ext(self.filename)
-        self.extensions = panutils.get_exts(self.filename)
+        self.extension = panutils.get_ext(self.basename)
+        self.extensions = panutils.get_exts(self.basename)
 
         if mimetype is not None:
             self.mime_type = mimetype
@@ -47,7 +47,7 @@ class Finding:
             self.set_error(str(err))
 
         if mimetype is None or encoding is None:
-            self.mime_type, self.encoding, err = panutils.get_mimetype(self.path,
+            self.mime_type, self.encoding, err = panutils.get_mimetype(self.abspath,
                                                                        payload)
             if err:
                 self.set_error(
@@ -58,7 +58,7 @@ class Finding:
 
     def __cmp__(self, other: 'Finding') -> bool:
 
-        return self.path.lower() == other.path.lower()
+        return self.abspath.lower() == other.abspath.lower()
 
     def set_file_stats(self) -> None:
 
@@ -66,7 +66,7 @@ class Finding:
             if self.payload:
                 self.size = len(self.payload)
             else:
-                stat: os.stat_result = os.stat(self.path)
+                stat: os.stat_result = os.stat(self.abspath)
                 self.size = stat.st_size
         except Exception as ex:
             self.size = -1
@@ -78,7 +78,7 @@ class Finding:
             self.errors = [error_msg]
         else:
             self.errors.append(error_msg)
-        logging.error(f'{error_msg} ({self.path})')
+        logging.error(f'{error_msg} ({self.abspath})')
 
     def __str__(self) -> str:
-        return f'{self.path} ({self.mime_type} : {self.encoding})'
+        return f'{self.abspath} ({self.mime_type} : {self.encoding})'

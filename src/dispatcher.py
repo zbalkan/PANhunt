@@ -59,35 +59,35 @@ class Dispatcher:
         if job.payload is not None:
             size = len(job.payload)
         else:
-            size = os.stat(job.path).st_size
+            size = os.stat(job.abspath).st_size
         if size > self.size_limit:
-            doc = Finding(filename=job.filename, file_dir=job.file_dir,
+            doc = Finding(basename=job.basename, dirname=job.dirname,
                           payload=job.payload, mimetype='Unknown', encoding='Unknown', err=None)
             doc.set_error(
-                f'File size {panutils.size_friendly(size=size)} over limit of {panutils.size_friendly(size=self.size_limit)} for checking for file \"{job.filename}\"')
+                f'File size {panutils.size_friendly(size=size)} over limit of {panutils.size_friendly(size=self.size_limit)} for checking for file \"{job.basename}\"')
             return doc
 
         mime_type, encoding, error = panutils.get_mimetype(
-            path=job.path, payload=job.payload)
+            path=job.abspath, payload=job.payload)
 
         if error:
-            return Finding(filename=job.filename, file_dir=job.file_dir, payload=job.payload, mimetype=mime_type, encoding=encoding, err=error)
+            return Finding(basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mime_type, encoding=encoding, err=error)
 
         archive_type: Optional[type[Archive]] = mappings.get_archive_by_file(
             mime_type=mime_type,
-            extension=panutils.get_ext(job.filename)
+            extension=panutils.get_ext(job.basename)
         )
 
         if archive_type is not None:
             # It's an archive, extract children and re-enqueue them as jobs
-            archive = archive_type(path=job.path, payload=job.payload)
+            archive = archive_type(path=job.abspath, payload=job.payload)
             try:
                 children: list[Job] = archive.get_children()
                 for child in children:
                     JobQueue().enqueue(child)
                 return None
             except Exception as ex:
-                doc = Finding(filename=job.filename, file_dir=job.file_dir,
+                doc = Finding(basename=job.basename, dirname=job.dirname,
                               payload=job.payload, mimetype=mime_type, encoding=encoding, err=None)
                 doc.set_error(str(ex))
                 return doc
@@ -100,7 +100,7 @@ class Dispatcher:
         # Scanning logic
         scanner: Optional[type[ScannerBase]] = mappings.get_scanner_by_file(
             mime_type=mimetype,
-            extension=panutils.get_ext(job.filename)
+            extension=panutils.get_ext(job.basename)
         )
         if not scanner:
             return None
@@ -113,11 +113,11 @@ class Dispatcher:
                 job=job, encoding=encoding)
             if matches and len(matches) > 0:
                 doc = Finding(
-                    filename=job.filename, file_dir=job.file_dir, payload=job.payload, mimetype=mimetype, encoding=encoding)
+                    basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mimetype, encoding=encoding)
                 doc.matches = matches
         except Exception as ex:
             doc = Finding(
-                filename=job.filename, file_dir=job.file_dir, payload=job.payload, mimetype=mimetype, encoding=encoding)
+                basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mimetype, encoding=encoding)
             doc.set_error(str(ex))
         finally:
             return doc

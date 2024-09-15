@@ -16,6 +16,6 @@ class Directory:
             for file in files:
                 # file = os.path.join(root, file)
                 jobs.append(Job(
-                    filename=file, file_dir=root))
+                    basename=file, dirname=root))
 
         return jobs
