@@ -53,7 +53,6 @@ options:
   -x EXCLUDE_DIRS  directories to exclude from the search (use absolute paths) (default: None)
   -o REPORT_DIR    Report file directory for TXT formatted PAN report (default: ./)
   -j JSON_DIR      Report file directory for JSON formatted PAN report (default: None)
-  -u               unmask PANs in output (default: False)
   -C CONFIG        configuration file to use (default: None)
   -X EXCLUDE_PAN   PAN to exclude from search (default: None)
   -q               No terminal output (default: False)
