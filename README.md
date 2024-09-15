@@ -257,6 +257,9 @@ This for includes a full architectural change to allow extending the scanning ca
 - The progress bars removed
 - Each file within a container now considered a separate file
 - Nested archive file handling problem fixed
+- Removed unmask option
+- Added `size limit` for files to large file search configurable
+- Minimized memory footprint of PANs by removing them ASAP
 
 ### v1.4
 
