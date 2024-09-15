@@ -73,21 +73,6 @@ def display_report(report: Report) -> None:
           f'Report written to {panutils.unicode_to_ascii(PANHuntConfiguration().get_report_path())}')
 
 
-def check_file_hash(text_file: str) -> None:
-
-    with open(text_file, encoding='utf-8', mode='r') as f:
-        text_output: str = f.read()
-
-    hash_pos: int = text_output.rfind(os.linesep)
-    hash_in_file: str = text_output[hash_pos + len(os.linesep):]
-    hash_check: str = panutils.get_text_hash(text_output[:hash_pos])
-    if hash_in_file == hash_check:
-        print(colorama.Fore.GREEN + 'Hashes OK')
-    else:
-        print(colorama.Fore.RED + 'Hashes Not OK')
-    print(colorama.Fore.WHITE + hash_in_file + '\n' + hash_check)
-
-
 def main() -> None:
 
     logging.basicConfig(filename=os.path.join(panutils.get_root_dir(), f'{APP_NAME}.log'),
@@ -122,14 +107,8 @@ def main() -> None:
                             default=False, help='No terminal output')
     arg_parser.add_argument('-v', dest='verbose', action='store_true',
                             default=False, help='Verbose logging')
-    arg_parser.add_argument('-c', dest='check_file_hash',
-                            help=argparse.SUPPRESS)  # hidden argument
 
     args: argparse.Namespace = arg_parser.parse_args()
-
-    if args.check_file_hash:
-        check_file_hash(args.check_file_hash)
-        sys.exit()
 
     config_file: Optional[str] = args.config
 

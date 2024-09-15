@@ -53,41 +53,32 @@ class Report:
 
         path: str = PANHuntConfiguration().get_report_path()
         logging.info("Creating TXT report.")
-
-        pan_sep: str = '\n\t'
-        pan_report: str = f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}\n{"=" * 100}\n'
-        pan_report += f'Searched {self.__searched}\nExcluded {self.__excluded}\n'
-        pan_report += f'Command: {self.__command}\n'
-        pan_report += f'Uname: {" | ".join(platform.uname())}\n'
-        pan_report += f'Elapsed time: {self.__elapsed}\n'
-        pan_report += f'Searched {self.__total_files} files. Found {self.pan_count} possible PANs.\n{"=" * 100}\n\n'
+        newline = '\n'
+        report: str = f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}{newline}{"=" * 100}{newline}'
+        report += f'Searched {self.__searched}\nExcluded {self.__excluded}{newline}'
+        report += f'Command: {self.__command}{newline}'
+        report += f'Uname: {" | ".join(platform.uname())}{newline}'
+        report += f'Elapsed time: {self.__elapsed}{newline}'
+        report += f'Searched {self.__total_files} files. Found {self.pan_count} possible PANs.{newline}{"=" * 100}{newline}{newline}'
 
         for file in self.matched_files:
-            pan_header: str = f"FOUND PANs: {file.abspath}"
-
-            pan_report += pan_header + '\n'
-            pan_list: str = '\t'
-
+            report += f"FOUND PANs: {file.abspath}" + newline
             for pan in file.matches:
-                pan_list += f"{pan.get_masked_pan()}{pan_sep}"
-            pan_report += pan_list.rstrip(pan_sep) + '\n\n'
+                report += f'\t{pan.get_masked_pan()}' + newline
+            report += newline
 
         if len(self.interesting_files) != 0:
-            pan_report += 'Interesting Files to check separately, probably a permission issue:\n'
-        for interesting in sorted(self.interesting_files, key=lambda x: x.basename):
-            pan_report += f'{interesting.abspath} ({panutils.size_friendly(interesting.size)})\n'
-            pan_report += f'Error: {interesting.errors}\n'
-
-        pan_report = pan_report.replace('\n', os.linesep)
+            report += 'Interesting Files to check separately, probably a permission issue:' + newline
+            for interesting in sorted(self.interesting_files, key=lambda x: x.basename):
+                report += f'{interesting.abspath} ({panutils.size_friendly(interesting.size)}){newline}'
+                report += f'Error: {interesting.errors}{newline}'
 
         basedir: str = os.path.dirname(os.path.abspath(path=path))
         if not exists(basedir):
             os.makedirs(basedir)
 
         with open(path, encoding='utf-8', mode='w') as f:
-            f.write(pan_report)
-
-        self.append_hash(path)
+            f.write(report)
 
         logging.info("Created TXT report.")
 
@@ -129,9 +120,6 @@ class Report:
                 report['interesting_files']['files'].append(
                     {'path': interesting.abspath, 'size': interesting.size, 'errors': interesting.errors})
 
-        initial_report: str = json.dumps(report, sort_keys=True)
-        digest: str = panutils.get_text_hash(initial_report)
-        report['hash'] = digest
         final_report: str = json.dumps(report, indent=4)
 
         basedir: str = os.path.dirname(os.path.abspath(path=path))
@@ -142,15 +130,3 @@ class Report:
             f.write(final_report)
 
         logging.info("Created JSON report.")
-
-    def append_hash(self, text_file: str) -> None:
-
-        with open(text_file, encoding='utf-8', mode='r') as f:
-            text: str = f.read()
-
-        hash_check: str = panutils.get_text_hash(text)
-
-        text += os.linesep + hash_check
-
-        with open(text_file, encoding='utf-8', mode='w') as f:
-            f.write(text)
