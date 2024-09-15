@@ -5,3 +5,4 @@
 PATHS=".venv/Lib/site-packages"
 
 pyinstaller src/panhunt.py -F --clean -i dionach.ico --paths="${PATHS}"
+
