@@ -2,7 +2,7 @@ import gc
 from re import Pattern
 
 from config import PANHuntConfiguration
-from PAN import PAN
+from pan import PAN
 from patterns import CardPatterns
 
 

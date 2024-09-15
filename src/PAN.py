@@ -5,29 +5,29 @@ import re
 class PAN:
     """PAN: A class for recording PANs and their brand"""
 
-    brand: str
-
-    __pan: str
+    __brand: str
     __masked: str
 
     def __init__(self, brand: str, pan: str) -> None:
 
-        self.brand = brand
+        self.__brand = brand
         self.__masked = self.__mask_pan(pan)
 
         # Clear the PAN from memory ASAP
         del pan
         gc.collect()
 
+    def __str__(self) -> str:
+        return f'{self.__brand}:{self.__masked}'
+
     def __mask_pan(self, pan: str) -> str:
         """The first six and last four digits are the maximum number of digits that may be displayed"""
         standardized = pan.replace(' ', '').replace('-', '')
         masked: str = standardized[0:6] + \
             re.sub(r'\d', '*', standardized[6:-4]) + standardized[-4:]
-        return masked
 
-    def get_masked_pan(self) -> str:
-        return f'{self.brand}:{self.__masked}'
+        del pan
+        return masked
 
     @staticmethod
     def is_valid_luhn_checksum(pan: str) -> bool:

@@ -16,7 +16,6 @@ from finding import Finding
 
 class Report:
 
-    __total_files: int
     __start: datetime
     __end: datetime
     __searched: str
@@ -30,13 +29,11 @@ class Report:
     __elapsed: timedelta
 
     def __init__(self,
-                 files_searched_count: int,
                  matched_files: list[Finding],
                  interesting_files: list[Finding],
                  start: datetime,
                  end: datetime) -> None:
         '''excluded_dirs: list[str]'''
-        self.__total_files = files_searched_count
         self.__start = start
         self.__end = end
         self.matched_files = matched_files
@@ -59,12 +56,12 @@ class Report:
         report += f'Command: {self.__command}{newline}'
         report += f'Uname: {" | ".join(platform.uname())}{newline}'
         report += f'Elapsed time: {self.__elapsed}{newline}'
-        report += f'Searched {self.__total_files} files. Found {self.pan_count} possible PANs.{newline}{"=" * 100}{newline}{newline}'
+        report += f'Found {self.pan_count} possible PANs.{newline}{"=" * 100}{newline}{newline}'
 
         for file in self.matched_files:
             report += f"FOUND PANs: {file.abspath}" + newline
             for pan in file.matches:
-                report += f'\t{pan.get_masked_pan()}' + newline
+                report += f'\t{pan}' + newline
             report += newline
 
         if len(self.interesting_files) != 0:
@@ -96,7 +93,6 @@ class Report:
         report['excluded'] = self.__excluded
         report['command'] = self.__command
         report['elapsed'] = str(self.__elapsed)
-        report['total_files'] = self.__total_files
         report['pans_found'] = self.pan_count
 
         matched_items: dict[str, list[str]] = {}
@@ -105,7 +101,7 @@ class Report:
             items: list[str] = []
             for pan in file.matches:
                 item: str = ''
-                item += f"{pan.get_masked_pan()}"
+                item += str(pan)
                 items.append(item)
             matched_items[file.abspath] = items
 

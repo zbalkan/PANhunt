@@ -3,15 +3,15 @@ import os
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from finder import PanFinder
 from formats.eml import Eml
-from job import Job, JobQueue
 from formats.mbox import Mbox
 from formats.msmsg import MSMSG
-from PAN import PAN
-from PanFinder import PanFinder
 from formats.pdf import Pdf
 from formats.pst import PST
 from formats.pst import Attachment as pstAttachment
+from job import Job, JobQueue
+from pan import PAN
 
 ''' If file size is 30MB or bigger, read line by line for better memory management '''
 BLOCK_SIZE: int = 31_457_280  # 30MB

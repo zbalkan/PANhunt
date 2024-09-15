@@ -42,7 +42,6 @@ def hunt_pans() -> Report:
     end: datetime = datetime.now()
 
     return Report(
-        files_searched_count=hunter.count,
         matched_files=findings,
         interesting_files=failures,
         start=start, end=end)
@@ -57,7 +56,7 @@ def display_report(report: Report) -> None:
         print(colorama.Fore.RED + panutils.unicode_to_ascii(pan_header))
         pan_list: str = '\t'
         for pan in sf.matches:
-            pan_list += f"{pan.get_masked_pan()}{pan_sep}"
+            pan_list += f"{pan}{pan_sep}"
 
         print(colorama.Fore.YELLOW +
               panutils.unicode_to_ascii(pan_list))

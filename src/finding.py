@@ -4,7 +4,7 @@ from typing import Optional
 
 import panutils
 from enums import ScanStatusEnum
-from PAN import PAN
+from pan import PAN
 
 
 class Finding:

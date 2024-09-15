@@ -11,7 +11,7 @@ from archive import Archive
 from config import PANHuntConfiguration
 from finding import Finding
 from job import Job, JobQueue
-from PAN import PAN
+from pan import PAN
 from scanner import ScannerBase
 
 
