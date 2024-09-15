@@ -1,3 +1,4 @@
+import gc
 from re import Pattern
 
 from config import PANHuntConfiguration
@@ -16,6 +17,9 @@ class PanFinder():
             for pan in regex.findall(text):
                 if PAN.is_valid_luhn_checksum(pan=pan) and not config.is_excluded(pan=pan):
                     matches.append(PAN(brand=brand, pan=pan))
+                    # Clear the PAN from memory ASAP
+                    del pan
+                    gc.collect()
                     break
 
         return matches
