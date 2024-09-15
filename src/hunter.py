@@ -4,7 +4,6 @@ import re
 import time
 
 from config import PANHuntConfiguration
-from directory import Directory
 from dispatcher import Dispatcher
 from finding import Finding
 from job import Job, JobQueue
@@ -33,12 +32,10 @@ class Hunter:
             if not self.__is_directory_excluded(dir):
                 JobQueue().enqueue(Job(basename, dirname=dir))
         else:
-            root = Directory(path=PANHuntConfiguration().search_dir)
-            for file in root.get_children():
-                if not self.__is_directory_excluded(file.dirname):
-                    # Create a Job instance for each file instead of ScannableFile
-                    job = Job(basename=file.basename,
-                              dirname=file.dirname, payload=file.payload)
+            for root, _, files in os.walk(PANHuntConfiguration().search_dir):
+                for file in files:
+                    job = Job(
+                        basename=file, dirname=root, payload=None)
                     JobQueue().enqueue(job)
                     self.count += 1
 

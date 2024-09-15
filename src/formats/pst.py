@@ -12,7 +12,6 @@ import itertools
 import logging
 import math
 import os
-import string
 import struct
 from datetime import datetime, timedelta
 from enum import Enum, Flag
@@ -2594,28 +2593,6 @@ class PST:
     def bruteforce(charset: str, maxlength: int) -> Generator[str, None, None]:
 
         return (''.join(candidate) for candidate in itertools.chain.from_iterable(itertools.product(charset, repeat=i) for i in range(1, maxlength + 1)))
-
-    @staticmethod
-    def crack_password(crc: int, dictionary_file: str = '') -> str:
-        """either does a dictionary attack against the PST password CRC hash, or does a brute force of up to 4 chars"""
-
-        if dictionary_file:
-            with open(dictionary_file, 'r', encoding='ascii') as f:
-                dic_entries: list[str] = f.readlines()
-
-                for password_check in dic_entries:
-                    crc_check: int = CRC.ComputeCRC(
-                        password_check.strip().encode())
-                    if crc == crc_check:
-                        return password_check
-        else:  # brute force
-            charset: str = string.ascii_lowercase + string.digits
-            for password_length in range(1, 5):
-                for password_check in PST.bruteforce(charset, password_length):
-                    crc_check = CRC.ComputeCRC(password_check.encode())
-                    if crc == crc_check:
-                        return password_check
-        return str()
 
 
 ###################################################################################################################################

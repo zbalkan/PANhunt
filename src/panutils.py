@@ -1,5 +1,4 @@
 import datetime as dt
-import hashlib
 import os
 import pathlib
 import re
@@ -170,23 +169,6 @@ def as_datetime(value: Any) -> dt.datetime:
         return value
     raise TypeError(
         f'Expected type "datetime" got "{type(value)}". \nValue: {value!r}')
-
-
-def get_text_hash(text: Union[str, bytes, memoryview]) -> str:
-    encoded_text: bytes
-
-    if isinstance(text, str):
-        encoded_text = text.encode('utf-8')
-    elif isinstance(text, memoryview):
-        temp = memoryview_to_bytes(text)
-        if (temp):
-            encoded_text = temp
-        else:
-            encoded_text = bytes()
-    else:
-        encoded_text = text
-
-    return hashlib.sha512(encoded_text + 'PAN'.encode('utf-8')).hexdigest()
 
 
 def memoryview_to_bytes(mem_view: memoryview) -> Optional[bytes]:
