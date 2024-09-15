@@ -42,7 +42,7 @@ However, you are advised  use a virtual environment. Update the path on the `bui
 ## Usage
 
 ```shell
-usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-u] [-C CONFIG] [-X EXCLUDE_PAN] [-q] [-v]
+usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
 
 PAN Hunt v1.5: search directories and sub directories for documents containing PANs.
 
@@ -56,7 +56,6 @@ options:
   -C CONFIG        configuration file to use (default: None)
   -X EXCLUDE_PAN   PAN to exclude from search (default: None)
   -q               No terminal output (default: False)
-  -v               Verbose logging (default: False)
 ```
 
 Simply running it with no arguments will search the `C:\` drive on Windows and filesystem under `/` on Linux, for documents containing PANs, and output to panhunt_<timestamp>.txt.
@@ -260,6 +259,7 @@ This for includes a full architectural change to allow extending the scanning ca
 - Removed unmask option
 - Added `size limit` for files to large file search configurable
 - Minimized memory footprint of PANs by removing them ASAP
+- Removed verbose flag
 
 ### v1.4
 
