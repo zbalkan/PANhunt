@@ -16,7 +16,6 @@ class PANHuntConfiguration:
     report_dir: str
     json_file: str
     json_dir: Optional[str]
-    mask_pans: bool
     excluded_directories: list[str]
     excluded_pans: list[str]
     size_limit: int
@@ -43,7 +42,6 @@ class PANHuntConfiguration:
             self.report_dir = panutils.get_root_dir()
             self.json_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.json'
             self.json_dir = None
-            self.mask_pans = False
             self.excluded_pans = []
             self.size_limit = 1_073_741_824  # 1Gb
             self._initialized = True  # Mark as initialized to prevent re-init
@@ -52,7 +50,6 @@ class PANHuntConfiguration:
                   search_dir: Optional[str] = None,
                   file_path: Optional[str] = None,
                   report_dir: Optional[str] = None,
-                  mask_pans: bool = False,
                   excluded_directories_string: Optional[str] = None,
                   excluded_pans_string: Optional[str] = None,
                   json_dir: Optional[str] = None,
@@ -65,7 +62,6 @@ class PANHuntConfiguration:
                       file_path=file_path,
                       report_dir=report_dir,
                       json_dir=json_dir,
-                      mask_pans=mask_pans,
                       excluded_directories_string=excluded_directories_string,
                       excluded_pans_string=excluded_pans_string,
                       verbose=verbose,
@@ -93,8 +89,6 @@ class PANHuntConfiguration:
             config_from_file=config_from_file, property='outfile')
         json_dir: Optional[str] = PANHuntConfiguration.__try_parse(
             config_from_file=config_from_file, property='json')
-        mask_pans: Optional[bool] = PANHuntConfiguration.__check_masked(
-            config_from_file)
         excluded_pans_string: Optional[str] = PANHuntConfiguration.__try_parse(
             config_from_file=config_from_file, property='excludepans')
         verbose: bool = PANHuntConfiguration.__check_verbose(
@@ -106,7 +100,6 @@ class PANHuntConfiguration:
                       file_path=file_path,
                       report_dir=report_dir,
                       json_dir=json_dir,
-                      mask_pans=mask_pans,
                       excluded_directories_string=excluded_directories_string,
                       excluded_pans_string=excluded_pans_string,
                       verbose=verbose,
@@ -138,13 +131,6 @@ class PANHuntConfiguration:
         return config_from_file
 
     @staticmethod
-    def __check_masked(config_from_file) -> Optional[bool]:
-        mask_pans: Optional[bool] = None
-        if 'unmask' in config_from_file:
-            mask_pans = not (config_from_file['unmask'].upper() == 'TRUE')
-        return mask_pans
-
-    @staticmethod
     def __check_verbose(config_from_file) -> bool:
         is_verbose: bool = False
         if 'verbose' in config_from_file:
@@ -170,7 +156,6 @@ class PANHuntConfiguration:
                  file_path: Optional[str],
                  report_dir: Optional[str],
                  json_dir: Optional[str],
-                 mask_pans: Optional[bool],
                  excluded_directories_string: Optional[str],
                  excluded_pans_string: Optional[str],
                  verbose: bool,
@@ -187,9 +172,6 @@ class PANHuntConfiguration:
                 self.report_dir = panutils.get_root_dir()
             else:
                 self.report_dir = os.path.abspath(report_dir)
-
-        if mask_pans:
-            self.mask_pans = mask_pans
 
         if excluded_directories_string and excluded_directories_string != 'None':
             self.excluded_directories = [exc_dir.lower()

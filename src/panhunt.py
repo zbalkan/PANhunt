@@ -122,8 +122,6 @@ def main() -> None:
         '-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
     arg_parser.add_argument(
         '-j', dest='json_dir', help='Report file directory for JSON formatted PAN report')
-    arg_parser.add_argument('-u', dest='unmask', action='store_true',
-                            default=False, help='unmask PANs in output')
     arg_parser.add_argument(
         '-C', dest='config', help='configuration file to use')
     arg_parser.add_argument(
@@ -163,7 +161,6 @@ def main() -> None:
         file_path = str(args.file_path)
         report_dir = str(args.report_dir)
         excluded_directories_string = str(args.exclude_dirs)
-        mask_pans: bool = not args.unmask
         excluded_pans_string = str(args.exclude_pan)
         json_dir: Optional[str] = args.json_dir
         verbose: bool = args.verbose
@@ -173,7 +170,6 @@ def main() -> None:
                                          file_path=file_path,
                                          report_dir=report_dir,
                                          json_dir=json_dir,
-                                         mask_pans=mask_pans,
                                          excluded_directories_string=excluded_directories_string,
                                          excluded_pans_string=excluded_pans_string,
                                          verbose=verbose)
