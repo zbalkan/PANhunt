@@ -7,7 +7,8 @@ import panutils
 
 
 class PANHuntConfiguration:
-    __instance = None  # Class-level variable to store the singleton instance
+    # Class-level variable to store the singleton instance
+    __instance: Optional['PANHuntConfiguration'] = None
 
     search_dir: str
     file_path: Optional[str]
@@ -21,7 +22,7 @@ class PANHuntConfiguration:
     size_limit: int
     verbose: bool
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs) -> 'PANHuntConfiguration':
         if cls.__instance is None:
             cls.__instance = super(PANHuntConfiguration,
                                    cls).__new__(cls, *args, **kwargs)

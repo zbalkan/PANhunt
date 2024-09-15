@@ -12,9 +12,8 @@ class Directory:
 
     def get_children(self) -> list[Job]:
         jobs: list[Job] = []
-        for root, dirs, files in os.walk(self.path):
+        for root, _, files in os.walk(self.path):
             for file in files:
-                # file = os.path.join(root, file)
                 jobs.append(Job(
                     basename=file, dirname=root))
 

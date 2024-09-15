@@ -12,7 +12,7 @@ class Finding:
     basename: str
     dirname: str
     abspath: str
-    file_category: ScanStatusEnum
+    status: ScanStatusEnum
     errors: Optional[list[str]] = None
     matches: list[PAN]
     size: int
@@ -29,7 +29,7 @@ class Finding:
         self.basename = basename
         self.dirname = dirname
         self.abspath = os.path.join(self.dirname, self.basename)
-        self.file_category = ScanStatusEnum.Scannable
+        self.status = ScanStatusEnum.Success
 
         self.payload = payload
 
@@ -71,7 +71,7 @@ class Finding:
         except Exception as ex:
             self.size = -1
             self.set_error(str(ex))
-            self.file_category = ScanStatusEnum.NotScanned
+            self.status = ScanStatusEnum.Failure
 
     def set_error(self, error_msg: str) -> None:
         if self.errors is None:

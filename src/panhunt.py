@@ -20,7 +20,6 @@ import colorama
 
 import panutils
 from config import PANHuntConfiguration
-from finding import Finding
 from hunter import Hunter
 from report import Report
 
@@ -36,23 +35,16 @@ def hunt_pans() -> Report:
 
     logging.info("Started searching in file(s).")
 
-    # check each file
-    hunter.hunt()
-
-    results: list[Finding] = hunter.get_results()
+    # Start the hunt
+    findings, failures = hunter.hunt()
     logging.info("Finished searching.")
 
     end: datetime = datetime.now()
 
-    interesting: list[Finding] = [
-        result for result in results if result.errors is not None and len(result.errors) > 0]
-    matches: list[Finding] = [
-        result for result in results if result.matches is not None and len(result.matches) > 0]
-
     return Report(
         files_searched_count=hunter.count,
-        matched_files=matches,
-        interesting_files=interesting,
+        matched_files=findings,
+        interesting_files=failures,
         start=start, end=end)
 
 

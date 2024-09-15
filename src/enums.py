@@ -136,8 +136,8 @@ class PropIdEnum(Enum):
 
 
 class ScanStatusEnum(Enum):
-    Scannable = 0
-    NotScanned = 5
+    Success = 0
+    Failure = 5
 
 
 class FileTypeEnum(Enum):

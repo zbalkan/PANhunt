@@ -18,7 +18,7 @@ class Hunter:
     def __init__(self) -> None:
         self.__dispatcher = Dispatcher()
 
-    def hunt(self) -> None:
+    def hunt(self) -> tuple[list[Finding], list[Finding]]:
         """Enqueue all jobs into the job queue for processing by the dispatcher."""
 
         self.__dispatcher.start()
@@ -49,9 +49,7 @@ class Hunter:
             time.sleep(0.1)
 
         logging.info(f"Total number of jobs (files): {self.count}")
-
-    def get_results(self) -> list[Finding]:
-        return self.__dispatcher.results
+        return self.__dispatcher.findings, self.__dispatcher.failures
 
     def __is_directory_excluded(self, dirname: str) -> bool:
         for excluded_dir in PANHuntConfiguration().excluded_directories:

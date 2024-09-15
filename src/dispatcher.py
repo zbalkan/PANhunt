@@ -1,29 +1,32 @@
+import logging
 import os
 import threading
 import time
 from typing import Optional
 
-from PAN import PAN
-from config import PANHuntConfiguration
+import enums
 import mappings
 import panutils
 from archive import Archive
+from config import PANHuntConfiguration
 from finding import Finding
 from job import Job, JobQueue
+from PAN import PAN
 from scanner import ScannerBase
 
 
 class Dispatcher:
-    # excluded_pans_list: list[str]
-    results: list[Finding]
-    size_limit: int
+    findings: list[Finding]
+    failures: list[Finding]
+
+    __size_limit: int
     _stop_flag: bool
 
     def __init__(self) -> None:
-        # self.excluded_pans_list = PANHuntConfiguration().excluded_pans
-        self.size_limit = PANHuntConfiguration().size_limit
+        self.__size_limit = PANHuntConfiguration().size_limit
         self._stop_flag = False
-        self.results = []
+        self.findings = []
+        self.failures = []
 
     def start(self) -> None:
         """Start the dispatcher loop in a separate thread."""
@@ -45,7 +48,10 @@ class Dispatcher:
                     try:
                         res: Optional[Finding] = self._dispatch_job(job)
                         if res is not None:
-                            self.results.append(res)
+                            if res.status == enums.ScanStatusEnum.Success:
+                                self.findings.append(res)
+                            else:
+                                self.failures.append(res)
                     finally:
                         # Mark the job as completed
                         job_queue.complete_job()
@@ -53,6 +59,9 @@ class Dispatcher:
                 time.sleep(0.1)
 
     def _dispatch_job(self, job: Job) -> Optional[Finding]:
+
+        logging.info(f"Processing job: {job.abspath}")
+
         # Dispatch job logic goes here
         # First, check the size of the job
         size: int
@@ -60,11 +69,11 @@ class Dispatcher:
             size = len(job.payload)
         else:
             size = os.stat(job.abspath).st_size
-        if size > self.size_limit:
+        if size > self.__size_limit:
             doc = Finding(basename=job.basename, dirname=job.dirname,
                           payload=job.payload, mimetype='Unknown', encoding='Unknown', err=None)
             doc.set_error(
-                f'File size {panutils.size_friendly(size=size)} over limit of {panutils.size_friendly(size=self.size_limit)} for checking for file \"{job.basename}\"')
+                f'File size {panutils.size_friendly(size=size)} over limit of {panutils.size_friendly(size=self.__size_limit)} for checking for file \"{job.basename}\"')
             return doc
 
         mime_type, encoding, error = panutils.get_mimetype(
@@ -107,17 +116,17 @@ class Dispatcher:
 
         scanner_instance = scanner()
 
-        doc = None
+        finding = None
         try:
             matches: list[PAN] = scanner_instance.scan(
                 job=job, encoding=encoding)
             if matches and len(matches) > 0:
-                doc = Finding(
+                finding = Finding(
                     basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mimetype, encoding=encoding)
-                doc.matches = matches
+                finding.matches = matches
         except Exception as ex:
-            doc = Finding(
+            finding = Finding(
                 basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mimetype, encoding=encoding)
-            doc.set_error(str(ex))
+            finding.set_error(str(ex))
         finally:
-            return doc
+            return finding
