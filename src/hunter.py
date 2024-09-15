@@ -12,7 +12,6 @@ from job import Job, JobQueue
 class Hunter:
 
     __dispatcher: Dispatcher
-    count: int = 0
 
     def __init__(self) -> None:
         self.__dispatcher = Dispatcher()
@@ -37,7 +36,6 @@ class Hunter:
                     job = Job(
                         basename=file, dirname=root, payload=None)
                     JobQueue().enqueue(job)
-                    self.count += 1
 
         # Mark the queue as finished so the dispatcher knows no more jobs are coming
         JobQueue().mark_input_complete()
@@ -45,7 +43,6 @@ class Hunter:
         while (not JobQueue().is_finished()):
             time.sleep(0.1)
 
-        logging.info(f"Total number of jobs (files): {self.count}")
         return self.__dispatcher.findings, self.__dispatcher.failures
 
     def __is_directory_excluded(self, dirname: str) -> bool:
