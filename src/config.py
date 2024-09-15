@@ -20,7 +20,6 @@ class PANHuntConfiguration:
     excluded_directories: list[str]
     excluded_pans: list[str]
     size_limit: int
-    verbose: bool
 
     def __new__(cls, *args, **kwargs) -> 'PANHuntConfiguration':
         if cls.__instance is None:
@@ -54,7 +53,6 @@ class PANHuntConfiguration:
                   excluded_directories_string: Optional[str] = None,
                   excluded_pans_string: Optional[str] = None,
                   json_dir: Optional[str] = None,
-                  verbose: bool = False,
                   size_limit: Optional[int] = None) -> None:
         """If any parameter is provided, it overwrites the previous value
         """
@@ -65,7 +63,6 @@ class PANHuntConfiguration:
                       json_dir=json_dir,
                       excluded_directories_string=excluded_directories_string,
                       excluded_pans_string=excluded_pans_string,
-                      verbose=verbose,
                       size_limit=size_limit)
 
     def with_file(self, config_file: str) -> None:
@@ -92,8 +89,6 @@ class PANHuntConfiguration:
             config_from_file=config_from_file, property='json')
         excluded_pans_string: Optional[str] = PANHuntConfiguration.__try_parse(
             config_from_file=config_from_file, property='excludepans')
-        verbose: bool = PANHuntConfiguration.__check_verbose(
-            config_from_file=config_from_file)
         size_limit = PANHuntConfiguration.__try_parse_int(
             config_from_file=config_from_file, property='sizelimit')
 
@@ -103,7 +98,6 @@ class PANHuntConfiguration:
                       json_dir=json_dir,
                       excluded_directories_string=excluded_directories_string,
                       excluded_pans_string=excluded_pans_string,
-                      verbose=verbose,
                       size_limit=size_limit)
 
     def get_json_path(self) -> Optional[str]:
@@ -132,13 +126,6 @@ class PANHuntConfiguration:
         return config_from_file
 
     @staticmethod
-    def __check_verbose(config_from_file) -> bool:
-        is_verbose: bool = False
-        if 'verbose' in config_from_file:
-            is_verbose = (config_from_file['verbose'].upper() == 'TRUE')
-        return is_verbose
-
-    @staticmethod
     def __try_parse(config_from_file: dict, property: str) -> Optional[str]:
         if property in config_from_file:
             return str(config_from_file[property])
@@ -159,7 +146,6 @@ class PANHuntConfiguration:
                  json_dir: Optional[str],
                  excluded_directories_string: Optional[str],
                  excluded_pans_string: Optional[str],
-                 verbose: bool,
                  size_limit: Optional[int]) -> None:
 
         if search_dir and search_dir != 'None':
@@ -186,9 +172,6 @@ class PANHuntConfiguration:
                 self.json_dir = panutils.get_root_dir()
             else:
                 self.json_dir = os.path.abspath(json_dir)
-
-        if verbose:
-            self.verbose = verbose
 
         if size_limit:
             self.size_limit = size_limit

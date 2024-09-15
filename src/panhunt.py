@@ -104,8 +104,6 @@ def main() -> None:
         '-X', dest='exclude_pan', help='PAN to exclude from search')
     arg_parser.add_argument('-q', dest='quiet', action='store_true',
                             default=False, help='No terminal output')
-    arg_parser.add_argument('-v', dest='verbose', action='store_true',
-                            default=False, help='Verbose logging')
 
     args: argparse.Namespace = arg_parser.parse_args()
 
@@ -133,7 +131,6 @@ def main() -> None:
         excluded_directories_string = str(args.exclude_dirs)
         excluded_pans_string = str(args.exclude_pan)
         json_dir: Optional[str] = args.json_dir
-        verbose: bool = args.verbose
         quiet: bool = args.quiet
 
         PANHuntConfiguration().with_args(search_dir=search_dir,
@@ -141,8 +138,7 @@ def main() -> None:
                                          report_dir=report_dir,
                                          json_dir=json_dir,
                                          excluded_directories_string=excluded_directories_string,
-                                         excluded_pans_string=excluded_pans_string,
-                                         verbose=verbose)
+                                         excluded_pans_string=excluded_pans_string)
 
     report: Report = hunt_pans()
 
