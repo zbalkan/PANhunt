@@ -1,7 +1,7 @@
 cffi==1.17.1
 charset-normalizer==3.3.2
 colorama==0.4.6
-cryptography==43.0.1
+cryptography==43.0.3
 pdfminer.six==20240706
 pycparser==2.22
 python-magic-bin==0.4.14 ; platform_system == 'Windows'
