@@ -24,7 +24,7 @@ from hunter import Hunter
 from report import Report
 
 APP_NAME: Final[str] = 'PANhunt'
-APP_VERSION: Final[str] = '1.5'
+APP_VERSION: Final[str] = '1.6'
 
 
 def hunt_pans() -> Report:

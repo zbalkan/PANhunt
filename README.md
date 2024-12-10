@@ -9,6 +9,8 @@
 ```shell
 NOTE: This is a fork of original PANHunt as an effort to migrate to Python 3.
 It is heavily modified and refactored. There may be issues with functionality. Do not use in production!
+
+This fork includes a full architectural change to allow extending the scanning capabilities by providing a new scanner. While it is more modular and has more file searching capabilities, this also means there is a performance impact for the sake of accuracy.
 ```
 
 PANhunt is a tool that can be used to search drives for credit card numbers (PANs). This is useful for checking PCI DSS scope accuracy. It's designed to be a simple, standalone tool that can be run from a USB stick. PANhunt includes a python PST file parser.
@@ -44,7 +46,7 @@ However, you are advised  use a virtual environment. Update the path on the `bui
 ```shell
 usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
 
-PAN Hunt v1.5: search directories and sub directories for documents containing PANs.
+PAN Hunt v1.6: search directories and sub directories for documents containing PANs.
 
 options:
   -h, --help       show this help message and exit
@@ -245,38 +247,3 @@ Report written to D:\PANhunt\out\panhunt_2024-09-14-221629.report
 
 The script allows for a configuration to be written that will default the application with settings such that you don't need to
 repeatedly specify exclude/include paths or the test PANs to exclude.
-
-## Changelog
-
-This for includes a full architectural change to allow extending the scanning capabilities by providing a new scanner. It is more modular and has more file searching capabilities. It means there is a performance impact for the sake of accuracy.
-
-### v1.5
-
-- Python version is now minimum 3.9
-- The progress bars removed
-- Each file within a container now considered a separate file
-- Nested archive file handling problem fixed
-- Removed unmask option
-- Added `size limit` for files to large file search configurable
-- Minimized memory footprint of PANs by removing them ASAP
-- Removed verbose flag
-
-### v1.4
-
-- Removed file extension based filtering. Now it relies on `magic` results.
-
-### v1.3
-
-- Migrated to Python 3
-- Used file type detection via `python-magic` instead of depending on file extensions only.
-- A default text log capability is added for the sake of accountability.
-- Text report now accepts only directory as an argument while the name is fixed.
-  - Text report filename template: `panhunt_<timestamp>.report`
-- An optional JSON formatted report generation capability is added for integration with 3rd parties. Parameter accepts the target directory.
-  - JSON report filename template: `panhunt_<timestamp>.json`
-- A flag `-q` (quiet) is added to disable terminal output be used when it is integrated with other tools.
-- A flag `-f` (filepath) is added to enable sigle-file scans. Great for FIM integration.
-- `.eml` and `.mbox` file scanning capability is added.
-- PDF file scanning capability is added. OCR is not working as expected yet.
-
-**NB!** There is at least 20% performance impact after refactoring. There are no performance improvements tried yet.
