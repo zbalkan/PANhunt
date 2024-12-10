@@ -96,7 +96,7 @@ def __get_filetype(mime_type_text: str, extension: str) -> FileTypeEnum:
             return FileTypeEnum.Zip
         elif mime_subtype in ['x-tar']:
             return FileTypeEnum.Tar
-        elif mime_subtype in ['x-gzip']:
+        elif mime_subtype in ['gzip', 'x-gzip', 'gzip-compressed', 'gzipped', 'x-gunzip', 'x-compress', 'x-compressed']:
             return FileTypeEnum.Gzip
         elif mime_subtype in ['x-xz']:
             return FileTypeEnum.Xz
