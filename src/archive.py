@@ -38,9 +38,9 @@ class ZipArchive(Archive):
             with zip_ref.open(file_info) as file:
                 file.seek(0)
                 payload: bytes = file.read()
-                x = Job(
+                job = Job(
                     basename=file_info.filename, dirname=self.path, payload=payload)
-                children.append(x)
+                children.append(job)
         zip_ref.close()
         return children
 
@@ -63,10 +63,10 @@ class TarArchive(Archive):
             if extracted is not None:
                 extracted.seek(0)
                 payload: bytes = extracted.read()
-                x = Job(
+                job = Job(
                     basename=file_info.path, dirname=self.path, payload=payload)
 
-                children.append(x)
+                children.append(job)
         tar_ref.close()
 
         return children
@@ -77,6 +77,7 @@ class GzipArchive(Archive):
     def get_children(self) -> list[Job]:
 
         gz_file: GzipFile
+
         if self.payload is not None:
             gz_file = GzipFile(
                 fileobj=BytesIO(self.payload), mode='r')
@@ -87,11 +88,11 @@ class GzipArchive(Archive):
         compressed_filename: str = panutils.get_compressed_filename(
             gz_file)
         gz_file.seek(0)
-        payload: bytes = gz_file.read1()
-        x = Job(
+        payload: bytes = gz_file.read()
+        job = Job(
             basename=compressed_filename, dirname=self.path, payload=payload)
         gz_file.close()
-        return [x]
+        return [job]
 
 
 class XzArchive(Archive):
@@ -108,8 +109,8 @@ class XzArchive(Archive):
         compressed_filename: str = os.path.basename(
             self.path).replace('.xz', '')
         xz_file.seek(0)
-        payload: bytes = xz_file.read1()
-        x = Job(
+        payload: bytes = xz_file.read()
+        job = Job(
             basename=compressed_filename, dirname=self.path, payload=payload)
         xz_file.close()
-        return [x]
+        return [job]
