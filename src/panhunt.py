@@ -12,7 +12,9 @@
 import argparse
 import logging
 import os
+import platform
 import sys
+import time
 from datetime import datetime
 from typing import Final, Optional
 
@@ -48,6 +50,15 @@ def hunt_pans() -> Report:
 
 
 def display_report(report: Report) -> None:
+
+    newline = '\n'
+    header: str = f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}{newline}{"=" * 100}{newline}'
+    header += f'Searched {report.__searched}\nExcluded {report.__excluded}{newline}'
+    header += f'Command: {report.__command}{newline}'
+    header += f'Uname: {" | ".join(platform.uname())}{newline}'
+    header += f'Elapsed time: {report.__elapsed}{newline}'
+    header += f'Found {report.pan_count} possible PANs.{newline}{"=" * 100}{newline}{newline}'
+    print(colorama.Fore.WHITE + header)
 
     pan_sep: str = '\n\t'
     for sf in report.matched_files:
