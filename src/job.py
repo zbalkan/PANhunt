@@ -1,7 +1,10 @@
 import os
+import time
 from queue import Queue
 from threading import Lock
 from typing import Optional
+
+import psutil
 
 
 class Job:
@@ -10,6 +13,7 @@ class Job:
     dirname: str
     payload: Optional[bytes]
     abspath: str
+
 
     def __init__(self, basename: str, dirname: str, payload: Optional[bytes] = None) -> None:
         self.basename = basename
@@ -28,6 +32,8 @@ class JobQueue:
     _jobs_in_progress: int = 0  # Jobs that are currently being processed
     _finished: bool = False    # Flag to indicate no more initial jobs will be added
 
+    _timeout: int = 20  # seconds
+
     def __new__(cls) -> "JobQueue":
         if cls._instance is None:
             with cls._lock:
@@ -38,6 +44,10 @@ class JobQueue:
 
     def enqueue(self, job: Job) -> None:
         """Push a job onto the queue and increment the enqueued job count."""
+
+        # Wait until there is enough memory to process the job
+        self.ensure_memory_ready(job)
+
         with self._lock:
             self._job_queue.put(job)
             self._jobs_enqueued += 1  # Increment job count
@@ -74,3 +84,22 @@ class JobQueue:
                 and self._jobs_enqueued == self._jobs_processed  # All enqueued jobs are processed
                 and self._jobs_in_progress == 0  # No jobs are currently being processed
             )
+
+    def ensure_memory_ready(self, job: Job) -> None:
+        if job.payload is None:
+            return
+        size = len(job.payload)
+        if size >= psutil.virtual_memory().total:
+            raise MemoryError(
+                f"Insufficient memory to process job: {job.abspath}")
+
+        sleep_time = 0.0
+        while size >= psutil.virtual_memory().free / 2: # We want to leave a buffer of free memory
+            sleep_time += 0.1
+            if (sleep_time >= self._timeout):
+                raise MemoryError(
+                    f"Insufficient memory to process job: {job.abspath}")
+            time.sleep(0.1)
+
+    def _is_free_memory_insufficient_for_job(self, job: Job) -> bool:
+        return job.payload is not None and len(job.payload) >= psutil.virtual_memory().free

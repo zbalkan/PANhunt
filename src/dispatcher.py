@@ -44,6 +44,7 @@ class Dispatcher:
         while not self._stop_flag and not job_queue.is_finished():
             if job_queue.has_jobs():
                 job: Optional[Job] = job_queue.dequeue()
+
                 if job:
                     try:
                         res: Optional[Finding] = self._dispatch_job(job)
@@ -53,6 +54,8 @@ class Dispatcher:
                             else:
                                 self.failures.append(res)
                     finally:
+                        job.payload = None # Clear the payload to save memory ASAP
+                        job = None # Clear the job to save memory ASAP
                         # Mark the job as completed
                         job_queue.complete_job()
             else:
@@ -91,7 +94,9 @@ class Dispatcher:
             # It's an archive, extract children and re-enqueue them as jobs
             archive = archive_type(path=job.abspath, payload=job.payload)
             try:
-                children: list[Job] = archive.get_children()
+                children, e = archive.get_children()
+                if e:
+                    raise e
                 for child in children:
                     JobQueue().enqueue(child)
                 return None

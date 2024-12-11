@@ -46,7 +46,7 @@ def __get_mime_data_from_buffer(payload: bytes) -> tuple[str, str]:
     else:
         buffer = payload[:2048]
 
-    mime_data: list[str] = m.from_buffer(buffer).split(';')
+    mime_data: list[str] = m.from_buffer(buffer).split(';')  # type: ignore
     mime_type: str = mime_data[0].strip().lower()
     encoding: str = mime_data[1].replace(
         ' charset=', '').strip().lower()
@@ -55,7 +55,7 @@ def __get_mime_data_from_buffer(payload: bytes) -> tuple[str, str]:
 
 def __get_mime_data_from_file(path: str) -> tuple[str, str]:
     m = magic.Magic(mime=True, mime_encoding=True)
-    mime_data: list[str] = m.from_file(filename=path).split(';')
+    mime_data: list[str] = m.from_file(filename=path).split(';') # type: ignore
     mime_type: str = mime_data[0].strip().lower()
     encoding: str = mime_data[1].replace(
         ' charset=', '').strip().lower()

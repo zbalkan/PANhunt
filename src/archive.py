@@ -8,6 +8,8 @@ from typing import IO, Optional
 from zipfile import ZipFile
 
 import panutils
+from config import PANHuntConfiguration
+from exceptions import PANHuntException
 from job import Job
 
 
@@ -19,62 +21,70 @@ class Archive:
         self.path = path
         self.payload = payload
 
-    def get_children(self) -> list[Job]:
+    def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
         raise NotImplementedError()
 
 
 class ZipArchive(Archive):
 
-    def get_children(self) -> list[Job]:
+    def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
         children: list[Job] = []
+        try:
+            zip_ref: ZipFile
+            if self.payload is not None:
+                zip_ref = ZipFile(BytesIO(self.payload), 'r')
+            else:
+                zip_ref = ZipFile(self.path, 'r')
 
-        zip_ref: ZipFile
-        if self.payload is not None:
-            zip_ref = ZipFile(BytesIO(self.payload), 'r')
-        else:
-            zip_ref = ZipFile(self.path, 'r')
+            for file_info in zip_ref.infolist():
+                with zip_ref.open(file_info) as file:
+                    file.seek(0)
+                    payload: bytes = file.read()
+                    job = Job(
+                        basename=file_info.filename, dirname=self.path, payload=payload)
+                    children.append(job)
+            zip_ref.close()
+        except Exception as ex:
+            return [], PANHuntException(str(ex))
 
-        for file_info in zip_ref.infolist():
-            with zip_ref.open(file_info) as file:
-                file.seek(0)
-                payload: bytes = file.read()
-                job = Job(
-                    basename=file_info.filename, dirname=self.path, payload=payload)
-                children.append(job)
-        zip_ref.close()
-        return children
+        return children, None
+
 
 
 class TarArchive(Archive):
 
-    def get_children(self) -> list[Job]:
+    def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
         children: list[Job] = []
 
-        tar_ref: TarFile
-        if self.payload is not None:
-            tar_ref = tarfile.open(
-                fileobj=BytesIO(self.payload), mode='r')
-        else:
-            tar_ref = tarfile.open(self.path, 'r')
+        try:
+            tar_ref: TarFile
+            if self.payload is not None:
+                tar_ref = tarfile.open(
+                    fileobj=BytesIO(self.payload), mode='r')
+            else:
+                tar_ref = tarfile.open(self.path, 'r')
 
-        members: list[TarInfo] = tar_ref.getmembers()
-        for file_info in [m for m in members if m.isfile()]:
-            extracted: Optional[IO[bytes]] = tar_ref.extractfile(file_info)
-            if extracted is not None:
-                extracted.seek(0)
-                payload: bytes = extracted.read()
-                job = Job(
-                    basename=file_info.path, dirname=self.path, payload=payload)
+            members: list[TarInfo] = tar_ref.getmembers()
+            for file_info in [m for m in members if m.isfile()]:
+                extracted: Optional[IO[bytes]] = tar_ref.extractfile(file_info)
+                if extracted is not None:
+                    extracted.seek(0)
+                    payload: bytes = extracted.read()
+                    job = Job(
+                        basename=file_info.path, dirname=self.path, payload=payload)
 
-                children.append(job)
-        tar_ref.close()
+                    children.append(job)
+            tar_ref.close()
 
-        return children
+        except Exception as ex:
+            return [], PANHuntException(str(ex))
+
+        return children, None
 
 
 class GzipArchive(Archive):
 
-    def get_children(self) -> list[Job]:
+    def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
 
         gz_file: GzipFile
 
@@ -88,16 +98,32 @@ class GzipArchive(Archive):
         compressed_filename: str = panutils.get_compressed_filename(
             gz_file)
         gz_file.seek(0)
-        payload: bytes = gz_file.read()
-        job = Job(
-            basename=compressed_filename, dirname=self.path, payload=payload)
+
+        size = 0
+        reached_eof = False
+        payload: bytes = b''
+        while size < PANHuntConfiguration().size_limit:
+            b = gz_file.read1()
+            if b == b'':
+                reached_eof = True
+                break
+            payload += gz_file.read1()
+            size += len(payload)
+
         gz_file.close()
-        return [job]
+
+        if not reached_eof:
+            return [], PANHuntException(
+                f'File size limit ({PANHuntConfiguration().size_limit}) reached during decompressing. Skipping file.')
+        else:
+            job = Job(
+                basename=compressed_filename, dirname=self.path, payload=payload)
+            return [job], None
 
 
 class XzArchive(Archive):
 
-    def get_children(self) -> list[Job]:
+    def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
 
         xz_file: LZMAFile
 
@@ -109,8 +135,25 @@ class XzArchive(Archive):
         compressed_filename: str = os.path.basename(
             self.path).replace('.xz', '')
         xz_file.seek(0)
-        payload: bytes = xz_file.read()
-        job = Job(
-            basename=compressed_filename, dirname=self.path, payload=payload)
+
+        size = 0
+        reached_eof = False
+        payload: bytes = b''
+        while size < PANHuntConfiguration().size_limit:
+            b = xz_file.read1()
+            if b == b'':
+                reached_eof = True
+                break
+            payload += xz_file.read1()
+            size += len(payload)
+
         xz_file.close()
-        return [job]
+
+        if not reached_eof:
+            return [], PANHuntException(
+                f'File size limit ({PANHuntConfiguration().size_limit}) reached during decompressing. Skipping file.')
+        else:
+            job = Job(
+                basename=compressed_filename, dirname=self.path, payload=payload)
+            xz_file.close()
+            return [job], None
