@@ -97,7 +97,7 @@ def main() -> None:
     arg_parser.add_argument(
         '-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
     arg_parser.add_argument(
-        '-j', dest='json_dir', help='Report file directory for JSON formatted PAN report')
+        '-j', dest='json_dir', help='Report file directory for JSON formatted PAN report', default=None)
     arg_parser.add_argument(
         '-C', dest='config', help='configuration file to use')
     arg_parser.add_argument(
