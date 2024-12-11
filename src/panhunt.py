@@ -77,7 +77,7 @@ def display_report(report: Report) -> None:
 
     if len(report.interesting_files) > 0:
         print(colorama.Fore.RED +
-              'Interesting Files to check separately, probably a permission issue:')
+              'Interesting Files to check separately, probably a permission or file size issue:')
         for interesting in report.interesting_files:
             print(colorama.Fore.YELLOW + '\t- ' +
                   f'{panutils.unicode_to_ascii(interesting.abspath)} ({panutils.unicode_to_ascii(panutils.size_friendly(interesting.size))})')

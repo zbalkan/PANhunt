@@ -65,7 +65,7 @@ class Report:
             report += newline
 
         if len(self.interesting_files) > 0:
-            report += 'Interesting Files to check separately, probably a permission issue:' + newline
+            report += 'Interesting Files to check separately, probably a permission or file size issue:' + newline
             for interesting in sorted(self.interesting_files, key=lambda x: x.basename):
                 report += f'{interesting.abspath} ({panutils.size_friendly(interesting.size)}){newline}'
                 report += f'Error: {interesting.errors}{newline}'
