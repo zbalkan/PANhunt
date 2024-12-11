@@ -20,6 +20,7 @@ class PANHuntConfiguration:
     excluded_directories: list[str]
     excluded_pans: list[str]
     size_limit: int
+    quiet: bool
 
     def __new__(cls, *args, **kwargs) -> 'PANHuntConfiguration':
         if cls.__instance is None:
@@ -44,7 +45,10 @@ class PANHuntConfiguration:
             self.json_dir = None
             self.excluded_pans = []
             self.size_limit = 1_073_741_824  # 1Gb
-            self._initialized = True  # Mark as initialized to prevent re-init
+            self.quiet = False
+
+            # Mark as initialized to prevent re-init
+            self._initialized = True
 
     def with_args(self,
                   search_dir: Optional[str] = None,
@@ -89,8 +93,10 @@ class PANHuntConfiguration:
             config_from_file=config_from_file, property='json')
         excluded_pans_string: Optional[str] = PANHuntConfiguration.__try_parse(
             config_from_file=config_from_file, property='excludepans')
-        size_limit = PANHuntConfiguration.__try_parse_int(
+        size_limit: Optional[int] = PANHuntConfiguration.__try_parse_int(
             config_from_file=config_from_file, property='sizelimit')
+        quiet: Optional[bool] = PANHuntConfiguration.__try_parse_bool(
+            config_from_file=config_from_file, property='quiet')
 
         self.__update(search_dir=search_dir,
                       file_path=file_path,
@@ -137,6 +143,14 @@ class PANHuntConfiguration:
             config_from_file, property)
         if s:
             return int(s)
+        return None
+
+    @ staticmethod
+    def __try_parse_bool(config_from_file: dict, property: str) -> Optional[bool]:
+        s: Optional[str]=PANHuntConfiguration.__try_parse(
+            config_from_file, property)
+        if s:
+            return s.lower() == 'true'
         return None
 
     def __update(self,

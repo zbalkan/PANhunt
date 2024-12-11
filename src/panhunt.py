@@ -109,10 +109,18 @@ def main() -> None:
 
     config_file: Optional[str] = args.config
 
+
+    # We need these as flags
+    json_dir: Optional[str]
+    quiet: bool
+
     # If exists, read the config file
     if config_file:
         PANHuntConfiguration().with_file(
             config_file=config_file)
+
+        json_dir = PANHuntConfiguration().json_dir
+        quiet = PANHuntConfiguration().quiet
     else:
         # Else, read the CLI parameters
         # Ask the user if they want to scan the root directory if no search directory or file path is provided
@@ -130,8 +138,8 @@ def main() -> None:
         report_dir = str(args.report_dir)
         excluded_directories_string = str(args.exclude_dirs)
         excluded_pans_string = str(args.exclude_pan)
-        json_dir: Optional[str] = args.json_dir
-        quiet: bool = args.quiet
+        json_dir = str(args.json_dir)
+        quiet = bool(args.quiet)
 
         PANHuntConfiguration().with_args(search_dir=search_dir,
                                          file_path=file_path,
