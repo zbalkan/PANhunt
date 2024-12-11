@@ -77,7 +77,7 @@ class Finding:
             self.errors = [error_msg]
         else:
             self.errors.append(error_msg)
-            self.status = ScanStatusEnum.Failure
+        self.status = ScanStatusEnum.Failure
         logging.error(f'{error_msg} ({self.abspath})')
 
     def __str__(self) -> str:
