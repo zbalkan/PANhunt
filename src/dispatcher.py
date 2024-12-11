@@ -96,10 +96,14 @@ class Dispatcher:
             try:
                 children, e = archive.get_children()
                 if e:
-                    raise e
-                for child in children:
-                    JobQueue().enqueue(child)
-                return None
+                    doc = Finding(basename=job.basename, dirname=job.dirname,
+                                  payload=job.payload, mimetype=mime_type, encoding=encoding, err=None)
+                    doc.set_error(str(e))
+                    return doc
+                else:
+                    for child in children:
+                        JobQueue().enqueue(child)
+                    return None
             except Exception as ex:
                 doc = Finding(basename=job.basename, dirname=job.dirname,
                               payload=job.payload, mimetype=mime_type, encoding=encoding, err=None)
