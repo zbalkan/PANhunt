@@ -44,13 +44,13 @@ class Finding:
             self.encoding = encoding
 
         if err is not None:
-            self.set_error(str(err))
+            self.__set_error(str(err))
 
         if mimetype is None or encoding is None:
             self.mime_type, self.encoding, err = panutils.get_mimetype(self.abspath,
                                                                        payload)
             if err:
-                self.set_error(
+                self.__set_error(
                     f'Failed to detect mimetype and encoding. Inner exception: {err}')
 
         self.set_file_stats()
@@ -70,9 +70,9 @@ class Finding:
                 self.size = stat.st_size
         except Exception as ex:
             self.size = -1
-            self.set_error(str(ex))
+            self.__set_error(str(ex))
 
-    def set_error(self, error_msg: str) -> None:
+    def __set_error(self, error_msg: str) -> None:
         if self.errors is None:
             self.errors = [error_msg]
         else:

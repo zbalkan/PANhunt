@@ -5,6 +5,7 @@ import time
 from typing import Optional
 
 import enums
+from exceptions import PANHuntException
 import mappings
 import panutils
 from archive import Archive
@@ -74,9 +75,9 @@ class Dispatcher:
             size = os.stat(job.abspath).st_size
         if size > self.__size_limit:
             doc = Finding(basename=job.basename, dirname=job.dirname,
-                          payload=job.payload, mimetype='Unknown', encoding='Unknown', err=None)
-            doc.set_error(
-                f'File size {panutils.size_friendly(size=size)} over limit of {panutils.size_friendly(size=self.__size_limit)} for checking for file \"{job.basename}\"')
+                          payload=job.payload, mimetype='Unknown', encoding='Unknown',
+                          err=PANHuntException(
+                              f'File size {panutils.size_friendly(size=size)} over limit of {panutils.size_friendly(size=self.__size_limit)} for checking for file \"{job.basename}\"')) # type: ignore
             return doc
 
         mime_type, encoding, error = panutils.get_mimetype(
@@ -97,8 +98,7 @@ class Dispatcher:
                 children, e = archive.get_children()
                 if e:
                     doc = Finding(basename=job.basename, dirname=job.dirname,
-                                  payload=job.payload, mimetype=mime_type, encoding=encoding, err=None)
-                    doc.set_error(str(e))
+                                  payload=job.payload, mimetype=mime_type, encoding=encoding, err=e) # type: ignore
                     return doc
                 else:
                     for child in children:
@@ -106,8 +106,7 @@ class Dispatcher:
                     return None
             except Exception as ex:
                 doc = Finding(basename=job.basename, dirname=job.dirname,
-                              payload=job.payload, mimetype=mime_type, encoding=encoding, err=None)
-                doc.set_error(str(ex))
+                              payload=job.payload, mimetype=mime_type, encoding=encoding, err=ex)  # type: ignore
                 return doc
         else:
             # Scan the file
@@ -135,7 +134,6 @@ class Dispatcher:
                 finding.matches = matches
         except Exception as ex:
             finding = Finding(
-                basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mimetype, encoding=encoding)
-            finding.set_error(str(ex))
+                basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mimetype, encoding=encoding, err=ex) # type: ignore
         finally:
             return finding
