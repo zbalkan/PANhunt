@@ -71,13 +71,13 @@ class Finding:
         except Exception as ex:
             self.size = -1
             self.set_error(str(ex))
-            self.status = ScanStatusEnum.Failure
 
     def set_error(self, error_msg: str) -> None:
         if self.errors is None:
             self.errors = [error_msg]
         else:
             self.errors.append(error_msg)
+            self.status = ScanStatusEnum.Failure
         logging.error(f'{error_msg} ({self.abspath})')
 
     def __str__(self) -> str:
