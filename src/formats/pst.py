@@ -457,7 +457,7 @@ class Block:
 
             elif self.btype == 2:  # SLBLOCK, SIBLOCK
 
-                self.rgentries: list[SIENTRY | SLENTRY] = []
+                self.rgentries: list[Union[SIENTRY, SLENTRY]] = []
 
                 if self.cLevel == 0:  # SLBLOCK
                     self.block_type = Block.btypeSLBLOCK
@@ -578,10 +578,10 @@ class NBD:
                 'Invalid block type (not SLBLOCK/SIBLOCK), got %s' % block.block_type)
         return subnodes
 
-    def get_page_leaf_entries(self, entry_type: Union[Type[NBTENTRY], Type[BBTENTRY]], page_offset: int) -> dict[int, NBTENTRY | BBTENTRY]:
+    def get_page_leaf_entries(self, entry_type: Union[Type[NBTENTRY], Type[BBTENTRY]], page_offset: int) -> dict[int, Union[NBTENTRY, BBTENTRY]]:
         """ entry type is NBTENTRY or BBTENTRY"""
 
-        leaf_entries: dict[int, NBTENTRY | BBTENTRY] = {}
+        leaf_entries: dict[int, Union[NBTENTRY, BBTENTRY]] = {}
         page: Page = self.fetch_page(page_offset)
         for entry in page.rgEntries:
 
@@ -756,7 +756,7 @@ class BTH:
         if self.hidRoot.hidIndex != 0:
             payload: bytes = hn.get_hid_data(self.hidRoot)
 
-            bth_record_list: list[BTHData | BTHIntermediate] = self.get_bth_records(
+            bth_record_list: list[Union[BTHData, BTHIntermediate]] = self.get_bth_records(
                 payload, self.bIdxLevels)
 
             bth_data_list: list[BTHData] = [
@@ -780,9 +780,9 @@ class BTH:
                     else:
                         bth_working_stack.extend(bth_intermediate_list)
 
-    def get_bth_records(self, payload: bytes, bIdxLevel: int) -> list[BTHData | BTHIntermediate]:
+    def get_bth_records(self, payload: bytes, bIdxLevel: int) -> list[Union[BTHData, BTHIntermediate]]:
 
-        bth_record_list: list[BTHData | BTHIntermediate] = []
+        bth_record_list: list[Union[BTHData, BTHIntermediate]] = []
 
         if bIdxLevel == 0:  # leaf
             record_size: int = self.cbKey + self.cbEnt

@@ -105,7 +105,7 @@ class Dispatcher:
             return self._scan_file(job, mime_type, encoding)
 
     def _scan_file(self, job: Job,
-                   mimetype: str, encoding: str) -> None | Finding:
+                   mimetype: str, encoding: str) -> Optional[Finding]:
         # Scanning logic
         scanner: Optional[type[ScannerBase]] = mappings.get_scanner_by_file(
             mime_type=mimetype,
