@@ -52,12 +52,15 @@ def hunt_pans() -> Report:
 def display_report(report: Report) -> None:
 
     newline = '\n'
-    header: str = f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}{newline}{"=" * 100}{newline}'
-    header += f'Searched {report.__searched}\nExcluded {report.__excluded}{newline}'
-    header += f'Command: {report.__command}{newline}'
+    header: str = f'PAN Hunt Report - {report.timestamp.strftime("%H:%M:%S %d/%m/%Y")}{newline}'
+    header = f'{"=" * 100}{newline}'
+    header += f'Searched {report.searched}{newline}'
+    header += f'Excluded {report.excluded}{newline}'
+    header += f'Command: {report.command}{newline}'
     header += f'Uname: {" | ".join(platform.uname())}{newline}'
-    header += f'Elapsed time: {report.__elapsed}{newline}'
-    header += f'Found {report.pan_count} possible PANs.{newline}{"=" * 100}{newline}{newline}'
+    header += f'Elapsed time: {report.elapsed}{newline}'
+    header += f'Found {report.pan_count} possible PANs.{newline}'
+    header += f'{"=" * 100}{newline}{newline}'
     print(colorama.Fore.WHITE + header)
 
     pan_sep: str = '\n\t'

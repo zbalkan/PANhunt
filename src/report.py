@@ -16,17 +16,17 @@ from finding import Finding
 
 class Report:
 
-    __start: datetime
-    __end: datetime
-    __searched: str
-    __excluded: str
+    start: datetime
+    end: datetime
+    searched: str
+    excluded: str
     pan_count: int
     matched_files: list[Finding]
     interesting_files: list[Finding]
 
-    __command: str
-    __timestamp: str
-    __elapsed: timedelta
+    command: str
+    timestamp: datetime
+    elapsed: timedelta
 
     def __init__(self,
                  matched_files: list[Finding],
@@ -34,15 +34,15 @@ class Report:
                  start: datetime,
                  end: datetime) -> None:
         '''excluded_dirs: list[str]'''
-        self.__start = start
-        self.__end = end
+        self.start = start
+        self.end = end
         self.matched_files = matched_files
         self.interesting_files = interesting_files
-        self.__searched = PANHuntConfiguration().search_dir
-        self.__excluded = ','.join(PANHuntConfiguration().excluded_directories)
-        self.__command = ' '.join(sys.argv)
-        self.__timestamp = time.strftime("%H:%M:%S %d/%m/%Y")
-        self.__elapsed = self.__end - self.__start
+        self.searched = PANHuntConfiguration().search_dir
+        self.excluded = ','.join(PANHuntConfiguration().excluded_directories)
+        self.command = ' '.join(sys.argv)
+        self.timestamp = datetime.now()
+        self.elapsed = self.end - self.start
         self.pan_count = len(
             [pan for f in self.matched_files if f.matches for pan in f.matches])
 
@@ -52,10 +52,10 @@ class Report:
         logging.info("Creating TXT report.")
         newline = '\n'
         report: str = f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}{newline}{"=" * 100}{newline}'
-        report += f'Searched {self.__searched}\nExcluded {self.__excluded}{newline}'
-        report += f'Command: {self.__command}{newline}'
+        report += f'Searched {self.searched}\nExcluded {self.excluded}{newline}'
+        report += f'Command: {self.command}{newline}'
         report += f'Uname: {" | ".join(platform.uname())}{newline}'
-        report += f'Elapsed time: {self.__elapsed}{newline}'
+        report += f'Elapsed time: {self.elapsed}{newline}'
         report += f'Found {self.pan_count} possible PANs.{newline}{"=" * 100}{newline}{newline}'
 
         for file in self.matched_files:
@@ -88,11 +88,11 @@ class Report:
         logging.info("Creating JSON report.")
 
         report: dict = {}
-        report['timestamp'] = self.__timestamp
-        report['searched'] = self.__searched
-        report['excluded'] = self.__excluded
-        report['command'] = self.__command
-        report['elapsed'] = str(self.__elapsed)
+        report['timestamp'] = self.timestamp.strftime("%H:%M:%S %d/%m/%Y")
+        report['searched'] = self.searched
+        report['excluded'] = self.excluded
+        report['command'] = self.command
+        report['elapsed'] = str(self.elapsed)
         report['pans_found'] = self.pan_count
 
         matched_items: dict[str, list[str]] = {}
