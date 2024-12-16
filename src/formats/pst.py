@@ -546,7 +546,7 @@ class NBD:
                     raise PANHuntException(
                         'Expecting data block, got block type %s' % xblock.block_type)
                 data_list.append(xblock.data_block)
-        elif block.block_type == Block.btypeXXBLOCK:
+        elif block.block_type == BlockType.XXBLOCK:
             for xxbid in block.rgbid:
                 xxblock: Block = self.fetch_block(xxbid)
                 if xxblock.block_type != BlockType.XBLOCK:
@@ -1220,7 +1220,7 @@ class TC:  # Table Context
 
         if not ptype.is_variable and not ptype.is_multi:
             if ptype.byte_count <= 8:
-                return ptype.value(DATA_bytes)
+                return ptype.value(data_bytes)
 
             hid = HID(data_bytes)
             return ptype.value(self.hn.get_hid_data(hid))
@@ -1805,9 +1805,9 @@ class Attachment:
     DisplayName: str
     AttachMethod: int
     AttachmentSize: int
-    AttachFilename: str
-    AttachLongFilename: str
-    Filename: str
+    __AttachFilename: Optional[str] = None
+    __AttachLongFilename: Optional[str] = None
+    Filename: Optional[str] = None
     BinaryData: Optional[bytes] = None
     AttachMimeTag: Optional[str]
     AttachExtension: str
@@ -1836,21 +1836,20 @@ class Attachment:
         afn: Optional[PCBTHData] = self.pc.get_raw_data(
             PropIdEnum.PidTagAttachFilename.value)
         if afn:
-            self.AttachFilename = panutils.as_str(afn.value)  # 8.3 short name
+            self.__AttachFilename = panutils.as_str(afn.value)  # 8.3 short name
 
         alfn: Optional[PCBTHData] = self.pc.get_raw_data(
             PropIdEnum.PidTagAttachLongFilename.value)
         if alfn:
-            self.AttachLongFilename = panutils.as_str(alfn.value)
+            self.__AttachLongFilename = panutils.as_str(alfn.value)
 
-        if self.AttachLongFilename:
-            self.Filename = self.AttachLongFilename
-        else:
-            self.Filename = self.AttachFilename
+        if self.__AttachLongFilename:
+            self.Filename = self.__AttachLongFilename
+        elif self.__AttachFilename:
+            self.Filename = self.__AttachFilename
+
         if self.Filename:
             self.Filename = os.path.basename(self.Filename)
-        else:
-            self.Filename = '[NoFilename_Method%s]' % self.AttachMethod
 
         if self.AttachMethod == Message.afByValue:
             atm: Optional[PCBTHData] = self.pc.get_raw_data(
@@ -2466,7 +2465,7 @@ class PST:
         except PermissionError:
             self.fd.close()
             raise PANHuntException(
-                f'The PST file is in use (probably by Outlook application).')
+                'The PST file is in use (probably by Outlook application).')
 
         self.header = Header(self.fd)
         if not self.header.validPST:
@@ -2531,7 +2530,7 @@ class PST:
                         if attachment:
                             if attachment.BinaryData and len(attachment.BinaryData) != 0:
                                 filepath: str = os.path.join(
-                                    path, attachment.Filename)
+                                    path, attachment.Filename or '')
                                 if overwrite:
                                     if os.path.exists(filepath):
                                         os.remove(filepath)
