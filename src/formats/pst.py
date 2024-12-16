@@ -341,6 +341,12 @@ class SIENTRY:
         self.nid = NID(nid)
         self.bid = BID(bid)
 
+class BlockType(IntEnum):
+    DATA = 0
+    XBLOCK = 1
+    XXBLOCK = 2
+    SLBLOCK = 3
+    SIBLOCK = 4
 
 class Block:
 
@@ -356,13 +362,6 @@ class Block:
 
     decrypt_table: bytes = bytes.maketrans(
         bytearray(list(range(256))), bytearray(mpbbCryptFrom512))
-
-    # TODO: Use Enum
-    btypeData = 0
-    btypeXBLOCK = 1
-    btypeXXBLOCK = 2
-    btypeSLBLOCK = 3
-    btypeSIBLOCK = 4
 
     is_ansi: bool
     block_type: int
@@ -421,7 +420,7 @@ class Block:
 
         if not self.bid.is_internal:
 
-            self.block_type = Block.btypeData
+            self.block_type = BlockType.DATA
             self.btype = 0
             self.cLevel = 0
             if bCryptMethod == CryptMethodEnum.NDB_CRYPT_PERMUTE:  # NDB_CRYPT_PERMUTE
@@ -444,9 +443,9 @@ class Block:
             if self.btype == 1:  # XBLOCK, XXBLOCK
                 self.lcbTotal = panutils.unpack_integer('I', payload[4:8])
                 if self.cLevel == 1:  # XBLOCK
-                    self.block_type = Block.btypeXBLOCK
+                    self.block_type = BlockType.XBLOCK
                 elif self.cLevel == 2:  # XXBLOCK
-                    self.block_type = Block.btypeXXBLOCK
+                    self.block_type = BlockType.XXBLOCK
                 else:
                     raise PANHuntException(
                         'Invalid Block Level %s' % self.cLevel)
@@ -460,12 +459,12 @@ class Block:
                 self.rgentries: list[Union[SIENTRY, SLENTRY]] = []
 
                 if self.cLevel == 0:  # SLBLOCK
-                    self.block_type = Block.btypeSLBLOCK
+                    self.block_type = BlockType.SLBLOCK
                     for i in range(self.cEnt):
                         self.rgentries.append(SLENTRY(
                             payload[sl_si_entries_offset + i * slentry_size:sl_si_entries_offset + (i + 1) * slentry_size]))
                 elif self.cLevel == 1:  # SIBLOCK
-                    self.block_type = Block.btypeSIBLOCK
+                    self.block_type = BlockType.SIBLOCK
                     for i in range(self.cEnt):
                         self.rgentries.append(SIENTRY(
                             payload[sl_si_entries_offset + i * sientry_size:sl_si_entries_offset + (i + 1) * sientry_size]))
@@ -535,19 +534,19 @@ class NBD:
         data_list: list[bytes] = []
 
         block: Block = self.fetch_block(bid)
-        if block.block_type == Block.btypeData:
+        if block.block_type == BlockType.DATA:
             data_list.append(block.data_block)
-        elif block.block_type == Block.btypeXBLOCK:
+        elif block.block_type == BlockType.XBLOCK:
             for xbid in block.rgbid:
                 xblock: Block = self.fetch_block(xbid)
-                if xblock.block_type != Block.btypeData:
+                if xblock.block_type != BlockType.DATA:
                     raise PANHuntException(
                         'Expecting data block, got block type %s' % xblock.block_type)
                 data_list.append(xblock.data_block)
         elif block.block_type == Block.btypeXXBLOCK:
             for xxbid in block.rgbid:
                 xxblock: Block = self.fetch_block(xxbid)
-                if xxblock.block_type != Block.btypeXBLOCK:
+                if xxblock.block_type != BlockType.XBLOCK:
                     raise PANHuntException(
                         'Expecting XBLOCK, got block type %s' % xxblock.block_type)
                 data_list.extend(self.fetch_all_block_data(xxbid))
@@ -561,7 +560,7 @@ class NBD:
 
         subnodes: dict[int, SLENTRY] = {}
         block: Block = self.fetch_block(bid)
-        if block.block_type == Block.btypeSLBLOCK:
+        if block.block_type == BlockType.SLBLOCK:
             for entry in block.rgentries:
                 if isinstance(entry, SLENTRY):
                     slentry: SLENTRY = entry
@@ -569,7 +568,7 @@ class NBD:
                         raise PANHuntException(
                             'Duplicate subnode %s' % slentry.nid)
                     subnodes[slentry.nid.nid] = slentry
-        elif block.block_type == Block.btypeSIBLOCK:
+        elif block.block_type == BlockType.SIBLOCK:
             for entry in block.rgentries:
                 if isinstance(entry, SIENTRY):
                     subnodes.update(self.fetch_subnodes(entry.bid))
@@ -1210,7 +1209,7 @@ class TC:  # Table Context
 
         if not ptype.is_variable and not ptype.is_multi:
             if ptype.byte_count <= 8:
-                return ptype.value(data_bytes)
+                return ptype.value(DATA_bytes)
 
             hid = HID(data_bytes)
             return ptype.value(self.hn.get_hid_data(hid))
