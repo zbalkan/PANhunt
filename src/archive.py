@@ -50,7 +50,6 @@ class ZipArchive(Archive):
         return children, None
 
 
-
 class TarArchive(Archive):
 
     def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:

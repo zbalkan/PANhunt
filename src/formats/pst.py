@@ -344,12 +344,14 @@ class SIENTRY:
         self.nid = NID(nid)
         self.bid = BID(bid)
 
+
 class BlockType(IntEnum):
     DATA = 0
     XBLOCK = 1
     XXBLOCK = 2
     SLBLOCK = 3
     SIBLOCK = 4
+
 
 class Block:
 
@@ -645,10 +647,12 @@ class HNPAGEMAP:
             self.rgibAlloc.append(struct.unpack(
                 'H', payload[4 + i * 2:4 + (i + 1) * 2])[0])
 
+
 class HNType(IntEnum):
     TypeTC = 0x7C
     TypeBTH = 0xB5
     TypePC = 0xBC
+
 
 class HN:
     # While it is not defined in the spec,
@@ -1084,6 +1088,7 @@ class TCROWID:
         else:  # unicode (4)
             self.dwRowIndex = panutils.unpack_integer('I', bth_data.data)
 
+
 class TCOffset(IntEnum):
     """
     Index   Name    Description
@@ -1097,6 +1102,7 @@ class TCOffset(IntEnum):
     TCI_2b = 1
     TCI_1b = 2
     TCI_bm = 3
+
 
 class TC:  # Table Context
 
