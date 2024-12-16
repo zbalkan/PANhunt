@@ -14,7 +14,7 @@ import math
 import os
 import struct
 from datetime import datetime, timedelta
-from enum import Enum, Flag
+from enum import Enum, Flag, IntEnum
 from io import BufferedReader, BytesIO
 from typing import Generator, Optional, Type, Union
 
@@ -643,26 +643,23 @@ class HNPAGEMAP:
             self.rgibAlloc.append(struct.unpack(
                 'H', payload[4 + i * 2:4 + (i + 1) * 2])[0])
 
+class HNType(IntEnum):
+    TypeTC = 0x7C
+    TypeBTH = 0xB5
+    TypePC = 0xBC
 
 class HN:
-
-    # TODO: Use Enum
-    bTypeTC: int = 0x7C
-    bTypeBTH: int = 0xB5
-    bTypePC: int = 0xBC
-
-    bid_sub: Optional[BID]  = None
-
     # While it is not defined in the spec,
     # BID data and BID sub nodes are needed to enumerate the sub nodes
     # BID comes from a NBTENTRY or a SLENTRY object
     node_entry: Union[NBTENTRY, SLENTRY]
+
     data_sections: list[bytes]
     ltp: 'LTP'
     hnpagemaps: list[HNPAGEMAP]
     subnodes: Optional[dict[int, SLENTRY]] = None
     bSig: int
-    bClientSig: int
+    bClientSig: HNType
     hidUserRoot: HID
     rgbFillLevel: int
 
@@ -685,7 +682,7 @@ class HN:
                 ibHnpm, bSig, bClientSig, hidUserRootBytes, rgbFillLevel = struct.unpack(
                     'HBB4sI', section_bytes[:12])
                 self.bSig = bSig
-                self.bClientSig = bClientSig
+                self.bClientSig = HNType(bClientSig)
                 self.rgbFillLevel = rgbFillLevel
 
                 self.hidUserRoot = HID(hidUserRootBytes)
@@ -752,7 +749,7 @@ class BTH:
         self.bType, self.cbKey, self.cbEnt, self.bIdxLevels, hidRootBytes = struct.unpack(
             'BBBB4s', bth_header_bytes)
         self.hidRoot: HID = HID(hidRootBytes)
-        if self.bType != HN.bTypeBTH:
+        if self.bType != HNType.TypeBTH:
             raise PANHuntException('Invalid BTH Type %s' % self.bType)
         self.bth_data_list = []
         bth_working_stack: list[BTHIntermediate] = []
@@ -1018,7 +1015,7 @@ class PC:  # Property Context
     def __init__(self, hn: HN) -> None:
 
         self.hn = hn
-        if hn.bClientSig != HN.bTypePC:
+        if hn.bClientSig != HNType.TypePC:
             raise PANHuntException(
                 'Invalid HN bClientSig, not bTypePC, is %s' % hn.bClientSig)
         self.bth = BTH(hn, hn.hidUserRoot)
@@ -1094,8 +1091,6 @@ class TC:  # Table Context
     TCI_bm: int = 3
 
     hn: HN
-    bType: int
-    cCols: int
     hnidRows: Union[HID, NID]
     hidRowIndex: HID
     rgib: tuple[int, int, int, int]
@@ -1107,14 +1102,14 @@ class TC:  # Table Context
     def __init__(self, hn: HN) -> None:
 
         self.hn = hn
-        if hn.bClientSig != HN.bTypeTC:
+        if hn.bClientSig != HNType.TypeTC:
             raise PANHuntException(
                 'Invalid HN bClientSig, not bTypeTC, is %s' % hn.bClientSig)
         tcinfo_bytes: bytes = hn.get_hid_data(hn.hidUserRoot)
-        self.bType, self.cCols = struct.unpack('BB', tcinfo_bytes[:2])
-        if self.bType != HN.bTypeTC:
+        bType, cCols = struct.unpack('BB', tcinfo_bytes[:2])
+        if bType != HNType.TypeTC:
             raise PANHuntException(
-                'Invalid TCINFO bType, not bTypeTC, is %s' % self.bType)
+                'Invalid TCINFO bType, not bTypeTC, is %s' % bType)
         self.rgib = struct.unpack('HHHH', tcinfo_bytes[2:10])    # type: ignore
         hidRowIndexBytes, hnidRowsBytes, hidIndexBytes = struct.unpack(
             '4s4s4s', tcinfo_bytes[10:22])
@@ -1125,7 +1120,7 @@ class TC:  # Table Context
         else:
             self.hnidRows = NID(hnidRowsBytes)
         self.rgTCOLDESC = []
-        for i in range(self.cCols):
+        for i in range(cCols):
             self.rgTCOLDESC.append(
                 TCOLDESC(tcinfo_bytes[22 + i * 8:22 + (i + 1) * 8]))
 
