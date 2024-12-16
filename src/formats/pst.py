@@ -1084,13 +1084,21 @@ class TCROWID:
         else:  # unicode (4)
             self.dwRowIndex = panutils.unpack_integer('I', bth_data.data)
 
+class TCOffset(IntEnum):
+    """
+    Index   Name    Description
+    0       TCI_4b  Ending offset of 8- and 4-byte data value group.
+    1       TCI_2b  Ending offset of 2-byte data value group.
+    2       TCI_1b  Ending offset of 1-byte data value group.
+    3       TCI_bm  Ending offset of the Cell Existence Block.
+    """
+
+    TCI_4b = 0
+    TCI_2b = 1
+    TCI_1b = 2
+    TCI_bm = 3
 
 class TC:  # Table Context
-
-    TCI_4b: int = 0
-    TCI_2b: int = 1
-    TCI_1b: int = 2
-    TCI_bm: int = 3
 
     hn: HN
     hnidRows: Union[HID, NID]
@@ -1153,7 +1161,7 @@ class TC:  # Table Context
             else:  # unicode
                 size_BlockTrailer = 16
 
-            row_size: int = self.rgib[TC.TCI_bm]
+            row_size: int = self.rgib[TCOffset.TCI_bm]
             RowsPerBlock: int = int(math.floor(
                 (8192.0 - size_BlockTrailer) / row_size))
 
@@ -1182,7 +1190,7 @@ class TC:  # Table Context
                 row_bytes: bytes = row_matrix_data[BlockIndex][RowIndex *
                                                                row_size:(RowIndex + 1) * row_size]
                 dwRowID: int = panutils.unpack_integer('I', row_bytes[:4])
-                rgbCEB: bytes = row_bytes[self.rgib[TC.TCI_1b]:]
+                rgbCEB: bytes = row_bytes[self.rgib[TCOffset.TCI_1b]:]
 
                 rowvals: dict[int, _ValueType] = {}
                 for tcoldesc in self.rgTCOLDESC:
