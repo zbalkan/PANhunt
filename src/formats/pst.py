@@ -14,7 +14,7 @@ import math
 import os
 import struct
 from datetime import datetime, timedelta
-from enum import Enum, Flag
+from enum import Enum, Flag, IntEnum
 from io import BufferedReader, BytesIO
 from typing import Generator, Optional, Type, Union
 
@@ -143,16 +143,19 @@ class BREF:
         return '%s, ib: %s' % (self.bid, hex(self.ib))
 
 
+class PageType(IntEnum):
+    BBT = 0x80
+    NBT = 0x81
+    FMap = 0x82
+    PMap = 0x83
+    AMap = 0x84
+    FPMap = 0x85
+    DL = 0x86
+
+
 class Page:
 
     PAGE_SIZE = 512
-    ptypeBBT = 0x80
-    ptypeNBT = 0x81
-    ptypeFMap = 0x82
-    ptypePMap = 0x83
-    ptypeAMap = 0x84
-    ptypeFPMap = 0x85
-    ptypeDL = 0x86
 
     ptype: int
     ptypeRepeat: int
@@ -191,7 +194,7 @@ class Page:
         self.bid = bid
         self.dwCRC = dwCRC
 
-        if self.ptype < Page.ptypeBBT or self.ptype > Page.ptypeDL:
+        if self.ptype < PageType.BBT or self.ptype > PageType.DL:
             raise PANHuntException('Invalid Page Type %s ' %
                                    hex(self.ptype))
         if self.ptype != self.ptypeRepeat:
@@ -199,7 +202,7 @@ class Page:
                 hex(self.ptype), hex(self.ptypeRepeat)))
 
         entry_type: Union[Type[BBTENTRY], Type[NBTENTRY], Type[BTENTRY]]
-        if self.ptype in (Page.ptypeBBT, Page.ptypeNBT):
+        if self.ptype in (PageType.BBT, PageType.NBT):
             cEnt: int
             cEntMax: int
             cbEnt: int
@@ -222,9 +225,9 @@ class Page:
             self.cLevel = cLevel
 
             if self.cLevel == 0:
-                if self.ptype == Page.ptypeBBT:
+                if self.ptype == PageType.BBT:
                     entry_type = BBTENTRY
-                else:  # ptypeNBT
+                else:  # type NBT
                     entry_type = NBTENTRY
                     entry_size = entry_size + entry_size // 3
             else:  # BTENTRY
@@ -341,6 +344,12 @@ class SIENTRY:
         self.nid = NID(nid)
         self.bid = BID(bid)
 
+class BlockType(IntEnum):
+    DATA = 0
+    XBLOCK = 1
+    XXBLOCK = 2
+    SLBLOCK = 3
+    SIBLOCK = 4
 
 class Block:
 
@@ -356,13 +365,6 @@ class Block:
 
     decrypt_table: bytes = bytes.maketrans(
         bytearray(list(range(256))), bytearray(mpbbCryptFrom512))
-
-    # TODO: Use Enum
-    btypeData = 0
-    btypeXBLOCK = 1
-    btypeXXBLOCK = 2
-    btypeSLBLOCK = 3
-    btypeSIBLOCK = 4
 
     is_ansi: bool
     block_type: int
@@ -421,7 +423,7 @@ class Block:
 
         if not self.bid.is_internal:
 
-            self.block_type = Block.btypeData
+            self.block_type = BlockType.DATA
             self.btype = 0
             self.cLevel = 0
             if bCryptMethod == CryptMethodEnum.NDB_CRYPT_PERMUTE:  # NDB_CRYPT_PERMUTE
@@ -444,9 +446,9 @@ class Block:
             if self.btype == 1:  # XBLOCK, XXBLOCK
                 self.lcbTotal = panutils.unpack_integer('I', payload[4:8])
                 if self.cLevel == 1:  # XBLOCK
-                    self.block_type = Block.btypeXBLOCK
+                    self.block_type = BlockType.XBLOCK
                 elif self.cLevel == 2:  # XXBLOCK
-                    self.block_type = Block.btypeXXBLOCK
+                    self.block_type = BlockType.XXBLOCK
                 else:
                     raise PANHuntException(
                         'Invalid Block Level %s' % self.cLevel)
@@ -460,12 +462,12 @@ class Block:
                 self.rgentries: list[Union[SIENTRY, SLENTRY]] = []
 
                 if self.cLevel == 0:  # SLBLOCK
-                    self.block_type = Block.btypeSLBLOCK
+                    self.block_type = BlockType.SLBLOCK
                     for i in range(self.cEnt):
                         self.rgentries.append(SLENTRY(
                             payload[sl_si_entries_offset + i * slentry_size:sl_si_entries_offset + (i + 1) * slentry_size]))
                 elif self.cLevel == 1:  # SIBLOCK
-                    self.block_type = Block.btypeSIBLOCK
+                    self.block_type = BlockType.SIBLOCK
                     for i in range(self.cEnt):
                         self.rgentries.append(SIENTRY(
                             payload[sl_si_entries_offset + i * sientry_size:sl_si_entries_offset + (i + 1) * sientry_size]))
@@ -535,19 +537,19 @@ class NBD:
         data_list: list[bytes] = []
 
         block: Block = self.fetch_block(bid)
-        if block.block_type == Block.btypeData:
+        if block.block_type == BlockType.DATA:
             data_list.append(block.data_block)
-        elif block.block_type == Block.btypeXBLOCK:
+        elif block.block_type == BlockType.XBLOCK:
             for xbid in block.rgbid:
                 xblock: Block = self.fetch_block(xbid)
-                if xblock.block_type != Block.btypeData:
+                if xblock.block_type != BlockType.DATA:
                     raise PANHuntException(
                         'Expecting data block, got block type %s' % xblock.block_type)
                 data_list.append(xblock.data_block)
         elif block.block_type == Block.btypeXXBLOCK:
             for xxbid in block.rgbid:
                 xxblock: Block = self.fetch_block(xxbid)
-                if xxblock.block_type != Block.btypeXBLOCK:
+                if xxblock.block_type != BlockType.XBLOCK:
                     raise PANHuntException(
                         'Expecting XBLOCK, got block type %s' % xxblock.block_type)
                 data_list.extend(self.fetch_all_block_data(xxbid))
@@ -561,7 +563,7 @@ class NBD:
 
         subnodes: dict[int, SLENTRY] = {}
         block: Block = self.fetch_block(bid)
-        if block.block_type == Block.btypeSLBLOCK:
+        if block.block_type == BlockType.SLBLOCK:
             for entry in block.rgentries:
                 if isinstance(entry, SLENTRY):
                     slentry: SLENTRY = entry
@@ -569,7 +571,7 @@ class NBD:
                         raise PANHuntException(
                             'Duplicate subnode %s' % slentry.nid)
                     subnodes[slentry.nid.nid] = slentry
-        elif block.block_type == Block.btypeSIBLOCK:
+        elif block.block_type == BlockType.SIBLOCK:
             for entry in block.rgentries:
                 if isinstance(entry, SIENTRY):
                     subnodes.update(self.fetch_subnodes(entry.bid))
@@ -643,26 +645,23 @@ class HNPAGEMAP:
             self.rgibAlloc.append(struct.unpack(
                 'H', payload[4 + i * 2:4 + (i + 1) * 2])[0])
 
+class HNType(IntEnum):
+    TypeTC = 0x7C
+    TypeBTH = 0xB5
+    TypePC = 0xBC
 
 class HN:
-
-    # TODO: Use Enum
-    bTypeTC: int = 0x7C
-    bTypeBTH: int = 0xB5
-    bTypePC: int = 0xBC
-
-    bid_sub: Optional[BID]  = None
-
     # While it is not defined in the spec,
     # BID data and BID sub nodes are needed to enumerate the sub nodes
     # BID comes from a NBTENTRY or a SLENTRY object
     node_entry: Union[NBTENTRY, SLENTRY]
+
     data_sections: list[bytes]
     ltp: 'LTP'
     hnpagemaps: list[HNPAGEMAP]
     subnodes: Optional[dict[int, SLENTRY]] = None
     bSig: int
-    bClientSig: int
+    bClientSig: HNType
     hidUserRoot: HID
     rgbFillLevel: int
 
@@ -685,7 +684,7 @@ class HN:
                 ibHnpm, bSig, bClientSig, hidUserRootBytes, rgbFillLevel = struct.unpack(
                     'HBB4sI', section_bytes[:12])
                 self.bSig = bSig
-                self.bClientSig = bClientSig
+                self.bClientSig = HNType(bClientSig)
                 self.rgbFillLevel = rgbFillLevel
 
                 self.hidUserRoot = HID(hidUserRootBytes)
@@ -752,7 +751,7 @@ class BTH:
         self.bType, self.cbKey, self.cbEnt, self.bIdxLevels, hidRootBytes = struct.unpack(
             'BBBB4s', bth_header_bytes)
         self.hidRoot: HID = HID(hidRootBytes)
-        if self.bType != HN.bTypeBTH:
+        if self.bType != HNType.TypeBTH:
             raise PANHuntException('Invalid BTH Type %s' % self.bType)
         self.bth_data_list = []
         bth_working_stack: list[BTHIntermediate] = []
@@ -1018,7 +1017,7 @@ class PC:  # Property Context
     def __init__(self, hn: HN) -> None:
 
         self.hn = hn
-        if hn.bClientSig != HN.bTypePC:
+        if hn.bClientSig != HNType.TypePC:
             raise PANHuntException(
                 'Invalid HN bClientSig, not bTypePC, is %s' % hn.bClientSig)
         self.bth = BTH(hn, hn.hidUserRoot)
@@ -1085,17 +1084,23 @@ class TCROWID:
         else:  # unicode (4)
             self.dwRowIndex = panutils.unpack_integer('I', bth_data.data)
 
+class TCOffset(IntEnum):
+    """
+    Index   Name    Description
+    0       TCI_4b  Ending offset of 8- and 4-byte data value group.
+    1       TCI_2b  Ending offset of 2-byte data value group.
+    2       TCI_1b  Ending offset of 1-byte data value group.
+    3       TCI_bm  Ending offset of the Cell Existence Block.
+    """
+
+    TCI_4b = 0
+    TCI_2b = 1
+    TCI_1b = 2
+    TCI_bm = 3
 
 class TC:  # Table Context
 
-    TCI_4b: int = 0
-    TCI_2b: int = 1
-    TCI_1b: int = 2
-    TCI_bm: int = 3
-
     hn: HN
-    bType: int
-    cCols: int
     hnidRows: Union[HID, NID]
     hidRowIndex: HID
     rgib: tuple[int, int, int, int]
@@ -1107,14 +1112,14 @@ class TC:  # Table Context
     def __init__(self, hn: HN) -> None:
 
         self.hn = hn
-        if hn.bClientSig != HN.bTypeTC:
+        if hn.bClientSig != HNType.TypeTC:
             raise PANHuntException(
                 'Invalid HN bClientSig, not bTypeTC, is %s' % hn.bClientSig)
         tcinfo_bytes: bytes = hn.get_hid_data(hn.hidUserRoot)
-        self.bType, self.cCols = struct.unpack('BB', tcinfo_bytes[:2])
-        if self.bType != HN.bTypeTC:
+        bType, cCols = struct.unpack('BB', tcinfo_bytes[:2])
+        if bType != HNType.TypeTC:
             raise PANHuntException(
-                'Invalid TCINFO bType, not bTypeTC, is %s' % self.bType)
+                'Invalid TCINFO bType, not bTypeTC, is %s' % bType)
         self.rgib = struct.unpack('HHHH', tcinfo_bytes[2:10])    # type: ignore
         hidRowIndexBytes, hnidRowsBytes, hidIndexBytes = struct.unpack(
             '4s4s4s', tcinfo_bytes[10:22])
@@ -1125,7 +1130,7 @@ class TC:  # Table Context
         else:
             self.hnidRows = NID(hnidRowsBytes)
         self.rgTCOLDESC = []
-        for i in range(self.cCols):
+        for i in range(cCols):
             self.rgTCOLDESC.append(
                 TCOLDESC(tcinfo_bytes[22 + i * 8:22 + (i + 1) * 8]))
 
@@ -1156,7 +1161,7 @@ class TC:  # Table Context
             else:  # unicode
                 size_BlockTrailer = 16
 
-            row_size: int = self.rgib[TC.TCI_bm]
+            row_size: int = self.rgib[TCOffset.TCI_bm]
             RowsPerBlock: int = int(math.floor(
                 (8192.0 - size_BlockTrailer) / row_size))
 
@@ -1185,7 +1190,7 @@ class TC:  # Table Context
                 row_bytes: bytes = row_matrix_data[BlockIndex][RowIndex *
                                                                row_size:(RowIndex + 1) * row_size]
                 dwRowID: int = panutils.unpack_integer('I', row_bytes[:4])
-                rgbCEB: bytes = row_bytes[self.rgib[TC.TCI_1b]:]
+                rgbCEB: bytes = row_bytes[self.rgib[TCOffset.TCI_1b]:]
 
                 rowvals: dict[int, _ValueType] = {}
                 for tcoldesc in self.rgTCOLDESC:
@@ -1215,7 +1220,7 @@ class TC:  # Table Context
 
         if not ptype.is_variable and not ptype.is_multi:
             if ptype.byte_count <= 8:
-                return ptype.value(data_bytes)
+                return ptype.value(DATA_bytes)
 
             hid = HID(data_bytes)
             return ptype.value(self.hn.get_hid_data(hid))
