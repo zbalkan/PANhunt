@@ -2,7 +2,7 @@ from typing import Optional, Type
 
 from archive import Archive, GzipArchive, TarArchive, XzArchive, ZipArchive
 from enums import FileTypeEnum
-from scanner import PlainTextFileScanner, EmlScanner, MboxScanner, MsgScanner, PdfScanner, PstScanner, ScannerBase
+from scanner import EmlScanner, MboxScanner, MsgScanner, PdfScanner, PlainTextFileScanner, PstScanner, ScannerBase
 
 # This dictionary is defined at the module level to ensure that only one instance
 # of internal_map exists throughout the program's runtime. This prevents unnecessary
@@ -74,6 +74,8 @@ def __get_filetype(mime_type_text: str, extension: str) -> FileTypeEnum:
         if mime_subtype in ["octet-stream"]:
             if extension in [".mbox"]:
                 return FileTypeEnum.Mbox
+            if extension in [".pst"]:
+                return FileTypeEnum.MsPst
             else:
                 return FileTypeEnum.Unknown
         elif mime_subtype in ['vnd.openxmlformats-officedocument.wordprocessingml.document']:

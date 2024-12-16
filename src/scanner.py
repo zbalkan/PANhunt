@@ -16,6 +16,8 @@ from pan import PAN
 ''' If file size is 30MB or bigger, read line by line for better memory management '''
 BLOCK_SIZE: int = 31_457_280  # 30MB
 
+MIN_PAN_LENGTH = 15
+
 
 class ScannerBase(ABC):
 
@@ -32,18 +34,24 @@ class PlainTextFileScanner(ScannerBase):
 
         text: str
         if job.payload:
+            # Nested attachments may have placeholder data hat is just bytes
+            # It is better to fall back to utf8 encoding in such cases
+            if encoding == 'binary':
+                encoding = 'utf8'
 
-            before = len(job.payload)
             text = job.payload.decode(
                 encoding=encoding, errors='backslashreplace')
-            after = len(text)
+
+            if len(text) < MIN_PAN_LENGTH:
+                return []
+
             finder = PanFinder()
             matches.extend(finder.find(text))
         else:
             s: os.stat_result = os.stat(path=job.abspath)
             file_size: int = s.st_size
 
-            if file_size == 0:
+            if file_size < MIN_PAN_LENGTH:
                 return []
 
             if 0 < file_size < BLOCK_SIZE:
@@ -164,6 +172,7 @@ class PstScanner(ScannerBase):
         matches: list[PAN] = []
 
         if self.pst.header.validPST:
+            pst_path: str = os.path.abspath(job.abspath)
             for folder in self.pst.folder_generator():
                 for message in self.pst.message_generator(folder=folder):
                     if message.Subject:
@@ -182,15 +191,16 @@ class PstScanner(ScannerBase):
                             matches.extend(body_matches)
 
                     if message.HasAttachments:
+                        basename = ':'.join([pst_path, message_path])
                         for _, subattachment in enumerate(message.subattachments):
                             if subattachment.Filename:
                                 att: Optional[pstAttachment] = message.get_attachment(
                                     subattachment=subattachment)
-                                if att:
+                                if att and att.Filename:
                                     # Create a job for the attachment and add it to the JobQueue
                                     job = Job(
                                         basename=att.Filename,  # Use the attachment filename
-                                        dirname=job.basename,  # The parent filename
+                                        dirname=basename,  # The parent filename
                                         payload=att.BinaryData  # Pass the binary content directly
                                     )
                                     JobQueue().enqueue(job)
