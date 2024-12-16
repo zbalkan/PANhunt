@@ -143,16 +143,19 @@ class BREF:
         return '%s, ib: %s' % (self.bid, hex(self.ib))
 
 
+class PageType(IntEnum):
+    BBT = 0x80
+    NBT = 0x81
+    FMap = 0x82
+    PMap = 0x83
+    AMap = 0x84
+    FPMap = 0x85
+    DL = 0x86
+
+
 class Page:
 
     PAGE_SIZE = 512
-    ptypeBBT = 0x80
-    ptypeNBT = 0x81
-    ptypeFMap = 0x82
-    ptypePMap = 0x83
-    ptypeAMap = 0x84
-    ptypeFPMap = 0x85
-    ptypeDL = 0x86
 
     ptype: int
     ptypeRepeat: int
@@ -191,7 +194,7 @@ class Page:
         self.bid = bid
         self.dwCRC = dwCRC
 
-        if self.ptype < Page.ptypeBBT or self.ptype > Page.ptypeDL:
+        if self.ptype < PageType.BBT or self.ptype > PageType.DL:
             raise PANHuntException('Invalid Page Type %s ' %
                                    hex(self.ptype))
         if self.ptype != self.ptypeRepeat:
@@ -199,7 +202,7 @@ class Page:
                 hex(self.ptype), hex(self.ptypeRepeat)))
 
         entry_type: Union[Type[BBTENTRY], Type[NBTENTRY], Type[BTENTRY]]
-        if self.ptype in (Page.ptypeBBT, Page.ptypeNBT):
+        if self.ptype in (PageType.BBT, PageType.NBT):
             cEnt: int
             cEntMax: int
             cbEnt: int
@@ -222,9 +225,9 @@ class Page:
             self.cLevel = cLevel
 
             if self.cLevel == 0:
-                if self.ptype == Page.ptypeBBT:
+                if self.ptype == PageType.BBT:
                     entry_type = BBTENTRY
-                else:  # ptypeNBT
+                else:  # type NBT
                     entry_type = NBTENTRY
                     entry_size = entry_size + entry_size // 3
             else:  # BTENTRY
