@@ -651,7 +651,12 @@ class HN:
     bTypeBTH: int = 0xB5
     bTypePC: int = 0xBC
 
-    nbt_entry: NBTENTRY
+    bid_sub: Optional[BID]  = None
+
+    # While it is not defined in the spec,
+    # BID data and BID sub nodes are needed to enumerate the sub nodes
+    # BID comes from a NBTENTRY or a SLENTRY object
+    node_entry: Union[NBTENTRY, SLENTRY]
     data_sections: list[bytes]
     ltp: 'LTP'
     hnpagemaps: list[HNPAGEMAP]
@@ -661,10 +666,10 @@ class HN:
     hidUserRoot: HID
     rgbFillLevel: int
 
-    def __init__(self, nbt_entry: NBTENTRY, ltp: 'LTP', data_sections: list[bytes]) -> None:
+    def __init__(self, node_entry: Union[NBTENTRY, SLENTRY], ltp: 'LTP', data_sections: list[bytes]) -> None:
         """data_sections = list of data sections from blocks"""
 
-        self.nbt_entry = nbt_entry
+        self.node_entry = node_entry
         self.data_sections = data_sections
         self.ltp = ltp
         self.hnpagemaps = []
@@ -692,9 +697,8 @@ class HN:
             self.hnpagemaps.append(HNPAGEMAP(section_bytes[ibHnpm:]))
 
         # subnode SLENTRYs
-        self.subnodes = None
-        if self.nbt_entry.bidSub.bid != 0:
-            self.subnodes = self.ltp.nbd.fetch_subnodes(self.nbt_entry.bidSub)
+        if node_entry.bidSub.bid != 0:
+            self.subnodes = self.ltp.nbd.fetch_subnodes(node_entry.bidSub)
 
     def get_hid_data(self, hid: HID) -> bytes:
 
@@ -705,7 +709,7 @@ class HN:
 
     def __repr__(self) -> str:
 
-        return 'HN: %s, Blocks: %s' % (self.nbt_entry, len(self.data_sections))
+        return 'HN: %s, Blocks: %s' % (self.node_entry, len(self.data_sections))
 
 
 class BTHData:
@@ -1309,7 +1313,6 @@ class LTP:
 
         block_data_list: list[bytes] = self.nbd.fetch_all_block_data(
             slentry.bidData)
-        # TODO: Solve HN with SLENTRY parameter
         hn: HN = HN(slentry, self, block_data_list)
 
         return PC(hn)
@@ -1327,7 +1330,6 @@ class LTP:
 
         block_data_list: list[bytes] = self.nbd.fetch_all_block_data(
             slentry.bidData)
-        # TODO: Solve HN with SLENTRY parameter
         hn: HN = HN(slentry, self, block_data_list)
 
         return TC(hn)
@@ -1594,7 +1596,6 @@ class Message:
 
             block_data_list: list[bytes] = nbd.fetch_all_block_data(
                 subnode.bidData)
-            # TODO: Solve HN with SLENTRY parameter
             hn: HN = HN(subnode, ltp, block_data_list)
             self.pc = PC(hn)
         else:
