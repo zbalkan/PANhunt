@@ -14,7 +14,6 @@ import logging
 import os
 import platform
 import sys
-import time
 from datetime import datetime
 from typing import Final, Optional
 
@@ -72,18 +71,14 @@ def display_report(report: Report) -> None:
         for pan in sf.matches:
             pan_list += f"{pan}{pan_sep}"
 
-        print(colorama.Fore.YELLOW +
-              panutils.unicode_to_ascii(pan_list))
+        print(colorama.Fore.YELLOW + panutils.unicode_to_ascii(pan_list))
 
     if len(report.interesting_files) > 0:
-        print(colorama.Fore.RED +
-              'Interesting Files to check separately, probably a permission or file size issue:')
+        print(colorama.Fore.RED + 'Interesting Files to check separately, probably a permission or file size issue:')
         for interesting in report.interesting_files:
-            print(colorama.Fore.YELLOW + '\t- ' +
-                  f'{panutils.unicode_to_ascii(interesting.abspath)} ({panutils.unicode_to_ascii(panutils.size_friendly(interesting.size))})')
+            print(colorama.Fore.YELLOW + '\t- ' + f'{panutils.unicode_to_ascii(interesting.abspath)} ({panutils.unicode_to_ascii(panutils.size_friendly(interesting.size))})')
 
-    print(colorama.Fore.WHITE +
-          f'Report written to {panutils.unicode_to_ascii(PANHuntConfiguration().get_report_path())}')
+    print(colorama.Fore.WHITE + f'Report written to {panutils.unicode_to_ascii(PANHuntConfiguration().get_report_path())}')
 
 
 def main() -> None:
@@ -94,7 +89,7 @@ def main() -> None:
                         datefmt="%Y-%m-%dT%H:%M:%S%z",
                         level=logging.DEBUG)
 
-    excepthook = logging.error
+    sys.excepthook = logging.error
     logging.info('Starting')
 
     colorama.init()
@@ -122,7 +117,6 @@ def main() -> None:
     args: argparse.Namespace = arg_parser.parse_args()
 
     config_file: Optional[str] = args.config
-
 
     # We need these as flags
     json_dir: Optional[str]

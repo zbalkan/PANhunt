@@ -55,8 +55,8 @@ class Dispatcher:
                             else:
                                 self.failures.append(res)
                     finally:
-                        job.payload = None # Clear the payload to save memory ASAP
-                        job = None # Clear the job to save memory ASAP
+                        job.payload = None  # Clear the payload to save memory ASAP
+                        job = None  # Clear the job to save memory ASAP
                         # Mark the job as completed
                         job_queue.complete_job()
             else:
@@ -77,7 +77,7 @@ class Dispatcher:
             doc = Finding(basename=job.basename, dirname=job.dirname,
                           payload=job.payload, mimetype='Unknown', encoding='Unknown',
                           err=PANHuntException(
-                              f'File size {panutils.size_friendly(size=size)} over limit of {panutils.size_friendly(size=self.__size_limit)} for checking for file \"{job.basename}\"')) # type: ignore
+                              f'File size {panutils.size_friendly(size=size)} over limit of {panutils.size_friendly(size=self.__size_limit)} for checking for file \"{job.basename}\"'))  # type: ignore
             return doc
 
         mime_type, encoding, error = panutils.get_mimetype(
@@ -98,7 +98,7 @@ class Dispatcher:
                 children, e = archive.get_children()
                 if e:
                     doc = Finding(basename=job.basename, dirname=job.dirname,
-                                  payload=job.payload, mimetype=mime_type, encoding=encoding, err=e) # type: ignore
+                                  payload=job.payload, mimetype=mime_type, encoding=encoding, err=e)  # type: ignore
                     return doc
                 else:
                     for child in children:
@@ -134,6 +134,6 @@ class Dispatcher:
                 finding.matches = matches
         except Exception as ex:
             finding = Finding(
-                basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mimetype, encoding=encoding, err=ex) # type: ignore
+                basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mimetype, encoding=encoding, err=ex)  # type: ignore
         finally:
             return finding

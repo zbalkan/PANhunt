@@ -14,7 +14,6 @@ class Job:
     payload: Optional[bytes]
     abspath: str
 
-
     def __init__(self, basename: str, dirname: str, payload: Optional[bytes] = None) -> None:
         self.basename = basename
         self.dirname = dirname
@@ -94,7 +93,7 @@ class JobQueue:
                 f"Insufficient memory to process job: {job.abspath}")
 
         sleep_time = 0.0
-        while size >= psutil.virtual_memory().free / 2: # We want to leave a buffer of free memory
+        while size >= psutil.virtual_memory().free / 2:  # We want to leave a buffer of free memory
             sleep_time += 0.1
             if (sleep_time >= self._timeout):
                 raise MemoryError(

@@ -55,7 +55,7 @@ def __get_mime_data_from_buffer(payload: bytes) -> tuple[str, str]:
 
 def __get_mime_data_from_file(path: str) -> tuple[str, str]:
     m = magic.Magic(mime=True, mime_encoding=True)
-    mime_data: list[str] = m.from_file(filename=path).split(';') # type: ignore
+    mime_data: list[str] = m.from_file(filename=path).split(';')  # type: ignore
     mime_type: str = mime_data[0].strip().lower()
     encoding: str = mime_data[1].replace(
         ' charset=', '').strip().lower()
@@ -182,7 +182,7 @@ def memoryview_to_bytes(mem_view: memoryview) -> Optional[bytes]:
 
 def get_compressed_filename(gf: GzipFile) -> str:
     gf.seek(0)
-    magic: bytes = gf.read(2)
+    _ = gf.read(2)  # skip magic bytes
     method, flag = struct.unpack("<BB", gf.read(2))
 
     if not flag & FNAME:
