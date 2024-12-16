@@ -154,7 +154,8 @@ def main() -> None:
                                          report_dir=report_dir,
                                          json_dir=json_dir,
                                          excluded_directories_string=excluded_directories_string,
-                                         excluded_pans_string=excluded_pans_string)
+                                         excluded_pans_string=excluded_pans_string,
+                                         quiet=quiet)
 
     report: Report = hunt_pans()
 
