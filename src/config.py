@@ -57,7 +57,8 @@ class PANHuntConfiguration:
                   excluded_directories_string: Optional[str] = None,
                   excluded_pans_string: Optional[str] = None,
                   json_dir: Optional[str] = None,
-                  size_limit: Optional[int] = None) -> None:
+                  size_limit: Optional[int] = None,
+                  quiet: Optional[bool] = None) -> None:
         """If any parameter is provided, it overwrites the previous value
         """
 
@@ -67,7 +68,8 @@ class PANHuntConfiguration:
                       json_dir=json_dir,
                       excluded_directories_string=excluded_directories_string,
                       excluded_pans_string=excluded_pans_string,
-                      size_limit=size_limit)
+                      size_limit=size_limit,
+                      quiet=quiet)
 
     def with_file(self, config_file: str) -> None:
         """If a config file provided and it has specific values, they overwrite the previous values
@@ -104,7 +106,8 @@ class PANHuntConfiguration:
                       json_dir=json_dir,
                       excluded_directories_string=excluded_directories_string,
                       excluded_pans_string=excluded_pans_string,
-                      size_limit=size_limit)
+                      size_limit=size_limit,
+                      quiet=quiet)
 
     def get_json_path(self) -> Optional[str]:
         if self.json_dir:
@@ -160,7 +163,8 @@ class PANHuntConfiguration:
                  json_dir: Optional[str],
                  excluded_directories_string: Optional[str],
                  excluded_pans_string: Optional[str],
-                 size_limit: Optional[int]) -> None:
+                 size_limit: Optional[int],
+                 quiet: Optional[bool] = False) -> None:
 
         if search_dir and search_dir != 'None':
             self.search_dir = os.path.abspath(path=search_dir)
@@ -189,3 +193,6 @@ class PANHuntConfiguration:
 
         if size_limit:
             self.size_limit = size_limit
+
+        if quiet:
+            self.quiet = quiet
