@@ -15,6 +15,7 @@ import os
 import platform
 import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Final, Optional
 
 import colorama
@@ -98,17 +99,17 @@ def main() -> None:
     arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog='panhunt', description=f'PAN Hunt v{APP_VERSION}: search directories and sub directories for documents containing PANs.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument(
-        '-s', dest='search_dir', help='base directory to search in')
+        '-s', dest='search_dir', type=Path, help='base directory to search in')
     arg_parser.add_argument(
-        '-f', dest='file_path', help='File path for single file scan')
-    arg_parser.add_argument('-x', dest='exclude_dirs',
+        '-f', dest='file_path', type=Path, help='File path for single file scan')
+    arg_parser.add_argument('-x', dest='exclude_dirs', type=Path,
                             help='directories to exclude from the search (use absolute paths)')
     arg_parser.add_argument(
-        '-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
+        '-o', dest='report_dir', type=Path, help='Report file directory for TXT formatted PAN report', default='./')
     arg_parser.add_argument(
-        '-j', dest='json_dir', help='Report file directory for JSON formatted PAN report', default=None)
+        '-j', dest='json_dir', type=Path, help='Report file directory for JSON formatted PAN report', default=None)
     arg_parser.add_argument(
-        '-C', dest='config', help='configuration file to use')
+        '-C', dest='config', type=Path, help='configuration file to use')
     arg_parser.add_argument(
         '-X', dest='exclude_pan', help='PAN to exclude from search')
     arg_parser.add_argument('-q', dest='quiet', action='store_true',
