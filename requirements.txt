@@ -1,7 +1,7 @@
 cffi==1.17.1
 charset-normalizer==3.4.0
 colorama==0.4.6
-cryptography==44.0.0
+cryptography==44.0.2
 pdfminer.six==20240706
 psutil==7.0.0
 pycparser==2.22
