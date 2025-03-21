@@ -113,7 +113,7 @@ class GzipArchive(Archive):
 
         if not reached_eof:
             return [], PANHuntException(
-                f'File size limit ({PANHuntConfiguration().size_limit}) reached during decompressing. Skipping file.')
+                f'File size limit ({panutils.size_friendly(PANHuntConfiguration().size_limit)}) reached during decompressing. Skipping file.')
         else:
             job = Job(
                 basename=compressed_filename, dirname=self.path, payload=payload)
@@ -150,7 +150,7 @@ class XzArchive(Archive):
 
         if not reached_eof:
             return [], PANHuntException(
-                f'File size limit ({PANHuntConfiguration().size_limit}) reached during decompressing. Skipping file.')
+                f'File size limit ({panutils.size_friendly(PANHuntConfiguration().size_limit)}) reached during decompressing. Skipping file.')
         else:
             job = Job(
                 basename=compressed_filename, dirname=self.path, payload=payload)

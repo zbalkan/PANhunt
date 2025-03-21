@@ -148,7 +148,7 @@ class PANHuntConfiguration:
             return int(s)
         return None
 
-    @ staticmethod
+    @staticmethod
     def __try_parse_bool(config_from_file: dict, property: str) -> Optional[bool]:
         s: Optional[str] = PANHuntConfiguration.__try_parse(
             config_from_file, property)
