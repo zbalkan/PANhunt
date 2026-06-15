@@ -1,5 +1,4 @@
 #! /usr/bin/env python3
-# -*- coding: UTF-8 -*-
 #
 # Copyright (c) 2014, Dionach Ltd. All rights reserved. See LICENSE file.
 #
@@ -17,13 +16,12 @@ from typing import Final
 
 import colorama
 
-import panutils
-from config import ScanConfiguration
-from presenter import CliPresenter
-from service import PanHuntService
+from . import panutils
+from .config import ScanConfiguration
+from .presenter import CliPresenter
+from .service import PanHuntService
 
 APP_NAME: Final[str] = 'PANhunt'
-APP_VERSION: Final[str] = '2.0'
 
 
 def main() -> None:
@@ -41,7 +39,7 @@ def main() -> None:
 
     arg_parser = argparse.ArgumentParser(
         prog='panhunt',
-        description=f'PAN Hunt v{APP_VERSION}: search directories and sub directories for documents containing PANs.',
+        description='PANHunt : search directories and sub directories for documents containing PANs.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('-s', dest='search_dir', help='base directory to search in')
     arg_parser.add_argument('-f', dest='file_path', help='File path for single file scan')

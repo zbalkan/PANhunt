@@ -4,16 +4,16 @@ import threading
 from io import IOBase
 from typing import Optional
 
-import enums
-import panutils
-from archive import Archive
-from buffer import JobBuffer
-from config import ScanConfiguration
-from exceptions import PANHuntException
-from factory import ArchiveFactory, ScannerFactory
-from finding import Finding
-from job import Job
-from pan import PAN
+from . import enums
+from . import panutils
+from .archive import Archive
+from .buffer import JobBuffer
+from .config import ScanConfiguration
+from .exceptions import PANHuntException
+from .factory import ArchiveFactory, ScannerFactory
+from .finding import Finding
+from .job import Job
+from .pan import PAN
 
 
 class Dispatcher:

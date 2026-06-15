@@ -1,3 +1,6 @@
+# PANhunt runtime dependencies with pinned versions for reproducible installs.
+# For development only; end users should use: pip install panhunt
+# These versions are validated against pyproject.toml constraints before each release.
 cffi==2.0.0
 charset-normalizer==3.4.7
 colorama==0.4.6

@@ -29,27 +29,28 @@ PANhunt follows a layered, dependency-injected architecture:
 
 The service and presenter layers are fully decoupled, making it straightforward to embed PANhunt in a larger application or swap the CLI presenter for a different UI.
 
-## Build
+## Install and package
 
-PANhunt requires Python **3.9** or later.
-
-Install runtime dependencies:
+PANhunt requires Python 3.9 or later. For normal usage, install the package and run the console script:
 
 ```shell
-pip install -r requirements.txt
+pipx install panhunt
+panhunt --help
 ```
 
-Install development dependencies (includes `mypy` and `pytest`):
+For local development, install the project with its development extras from the repository root:
 
 ```shell
-pip install -r requirements.dev.txt
+pip install -e .[dev]
+pytest
 ```
 
-## Build executable
+To build distribution artifacts for PyPI, run:
 
-To compile as a standalone executable, [PyInstaller](https://pypi.python.org/pypi/PyInstaller) is required.
-
-You are advised to use a virtual environment. Update the path in `build.sh` (Linux) or `build.ps1` (Windows) and run the script. The scripts clean the build cache, include the original icon, and bundle all dependencies. The example assumes a virtual environment in a folder called `.venv`.
+```shell
+python -m build
+python -m twine check dist/*
+```
 
 ## Testing
 
@@ -66,7 +67,7 @@ Current coverage: **135 tests at ~81% coverage**.
 ```shell
 usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
 
-PAN Hunt: search directories and sub directories for documents containing PANs.
+PANHunt : search directories and sub directories for documents containing PANs.
 
 options:
   -h, --help       show this help message and exit

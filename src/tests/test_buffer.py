@@ -5,8 +5,8 @@ import time
 
 import pytest
 
-from buffer import InMemoryJobBuffer
-from job import Job
+from panhunt.buffer import InMemoryJobBuffer
+from panhunt.job import Job
 
 
 def _make_job(name: str = 'test.txt') -> Job:

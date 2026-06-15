@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from config import ScanConfiguration
-from finding import Finding
-from models import ScanResult
-from pan import PAN
-from report import ReportGenerator
+from panhunt.config import ScanConfiguration
+from panhunt.finding import Finding
+from panhunt.models import ScanResult
+from panhunt.pan import PAN
+from panhunt.report import ReportGenerator
 
 
 @pytest.fixture

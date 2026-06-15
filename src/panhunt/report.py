@@ -1,8 +1,8 @@
 import platform
 import sys
 
-import panutils
-from models import ScanResult
+from . import panutils
+from .models import ScanResult
 
 
 class ReportGenerator:

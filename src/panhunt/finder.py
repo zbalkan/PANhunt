@@ -1,8 +1,8 @@
 from re import Pattern
 
-from config import ScanConfiguration
-from pan import PAN
-from patterns import CardPatterns
+from .config import ScanConfiguration
+from .pan import PAN
+from .patterns import CardPatterns
 
 
 class PanFinder:

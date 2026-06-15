@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 from typing import Optional
 
-import panutils
-from enums import ScanStatusEnum
-from pan import PAN
+from . import panutils
+from .enums import ScanStatusEnum
+from .pan import PAN
 
 
 class Finding:

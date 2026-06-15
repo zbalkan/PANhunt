@@ -2,7 +2,7 @@
 
 import pytest
 
-from pan import PAN
+from panhunt.pan import PAN
 
 
 class TestLuhnChecksum:

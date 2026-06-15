@@ -2,11 +2,11 @@ import logging
 import os
 import time
 
-from buffer import JobBuffer
-from config import ScanConfiguration
-from dispatcher import Dispatcher
-from finding import Finding
-from job import Job
+from .buffer import JobBuffer
+from .config import ScanConfiguration
+from .dispatcher import Dispatcher
+from .finding import Finding
+from .job import Job
 
 
 class Hunter:

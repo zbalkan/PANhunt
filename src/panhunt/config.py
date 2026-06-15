@@ -3,7 +3,7 @@ import os
 import time
 from typing import Optional
 
-import panutils
+from . import panutils
 
 
 class ScanConfiguration:

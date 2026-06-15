@@ -5,8 +5,8 @@ import tempfile
 
 import pytest
 
-from config import ScanConfiguration
-from service import PanHuntService
+from panhunt.config import ScanConfiguration
+from panhunt.service import PanHuntService
 
 
 class TestScanCleanFile:
@@ -80,6 +80,6 @@ class TestScanResultStructure:
             f.write('4111111111111111\n')
         config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=True)
         result = PanHuntService().scan(config)
-        from finding import Finding
+        from panhunt.finding import Finding
         for f in result.matched_files:
             assert isinstance(f, Finding)

@@ -15,9 +15,9 @@ from datetime import datetime, timedelta
 from io import BufferedReader
 from typing import Literal, Optional, Union
 
-import panutils
-from enums import PropIdEnum, PTypeEnum
-from exceptions import PANHuntException
+from .. import panutils
+from ..enums import PropIdEnum, PTypeEnum
+from ..exceptions import PANHuntException
 
 _FilePathOrFileObject = Union[BufferedReader, int, str, bytes, os.PathLike[
     str], os.PathLike[bytes]]

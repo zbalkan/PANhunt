@@ -5,18 +5,18 @@ from abc import ABC, abstractmethod
 from io import IOBase
 from typing import Optional
 
-from buffer import JobBuffer
-from config import ScanConfiguration
-from constants import BLOCK_SIZE_BYTES, MIN_PAN_LENGTH, STREAM_CHUNK_SIZE_BYTES
-from finder import PanFinder
-from formats.eml import Eml
-from formats.mbox import Mbox
-from formats.msmsg import MSMSG
-from formats.pdf import Pdf
-from formats.pst import PST
-from formats.pst import Attachment as PstAttachment
-from job import Job
-from pan import PAN
+from .buffer import JobBuffer
+from .config import ScanConfiguration
+from .constants import BLOCK_SIZE_BYTES, MIN_PAN_LENGTH, STREAM_CHUNK_SIZE_BYTES
+from .finder import PanFinder
+from .formats.eml import Eml
+from .formats.mbox import Mbox
+from .formats.msmsg import MSMSG
+from .formats.pdf import Pdf
+from .formats.pst import PST
+from .formats.pst import Attachment as PstAttachment
+from .job import Job
+from .pan import PAN
 
 
 class ScannerBase(ABC):
