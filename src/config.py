@@ -182,7 +182,7 @@ class PANHuntConfiguration:
             self.excluded_directories = [exc_dir.lower()
                                          for exc_dir in excluded_directories_string.split(',')]
 
-        if excluded_pans_string and excluded_pans_string != excluded_pans_string and len(excluded_pans_string) > 0:
+        if excluded_pans_string and excluded_pans_string != 'None':
             self.excluded_pans = excluded_pans_string.split(',')
 
         if json_dir:
