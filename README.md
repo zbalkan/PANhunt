@@ -6,40 +6,60 @@
 
 ## Introduction
 
-```shell
-NOTE: This is a fork of original PANHunt as an effort to migrate to Python 3.
-It is heavily modified and refactored. There may be issues with functionality. Do not use in production!
+> **Note:** This is a heavily modified fork of the original PANHunt, migrated to Python 3 and significantly refactored. The codebase has been restructured with a layered architecture to improve modularity, testability, and maintainability.
 
-This fork includes a full architectural change to allow extending the scanning capabilities by providing a new scanner. While it is more modular and has more file searching capabilities, this also means there is a performance impact for the sake of accuracy.
-```
-
-PANhunt is a tool that can be used to search drives for credit card numbers (PANs). This is useful for checking PCI DSS scope accuracy. It's designed to be a simple, standalone tool that can be run from a USB stick. PANhunt includes a python PST file parser.
+PANhunt is a tool that can be used to search drives for credit card numbers (PANs). This is useful for checking PCI DSS scope accuracy. It's designed to be a simple, standalone tool that can be run from a USB stick. PANhunt includes a Python PST file parser.
 
 ## Function
 
-The script uses regular expressions to look for Visa, MasterCard or AMEX credit card numbers in document files. Zip files are recursed to look for document files. PST and MSG files are parsed and emails and attachments searched in.
+The script uses regular expressions to look for Visa, MasterCard or AMEX credit card numbers in document files. Archive files (ZIP, TAR, GZ, XZ) are recursed to look for document files. PST and MSG files are parsed and emails and attachments searched in.
 
 The script will list but does not yet search Access databases.
 
+## Architecture
+
+PANhunt follows a layered, dependency-injected architecture:
+
+- **`PanHuntService`** — orchestrates a full scan session with no UI concerns
+- **`CliPresenter`** — handles all terminal output and report file writing
+- **`Hunter`** / **`Dispatcher`** — file-system traversal and concurrent scanning
+- **`ScannerFactory`** / **`ArchiveFactory`** — produce scanner and archive-handler instances for each file type; custom scanners can be registered at runtime
+- **`ScanConfiguration`** — immutable configuration object created once and injected into all components
+- **`ScanResult`** / **`Finding`** — data-transfer objects carrying structured output
+
+The service and presenter layers are fully decoupled, making it straightforward to embed PANhunt in a larger application or swap the CLI presenter for a different UI.
+
 ## Build
 
-PANhunt is a Python script that can be easily converted to a standalone Windows executable using PyInstaller.
+PANhunt requires Python **3.9** or later.
 
-panhunt.py requires:
+Install runtime dependencies:
 
-- Python 3.9
+```shell
+pip install -r requirements.txt
+```
 
-You can use `pip install -r requirements.txt` for usage and `pip install -r requirements.dev.txt` for development.
+Install development dependencies (includes `mypy` and `pytest`):
+
+```shell
+pip install -r requirements.dev.txt
+```
 
 ## Build executable
 
-To compile as an executable, it requires:
+To compile as a standalone executable, [PyInstaller](https://pypi.python.org/pypi/PyInstaller) is required.
 
-- [PyInstaller](https://pypi.python.org/pypi/PyInstaller)
+You are advised to use a virtual environment. Update the path in `build.sh` (Linux) or `build.ps1` (Windows) and run the script. The scripts clean the build cache, include the original icon, and bundle all dependencies. The example assumes a virtual environment in a folder called `.venv`.
 
-In order to create panhunt as a standalone executable run (works in both Linux and Windows):
+## Testing
 
-However, you are advised  use a virtual environment. Update the path on the `build.sh` or `build.ps1` file and run. With the short scripts, you can clean the cache, include the original icon and the dependencies (works in both Linux and Windows). The example uses a virtual environment in a folder called `.venv`.
+The test suite uses `pytest` and covers the core scanning logic, configuration, factories, service layer, and presenter.
+
+```shell
+pytest src/tests/
+```
+
+Current coverage: **135 tests at ~81% coverage**.
 
 ## Usage
 
@@ -60,7 +80,7 @@ options:
   -q               No terminal output (default: False)
 ```
 
-Simply running it with no arguments will search the `C:\` drive on Windows and filesystem under `/` on Linux, for documents containing PANs, and output to panhunt_<timestamp>.txt.
+Simply running it with no arguments will search the `C:\` drive on Windows and the filesystem under `/` on Linux, for documents containing PANs, and output to `panhunt_<timestamp>.report`.
 
 ## Example Output
 
@@ -130,11 +150,6 @@ FOUND PANs: test with attachments.msg\test.txt (96.00B)
         Visa:401288******1881
         AMEX:371449*****8431
 
-FOUND PANs: success.tar\test.rtf (40.79KB)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
 FOUND PANs: D:\PANhunt\test\office\test.docx\word/document.xml (3.50KB)
         Mastercard:510510******5100
         Visa:401288******1881
@@ -170,66 +185,6 @@ FOUND PANs: D:\PANhunt\test\zip\test.zip\test.txt (96.00B)
         Visa:401288******1881
         AMEX:371449*****8431
 
-FOUND PANs: test.txt\test.docx\word/document.xml (3.50KB)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.docx\test.pptx\ppt/slides/slide1.xml (1.68KB)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.pptx\test.txt.gz\test.txt (54.00B)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.txt.gz\test.txt.xz\test.txt (54.00B)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.txt.xz\success.tar\dir2/test.txt (96.00B)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.rtf\test.xlsx\xl/sharedStrings.xml (328.00B)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.txt\test.docx\word/document.xml (3.50KB)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.docx\test.pptx\ppt/slides/slide1.xml (1.68KB)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.pptx\test.txt.gz\test.txt (54.00B)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.txt.gz\test.txt.xz\test.txt (54.00B)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.txt.xz\success.tar\dir2/test.txt (96.00B)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
-FOUND PANs: test.rtf\test.xlsx\xl/sharedStrings.xml (328.00B)
-        Mastercard:510510******5100
-        Visa:401288******1881
-        AMEX:371449*****8431
-
 FOUND PANs: D:\PANhunt\test\tar\success.tar.gz\success.tar\dir2/test.txt (54.00B)
         Mastercard:510510******5100
         Visa:401288******1881
@@ -245,5 +200,17 @@ Report written to D:\PANhunt\out\panhunt_2024-09-14-221629.report
 
 ## Configuration
 
-The script allows for a configuration to be written that will default the application with settings such that you don't need to
-repeatedly specify exclude/include paths or the test PANs to exclude.
+The script allows for a configuration file that sets default values, so you don't need to repeatedly specify paths or PANs to exclude on the command line.
+
+Example `config.ini`:
+
+```ini
+[DEFAULT]
+search = /data
+exclude = /data/logs,/data/tmp
+outfile = /var/reports
+excludepans = 4111111111111111
+quiet = false
+```
+
+Pass the config file with `-C config.ini`.
