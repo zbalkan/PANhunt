@@ -141,21 +141,14 @@ def main() -> None:
             if response.lower() != 'y':
                 sys.exit()
 
-        search_dir = str(args.search_dir)
-        file_path = str(args.file_path)
-        report_dir = str(args.report_dir)
-        excluded_directories_string = str(args.exclude_dirs)
-        excluded_pans_string = str(args.exclude_pan)
-        json_dir = str(args.json_dir)
-        quiet = bool(args.quiet)
-
-        PANHuntConfiguration().with_args(search_dir=search_dir,
-                                         file_path=file_path,
-                                         report_dir=report_dir,
-                                         json_dir=json_dir,
-                                         excluded_directories_string=excluded_directories_string,
-                                         excluded_pans_string=excluded_pans_string,
-                                         quiet=quiet)
+        PANHuntConfiguration().with_args(
+            search_dir=args.search_dir,
+            file_path=args.file_path,
+            report_dir=args.report_dir,
+            json_dir=args.json_dir,
+            excluded_directories_string=args.exclude_dirs,
+            excluded_pans_string=args.exclude_pan,
+            quiet=args.quiet)
 
     report: Report = hunt_pans()
 
