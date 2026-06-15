@@ -6,58 +6,53 @@ from io import IOBase
 from typing import Optional
 
 import enums
-from exceptions import PANHuntException
-import mappings
 import panutils
 from archive import Archive
-from config import PANHuntConfiguration
+from buffer import JobBuffer
+from config import ScanConfiguration
+from exceptions import PANHuntException
+from factory import ArchiveFactory, ScannerFactory
 from finding import Finding
-from job import Job, JobQueue
+from job import Job
 from pan import PAN
-from scanner import ScannerBase
 
 
 class Dispatcher:
     findings: list[Finding]
     failures: list[Finding]
 
-    __size_limit: int
     _stop_flag: bool
     __findings_lock: threading.Lock
 
-    def __init__(self) -> None:
-        self.__size_limit = PANHuntConfiguration().size_limit
+    def __init__(self, buffer: JobBuffer, config: ScanConfiguration) -> None:
+        self._buffer = buffer
+        self._config = config
+        self._scanner_factory = ScannerFactory(buffer=buffer, config=config)
         self._stop_flag = False
         self.findings = []
         self.failures = []
         self.__findings_lock = threading.Lock()
 
     def start(self) -> None:
-        """Start the dispatcher loop in a separate thread."""
         self._stop_flag = False
-        dispatch_thread = threading.Thread(
-            target=self._run_dispatch_loop, daemon=True)
+        dispatch_thread = threading.Thread(target=self._run_dispatch_loop, daemon=True)
         dispatch_thread.start()
 
     def stop(self) -> None:
-        """Stop the dispatcher loop."""
         self._stop_flag = True
 
     def get_findings(self) -> list[Finding]:
-        """Thread-safe getter for findings."""
         with self.__findings_lock:
             return list(self.findings)
 
     def get_failures(self) -> list[Finding]:
-        """Thread-safe getter for failures."""
         with self.__findings_lock:
             return list(self.failures)
 
     def _run_dispatch_loop(self) -> None:
-        job_queue = JobQueue()
-        while not self._stop_flag and not job_queue.is_finished():
-            if job_queue.has_jobs():
-                job: Optional[Job] = job_queue.dequeue()
+        while not self._stop_flag and not self._buffer.is_finished():
+            if self._buffer.has_jobs():
+                job: Optional[Job] = self._buffer.dequeue()
 
                 if job:
                     try:
@@ -72,19 +67,17 @@ class Dispatcher:
                         if job.payload and isinstance(job.payload, IOBase):
                             try:
                                 job.payload.close()
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logging.warning(f"Failed to close payload for {job.abspath}: {e}")
                         job.payload = None
                         job = None
-                        job_queue.complete_job()
+                        self._buffer.complete_job()
             else:
                 time.sleep(0.1)
 
     def _dispatch_job(self, job: Job) -> Optional[Finding]:
-
         logging.info(f"Processing job: {job.abspath}")
 
-        size: int
         if job.payload is not None:
             if isinstance(job.payload, IOBase):
                 try:
@@ -98,67 +91,70 @@ class Dispatcher:
         else:
             size = os.stat(job.abspath).st_size
 
-        if size > self.__size_limit:
-            doc = Finding(basename=job.basename, dirname=job.dirname,
-                          payload=job.payload, mimetype='Unknown', encoding='Unknown',
-                          err=PANHuntException(
-                              f'File size {panutils.size_friendly(size=size)} over limit of {panutils.size_friendly(size=self.__size_limit)} for checking for file \"{job.basename}\"'))  # type: ignore
-            return doc
+        if size > self._config.size_limit:
+            return Finding(
+                basename=job.basename, dirname=job.dirname, payload=job.payload,
+                mimetype='Unknown', encoding='Unknown',
+                err=PANHuntException(
+                    f'File size {panutils.size_friendly(size=size)} over limit of '
+                    f'{panutils.size_friendly(size=self._config.size_limit)} for file "{job.basename}"'
+                )
+            )  # type: ignore
 
-        mime_type, encoding, error = panutils.get_mimetype(
-            path=job.abspath, payload=job.payload)
+        mime_type, encoding, error = panutils.get_mimetype(path=job.abspath, payload=job.payload)
 
         if error:
-            return Finding(basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mime_type, encoding=encoding, err=error)
+            return Finding(
+                basename=job.basename, dirname=job.dirname, payload=job.payload,
+                mimetype=mime_type, encoding=encoding, err=error
+            )
 
-        archive_type: Optional[type[Archive]] = mappings.get_archive_by_file(
+        archive_type: Optional[type[Archive]] = ArchiveFactory.get_archive(
             mime_type=mime_type,
             extension=panutils.get_ext(job.basename)
         )
 
         if archive_type is not None:
-            # It's an archive, extract children and re-enqueue them as jobs
             archive = archive_type(path=job.abspath, payload=job.payload)
             try:
                 children, e = archive.get_children()
                 if e:
-                    doc = Finding(basename=job.basename, dirname=job.dirname,
-                                  payload=job.payload, mimetype=mime_type, encoding=encoding, err=e)  # type: ignore
-                    return doc
-                else:
-                    for child in children:
-                        JobQueue().enqueue(child)
-                    return None
+                    return Finding(
+                        basename=job.basename, dirname=job.dirname, payload=job.payload,
+                        mimetype=mime_type, encoding=encoding, err=e
+                    )  # type: ignore
+                for child in children:
+                    self._buffer.enqueue(child)
+                return None
             except Exception as ex:
-                doc = Finding(basename=job.basename, dirname=job.dirname,
-                              payload=job.payload, mimetype=mime_type, encoding=encoding, err=ex)  # type: ignore
-                return doc
-        else:
-            # Scan the file
-            return self._scan_file(job, mime_type, encoding)
+                return Finding(
+                    basename=job.basename, dirname=job.dirname, payload=job.payload,
+                    mimetype=mime_type, encoding=encoding, err=ex
+                )  # type: ignore
 
-    def _scan_file(self, job: Job,
-                   mimetype: str, encoding: str) -> Optional[Finding]:
-        # Scanning logic
-        scanner: Optional[type[ScannerBase]] = mappings.get_scanner_by_file(
+        return self._scan_file(job, mime_type, encoding)
+
+    def _scan_file(self, job: Job, mimetype: str, encoding: str) -> Optional[Finding]:
+        scanner_instance = self._scanner_factory.get_scanner(
             mime_type=mimetype,
             extension=panutils.get_ext(job.basename)
         )
-        if not scanner:
+        if not scanner_instance:
             return None
-
-        scanner_instance = scanner()
 
         finding = None
         try:
-            matches: list[PAN] = scanner_instance.scan(
-                job=job, encoding=encoding)
-            if matches and len(matches) > 0:
+            matches: list[PAN] = scanner_instance.scan(job=job, encoding=encoding)
+            if matches:
                 finding = Finding(
-                    basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mimetype, encoding=encoding)
+                    basename=job.basename, dirname=job.dirname, payload=job.payload,
+                    mimetype=mimetype, encoding=encoding
+                )
                 finding.matches = matches
         except Exception as ex:
             finding = Finding(
-                basename=job.basename, dirname=job.dirname, payload=job.payload, mimetype=mimetype, encoding=encoding, err=ex)  # type: ignore
+                basename=job.basename, dirname=job.dirname, payload=job.payload,
+                mimetype=mimetype, encoding=encoding, err=ex
+            )  # type: ignore
         finally:
             return finding

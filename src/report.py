@@ -1,126 +1,64 @@
-import json
-import logging
-import os
 import platform
 import sys
-import time
-from datetime import datetime, timedelta
-from typing import Optional
 
 import panutils
-from config import PANHuntConfiguration
-from finding import Finding
+from models import ScanResult
 
 
-class Report:
+class ReportGenerator:
+    """Formats a ScanResult into text or JSON. Pure logic — no file I/O."""
 
-    start: datetime
-    end: datetime
-    searched: str
-    excluded: str
-    pan_count: int
-    matched_files: list[Finding]
-    interesting_files: list[Finding]
-
-    command: str
-    timestamp: datetime
-    elapsed: timedelta
-
-    def __init__(self,
-                 matched_files: list[Finding],
-                 interesting_files: list[Finding],
-                 start: datetime,
-                 end: datetime) -> None:
-        '''excluded_dirs: list[str]'''
-        self.start = start
-        self.end = end
-        self.matched_files = matched_files
-        self.interesting_files = interesting_files
-        self.searched = PANHuntConfiguration().search_dir
-        self.excluded = ','.join(PANHuntConfiguration().excluded_directories)
-        self.command = ' '.join(sys.argv)
-        self.timestamp = datetime.now()
-        self.elapsed = self.end - self.start
-        self.pan_count = len(
-            [pan for f in self.matched_files if f.matches for pan in f.matches])
-
-    def create_text_report(self) -> None:
-
-        path: str = PANHuntConfiguration().get_report_path()
-        logging.info("Creating TXT report.")
+    def generate_text(self, result: ScanResult) -> str:
         newline = '\n'
-        report: str = f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}{newline}{"=" * 100}{newline}'
-        report += f'Searched {self.searched}\nExcluded {self.excluded}{newline}'
-        report += f'Command: {self.command}{newline}'
-        report += f'Uname: {" | ".join(platform.uname())}{newline}'
-        report += f'Elapsed time: {self.elapsed}{newline}'
-        report += f'Found {self.pan_count} possible PANs.{newline}{"=" * 100}{newline}{newline}'
+        sep = '=' * 100
+        report = (
+            f'PAN Hunt Report - {result.start_time.strftime("%H:%M:%S %d/%m/%Y")}{newline}'
+            f'{sep}{newline}'
+            f'Searched {result.config.search_dir}{newline}'
+            f'Excluded {",".join(result.config.excluded_directories)}{newline}'
+            f'Command: {" ".join(sys.argv)}{newline}'
+            f'Uname: {" | ".join(platform.uname())}{newline}'
+            f'Elapsed time: {result.elapsed}{newline}'
+            f'Found {result.pan_count} possible PANs.{newline}'
+            f'{sep}{newline}{newline}'
+        )
 
-        for file in self.matched_files:
-            report += f"FOUND PANs: {file.abspath}" + newline
+        for file in result.matched_files:
+            # size_friendly is called once per matched file by design — file size is part of the report spec.
+            report += f'FOUND PANs: {file.abspath} ({panutils.size_friendly(file.size)}){newline}'
             for pan in file.matches:
-                report += f'\t{pan}' + newline
+                report += f'\t{pan}{newline}'
             report += newline
 
-        if len(self.interesting_files) > 0:
-            report += 'Interesting Files to check separately, probably a permission or file size issue:' + newline
-            for interesting in sorted(self.interesting_files, key=lambda x: x.basename):
+        if result.interesting_files:
+            report += f'Interesting Files to check separately, probably a permission or file size issue:{newline}'
+            for interesting in sorted(result.interesting_files, key=lambda x: x.basename):
                 report += f'{interesting.abspath} ({panutils.size_friendly(interesting.size)}){newline}'
                 report += f'Error: {interesting.errors}{newline}'
 
-        basedir: str = os.path.dirname(os.path.abspath(path=path))
-        if not os.path.exists(basedir):
-            os.makedirs(basedir)
+        return report
 
-        with open(path, encoding='utf-8', mode='w') as f:
-            f.write(report)
+    def generate_json(self, result: ScanResult) -> dict:
+        data: dict = {
+            'timestamp': result.start_time.strftime('%H:%M:%S %d/%m/%Y'),
+            'searched': result.config.search_dir,
+            'excluded': ','.join(result.config.excluded_directories),
+            'command': ' '.join(sys.argv),
+            'elapsed': str(result.elapsed),
+            'pans_found': result.pan_count,
+            'pans_found_results': {
+                f.abspath: [str(pan) for pan in f.matches]
+                for f in result.matched_files
+            },
+        }
 
-        logging.info("Created TXT report.")
+        if result.interesting_files:
+            data['interesting_files'] = {
+                'total': len(result.interesting_files),
+                'files': [
+                    {'path': f.abspath, 'size': f.size, 'errors': f.errors}
+                    for f in result.interesting_files
+                ],
+            }
 
-    def create_json_report(self) -> None:
-
-        path: Optional[str] = PANHuntConfiguration().get_json_path()
-        if path is None:
-            return
-
-        logging.info("Creating JSON report.")
-
-        report: dict = {}
-        report['timestamp'] = self.timestamp.strftime("%H:%M:%S %d/%m/%Y")
-        report['searched'] = self.searched
-        report['excluded'] = self.excluded
-        report['command'] = self.command
-        report['elapsed'] = str(self.elapsed)
-        report['pans_found'] = self.pan_count
-
-        matched_items: dict[str, list[str]] = {}
-        for file in self.matched_files:
-
-            items: list[str] = []
-            for pan in file.matches:
-                item: str = ''
-                item += str(pan)
-                items.append(item)
-            matched_items[file.abspath] = items
-
-        report['pans_found_results'] = matched_items
-
-        if len(self.interesting_files) > 0:
-            report['interesting_files'] = {}
-            report['interesting_files']['total'] = len(self.interesting_files)
-
-            report['interesting_files']['files'] = []
-            for interesting in self.interesting_files:
-                report['interesting_files']['files'].append(
-                    {'path': interesting.abspath, 'size': interesting.size, 'errors': interesting.errors})
-
-        final_report: str = json.dumps(report, indent=4)
-
-        basedir: str = os.path.dirname(os.path.abspath(path=path))
-        if not os.path.exists(basedir):
-            os.makedirs(basedir)
-
-        with open(path, "w") as f:  # type: ignore
-            f.write(final_report)
-
-        logging.info("Created JSON report.")
+        return data
