@@ -6,16 +6,15 @@ from io import IOBase
 from typing import Optional
 
 import enums
-import mappings
 import panutils
 from archive import Archive
 from buffer import JobBuffer
 from config import ScanConfiguration
 from exceptions import PANHuntException
+from factory import ArchiveFactory, ScannerFactory
 from finding import Finding
 from job import Job
 from pan import PAN
-from scanner import ScannerBase
 
 
 class Dispatcher:
@@ -28,6 +27,7 @@ class Dispatcher:
     def __init__(self, buffer: JobBuffer, config: ScanConfiguration) -> None:
         self._buffer = buffer
         self._config = config
+        self._scanner_factory = ScannerFactory(buffer=buffer, config=config)
         self._stop_flag = False
         self.findings = []
         self.failures = []
@@ -109,7 +109,7 @@ class Dispatcher:
                 mimetype=mime_type, encoding=encoding, err=error
             )
 
-        archive_type: Optional[type[Archive]] = mappings.get_archive_by_file(
+        archive_type: Optional[type[Archive]] = ArchiveFactory.get_archive(
             mime_type=mime_type,
             extension=panutils.get_ext(job.basename)
         )
@@ -135,14 +135,12 @@ class Dispatcher:
         return self._scan_file(job, mime_type, encoding)
 
     def _scan_file(self, job: Job, mimetype: str, encoding: str) -> Optional[Finding]:
-        scanner_class: Optional[type[ScannerBase]] = mappings.get_scanner_by_file(
+        scanner_instance = self._scanner_factory.get_scanner(
             mime_type=mimetype,
             extension=panutils.get_ext(job.basename)
         )
-        if not scanner_class:
+        if not scanner_instance:
             return None
-
-        scanner_instance = scanner_class(buffer=self._buffer, config=self._config)
 
         finding = None
         try:
