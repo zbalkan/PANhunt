@@ -5,11 +5,11 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from config import ScanConfiguration
-from dispatcher import Dispatcher
-from finding import Finding
-from hunter import Hunter
-from job import Job
+from panhunt.config import ScanConfiguration
+from panhunt.dispatcher import Dispatcher
+from panhunt.finding import Finding
+from panhunt.hunter import Hunter
+from panhunt.job import Job
 
 
 @pytest.fixture

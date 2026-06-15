@@ -8,10 +8,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from buffer import InMemoryJobBuffer, JobBuffer
-from config import ScanConfiguration
-from finding import Finding
-from models import ScanResult
+from panhunt.buffer import InMemoryJobBuffer, JobBuffer
+from panhunt.config import ScanConfiguration
+from panhunt.finding import Finding
+from panhunt.models import ScanResult
 
 
 # ---------------------------------------------------------------------------

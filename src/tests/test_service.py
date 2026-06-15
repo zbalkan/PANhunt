@@ -5,31 +5,31 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from buffer import InMemoryJobBuffer, JobBuffer
-from config import ScanConfiguration
-from finding import Finding
-from models import ScanResult
-from service import PanHuntService
+from panhunt.buffer import InMemoryJobBuffer, JobBuffer
+from panhunt.config import ScanConfiguration
+from panhunt.finding import Finding
+from panhunt.models import ScanResult
+from panhunt.service import PanHuntService
 
 
 class TestScanReturnType:
     def test_returns_scan_result(self, config):
         svc = PanHuntService()
-        with patch('service.Hunter') as MockHunter:
+        with patch('panhunt.service.Hunter') as MockHunter:
             MockHunter.return_value.hunt.return_value = ([], [])
             result = svc.scan(config)
         assert isinstance(result, ScanResult)
 
     def test_result_has_config(self, config):
         svc = PanHuntService()
-        with patch('service.Hunter') as MockHunter:
+        with patch('panhunt.service.Hunter') as MockHunter:
             MockHunter.return_value.hunt.return_value = ([], [])
             result = svc.scan(config)
         assert result.config is config
 
     def test_result_has_timestamps(self, config):
         svc = PanHuntService()
-        with patch('service.Hunter') as MockHunter:
+        with patch('panhunt.service.Hunter') as MockHunter:
             MockHunter.return_value.hunt.return_value = ([], [])
             result = svc.scan(config)
         assert isinstance(result.start_time, datetime)
@@ -47,7 +47,7 @@ class TestBufferFactory:
             return b
 
         svc = PanHuntService(buffer_factory=tracking_factory)
-        with patch('service.Hunter') as MockHunter:
+        with patch('panhunt.service.Hunter') as MockHunter:
             MockHunter.return_value.hunt.return_value = ([], [])
             svc.scan(config)
 
@@ -62,7 +62,7 @@ class TestBufferFactory:
             return mock_buffer
 
         svc = PanHuntService(buffer_factory=custom_factory)
-        with patch('service.Hunter') as MockHunter:
+        with patch('panhunt.service.Hunter') as MockHunter:
             MockHunter.return_value.hunt.return_value = ([], [])
             svc.scan(config)
 
@@ -77,7 +77,7 @@ class TestResultContent:
             dirname=os.path.dirname(tmp_text_file),
         )
         svc = PanHuntService()
-        with patch('service.Hunter') as MockHunter:
+        with patch('panhunt.service.Hunter') as MockHunter:
             MockHunter.return_value.hunt.return_value = ([finding], [])
             result = svc.scan(config)
         assert len(result.matched_files) == 1
@@ -85,7 +85,7 @@ class TestResultContent:
     def test_failures_passed_through(self, config):
         failing = Finding(basename='bad.txt', dirname='/no/such/dir')
         svc = PanHuntService()
-        with patch('service.Hunter') as MockHunter:
+        with patch('panhunt.service.Hunter') as MockHunter:
             MockHunter.return_value.hunt.return_value = ([], [failing])
             result = svc.scan(config)
         assert len(result.interesting_files) == 1

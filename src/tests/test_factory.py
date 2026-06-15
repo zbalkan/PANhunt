@@ -2,11 +2,11 @@
 
 import pytest
 
-from buffer import InMemoryJobBuffer
-from config import ScanConfiguration
-from enums import FileTypeEnum
-from factory import ArchiveFactory, ScannerFactory
-from scanner import (
+from panhunt.buffer import InMemoryJobBuffer
+from panhunt.config import ScanConfiguration
+from panhunt.enums import FileTypeEnum
+from panhunt.factory import ArchiveFactory, ScannerFactory
+from panhunt.scanner import (
     EmlScanner,
     MboxScanner,
     MsgScanner,
@@ -67,27 +67,27 @@ class TestScannerFactory:
 
 class TestArchiveFactory:
     def test_zip_mime(self):
-        from archive import ZipArchive
+        from panhunt.archive import ZipArchive
         cls = ArchiveFactory.get_archive('application/zip', '.zip')
         assert cls is ZipArchive
 
     def test_tar_mime(self):
-        from archive import TarArchive
+        from panhunt.archive import TarArchive
         cls = ArchiveFactory.get_archive('application/x-tar', '.tar')
         assert cls is TarArchive
 
     def test_gzip_mime(self):
-        from archive import GzipArchive
+        from panhunt.archive import GzipArchive
         cls = ArchiveFactory.get_archive('application/gzip', '.gz')
         assert cls is GzipArchive
 
     def test_xz_mime(self):
-        from archive import XzArchive
+        from panhunt.archive import XzArchive
         cls = ArchiveFactory.get_archive('application/x-xz', '.xz')
         assert cls is XzArchive
 
     def test_docx_is_zip(self):
-        from archive import ZipArchive
+        from panhunt.archive import ZipArchive
         cls = ArchiveFactory.get_archive(
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             '.docx',

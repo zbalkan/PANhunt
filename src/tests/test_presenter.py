@@ -7,9 +7,9 @@ from unittest.mock import patch
 
 import pytest
 
-from config import ScanConfiguration
-from models import ScanResult
-from presenter import CliPresenter, _write_file
+from panhunt.config import ScanConfiguration
+from panhunt.models import ScanResult
+from panhunt.presenter import CliPresenter, _write_file
 
 
 def _make_result(config, matched=None, interesting=None):

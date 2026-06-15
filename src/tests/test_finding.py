@@ -5,9 +5,9 @@ import tempfile
 
 import pytest
 
-from enums import ScanStatusEnum
-from finding import Finding
-from pan import PAN
+from panhunt.enums import ScanStatusEnum
+from panhunt.finding import Finding
+from panhunt.pan import PAN
 
 
 class TestInit:

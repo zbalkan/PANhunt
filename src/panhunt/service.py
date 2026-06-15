@@ -2,11 +2,11 @@ import logging
 from datetime import datetime
 from typing import Callable, Optional
 
-from buffer import InMemoryJobBuffer, JobBuffer
-from config import ScanConfiguration
-from dispatcher import Dispatcher
-from hunter import Hunter
-from models import ScanResult
+from .buffer import InMemoryJobBuffer, JobBuffer
+from .config import ScanConfiguration
+from .dispatcher import Dispatcher
+from .hunter import Hunter
+from .models import ScanResult
 
 
 class PanHuntService:

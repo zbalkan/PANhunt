@@ -16,10 +16,10 @@ from typing import Final
 
 import colorama
 
-import panutils
-from config import ScanConfiguration
-from presenter import CliPresenter
-from service import PanHuntService
+from . import panutils
+from .config import ScanConfiguration
+from .presenter import CliPresenter
+from .service import PanHuntService
 
 APP_NAME: Final[str] = 'PANhunt'
 

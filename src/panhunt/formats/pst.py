@@ -18,9 +18,9 @@ from enum import Enum, Flag, IntEnum
 from io import BufferedReader, BytesIO
 from typing import Generator, Optional, Type, Union
 
-import panutils
-from enums import PropIdEnum, PTypeEnum
-from exceptions import PANHuntException
+from .. import panutils
+from ..enums import PropIdEnum, PTypeEnum
+from ..exceptions import PANHuntException
 
 _ValueType = Optional[Union[int, float, datetime, bool, str, bytes,
                             list[int], list[float], list[datetime], list[bytes], list[str]]]

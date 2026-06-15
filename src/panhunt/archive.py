@@ -7,9 +7,9 @@ from tarfile import TarFile, TarInfo
 from typing import IO, Optional
 from zipfile import ZipFile
 
-import panutils
-from exceptions import PANHuntException
-from job import Job
+from . import panutils
+from .exceptions import PANHuntException
+from .job import Job
 
 
 class Archive:

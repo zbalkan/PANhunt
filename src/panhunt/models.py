@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from config import ScanConfiguration
-from finding import Finding
+from .config import ScanConfiguration
+from .finding import Finding
 
 
 @dataclass

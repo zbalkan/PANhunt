@@ -8,7 +8,7 @@ version = "2.0.0"
 description = "Search directories and archives for documents containing payment card numbers (PANs)."
 readme = "README.md"
 requires-python = ">=3.9"
-license = { file = "LICENSE" }
+license = "BSD-3-Clause"
 authors = [
     { name = "Dionach Ltd" },
     { name = "Zafer Balkan" },
@@ -19,7 +19,6 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -63,33 +62,12 @@ Changelog = "https://github.com/zbalkan/PANhunt/blob/master/CHANGELOG.md"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-py-modules = [
-    "archive",
-    "buffer",
-    "config",
-    "constants",
-    "dispatcher",
-    "enums",
-    "exceptions",
-    "factory",
-    "finder",
-    "finding",
-    "hunter",
-    "job",
-    "models",
-    "pan",
-    "panhunt",
-    "panutils",
-    "patterns",
-    "presenter",
-    "report",
-    "scanner",
-    "service",
-]
-packages = ["formats"]
 
-[tool.setuptools.data-files]
-"." = ["src/panhunt.ini"]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+panhunt = ["resources/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["src/tests"]

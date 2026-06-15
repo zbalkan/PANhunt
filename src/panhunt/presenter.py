@@ -6,9 +6,9 @@ import sys
 
 import colorama
 
-import panutils
-from models import ScanResult
-from report import ReportGenerator
+from . import panutils
+from .models import ScanResult
+from .report import ReportGenerator
 
 
 class CliPresenter:

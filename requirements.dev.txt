@@ -1,3 +1,7 @@
+# PANhunt development dependencies with pinned versions for reproducible installs.
+# For development and testing only; end users should use: pip install panhunt
+# These versions include build, test, and type-checking tools beyond runtime requirements.
+# Update via: pip install -e .[dev] && pip freeze > requirements.dev.txt
 cffi==2.0.0
 charset-normalizer==3.4.7
 colorama==0.4.6

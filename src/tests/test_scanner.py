@@ -5,9 +5,9 @@ import os
 
 import pytest
 
-from finder import PanFinder
-from job import Job
-from scanner import PlainTextFileScanner
+from panhunt.finder import PanFinder
+from panhunt.job import Job
+from panhunt.scanner import PlainTextFileScanner
 
 
 @pytest.fixture
@@ -18,7 +18,7 @@ def scanner(mock_buffer, config):
 @pytest.fixture
 def scanner_with_exclusion(mock_buffer):
     # The regex extracts '4111 1111 1111 1111' (with spaces); exclusion must match exactly
-    from config import ScanConfiguration
+    from panhunt.config import ScanConfiguration
     cfg = ScanConfiguration.from_args(
         search_dir='/tmp',
         excluded_pans_string='4111 1111 1111 1111',

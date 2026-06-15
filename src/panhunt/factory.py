@@ -1,11 +1,11 @@
 from typing import Optional, Type
 
-import enums
-from archive import Archive, GzipArchive, TarArchive, XzArchive, ZipArchive
-from buffer import JobBuffer
-from config import ScanConfiguration
-from finder import PanFinder
-from scanner import (
+from . import enums
+from .archive import Archive, GzipArchive, TarArchive, XzArchive, ZipArchive
+from .buffer import JobBuffer
+from .config import ScanConfiguration
+from .finder import PanFinder
+from .scanner import (
     EmlScanner,
     MboxScanner,
     MsgScanner,

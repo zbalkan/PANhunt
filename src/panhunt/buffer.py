@@ -7,8 +7,8 @@ from typing import Optional
 
 import psutil
 
-from constants import MEMORY_CHECK_TIMEOUT_SECONDS
-from job import Job
+from .constants import MEMORY_CHECK_TIMEOUT_SECONDS
+from .job import Job
 
 
 class JobBuffer(ABC):

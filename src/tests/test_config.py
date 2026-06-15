@@ -6,7 +6,7 @@ import tempfile
 
 import pytest
 
-from config import ScanConfiguration
+from panhunt.config import ScanConfiguration
 
 
 class TestDefaults:
