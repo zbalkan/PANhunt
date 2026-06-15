@@ -1,4 +1,3 @@
-import gc
 import re
 
 
@@ -13,10 +12,6 @@ class PAN:
         self.__brand = brand
         self.__masked = self.__mask_pan(pan)
 
-        # Clear the PAN from memory ASAP
-        del pan
-        gc.collect()
-
     def __str__(self) -> str:
         return f'{self.__brand}:{self.__masked}'
 
@@ -26,7 +21,6 @@ class PAN:
         masked: str = standardized[0:6] + \
             re.sub(r'\d', '*', standardized[6:-4]) + standardized[-4:]
 
-        del pan
         return masked
 
     @staticmethod
