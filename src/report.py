@@ -7,8 +7,6 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional
 
-from genericpath import exists
-
 import panutils
 from config import PANHuntConfiguration
 from finding import Finding
@@ -71,7 +69,7 @@ class Report:
                 report += f'Error: {interesting.errors}{newline}'
 
         basedir: str = os.path.dirname(os.path.abspath(path=path))
-        if not exists(basedir):
+        if not os.path.exists(basedir):
             os.makedirs(basedir)
 
         with open(path, encoding='utf-8', mode='w') as f:
@@ -119,7 +117,7 @@ class Report:
         final_report: str = json.dumps(report, indent=4)
 
         basedir: str = os.path.dirname(os.path.abspath(path=path))
-        if not exists(basedir):
+        if not os.path.exists(basedir):
             os.makedirs(basedir)
 
         with open(path, "w") as f:  # type: ignore
