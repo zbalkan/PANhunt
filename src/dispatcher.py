@@ -23,12 +23,14 @@ class Dispatcher:
 
     __size_limit: int
     _stop_flag: bool
+    __findings_lock: threading.Lock
 
     def __init__(self) -> None:
         self.__size_limit = PANHuntConfiguration().size_limit
         self._stop_flag = False
         self.findings = []
         self.failures = []
+        self.__findings_lock = threading.Lock()
 
     def start(self) -> None:
         """Start the dispatcher loop in a separate thread."""
@@ -41,6 +43,16 @@ class Dispatcher:
         """Stop the dispatcher loop."""
         self._stop_flag = True
 
+    def get_findings(self) -> list[Finding]:
+        """Thread-safe getter for findings."""
+        with self.__findings_lock:
+            return list(self.findings)
+
+    def get_failures(self) -> list[Finding]:
+        """Thread-safe getter for failures."""
+        with self.__findings_lock:
+            return list(self.failures)
+
     def _run_dispatch_loop(self) -> None:
         job_queue = JobQueue()
         while not self._stop_flag and not job_queue.is_finished():
@@ -51,10 +63,11 @@ class Dispatcher:
                     try:
                         res: Optional[Finding] = self._dispatch_job(job)
                         if res is not None:
-                            if res.status == enums.ScanStatusEnum.Success:
-                                self.findings.append(res)
-                            else:
-                                self.failures.append(res)
+                            with self.__findings_lock:
+                                if res.status == enums.ScanStatusEnum.Success:
+                                    self.findings.append(res)
+                                else:
+                                    self.failures.append(res)
                     finally:
                         if job.payload and isinstance(job.payload, IOBase):
                             try:
