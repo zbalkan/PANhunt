@@ -1,6 +1,7 @@
 import io
 import os
 from abc import ABC, abstractmethod
+from io import IOBase
 from typing import Optional
 
 from finder import PanFinder
@@ -13,8 +14,8 @@ from formats.pst import Attachment as pstAttachment
 from job import Job, JobQueue
 from pan import PAN
 
-''' If file size is 30MB or bigger, read line by line for better memory management '''
-BLOCK_SIZE: int = 31_457_280  # 30MB
+BLOCK_SIZE: int = 31_457_280  # 30MB for file reads
+CHUNK_SIZE: int = 8_388_608   # 8MB for streaming/decompressed content
 
 MIN_PAN_LENGTH = 15
 
@@ -32,39 +33,87 @@ class PlainTextFileScanner(ScannerBase):
 
         matches: list[PAN] = []
 
-        text: str
         if job.payload:
-            # Nested attachments may have placeholder data hat is just bytes
-            # It is better to fall back to utf8 encoding in such cases
-            if encoding == 'binary':
-                encoding = 'utf8'
+            if isinstance(job.payload, IOBase):
+                matches.extend(self._scan_stream(job.payload, encoding))
+            else:
+                matches.extend(self._scan_bytes(job.payload, encoding))
+        else:
+            matches.extend(self._scan_file(job.abspath, encoding))
 
-            text = job.payload.decode(
-                encoding=encoding, errors='backslashreplace')
+        return matches
 
-            if len(text) < MIN_PAN_LENGTH:
-                return []
+    def _scan_bytes(self, payload: bytes, encoding: str = 'utf8') -> list[PAN]:
+        matches: list[PAN] = []
 
+        if encoding == 'binary':
+            encoding = 'utf8'
+
+        text = payload.decode(
+            encoding=encoding, errors='backslashreplace')
+
+        if len(text) < MIN_PAN_LENGTH:
+            return []
+
+        finder = PanFinder()
+        matches.extend(finder.find(text))
+        return matches
+
+    def _scan_file(self, filepath: str, encoding: str = 'utf8') -> list[PAN]:
+        matches: list[PAN] = []
+
+        s: os.stat_result = os.stat(path=filepath)
+        file_size: int = s.st_size
+
+        if file_size < MIN_PAN_LENGTH:
+            return []
+
+        if 0 < file_size < BLOCK_SIZE:
+            with open(file=filepath, mode='r', encoding=encoding, errors='backslashreplace') as f:
+                text = f.read()
             finder = PanFinder()
             matches.extend(finder.find(text))
         else:
-            s: os.stat_result = os.stat(path=job.abspath)
-            file_size: int = s.st_size
+            with open(file=filepath, mode='r', encoding=encoding, errors='backslashreplace') as f:
+                for line in f:
+                    finder = PanFinder()
+                    matches.extend(finder.find(line))
 
-            if file_size < MIN_PAN_LENGTH:
-                return []
+        return matches
 
-            if 0 < file_size < BLOCK_SIZE:
-                with open(file=job.abspath, mode='r', encoding=encoding, errors='backslashreplace') as f:
-                    text = f.read()
+    def _scan_stream(self, stream: IOBase, encoding: str = 'utf8') -> list[PAN]:
+        matches: list[PAN] = []
 
-                finder = PanFinder()
-                matches.extend(finder.find(text))
-            else:
-                with open(file=job.abspath, mode='r', encoding=encoding, errors='backslashreplace') as f:
-                    for line in f:
-                        finder = PanFinder()
-                        matches.extend(finder.find(line))
+        if encoding == 'binary':
+            encoding = 'utf8'
+
+        try:
+            stream.seek(0)
+        except (OSError, io.UnsupportedOperation):
+            pass
+
+        buffer = ''
+        while True:
+            chunk = stream.read(CHUNK_SIZE)
+            if not chunk:
+                if buffer and len(buffer) >= MIN_PAN_LENGTH:
+                    finder = PanFinder()
+                    matches.extend(finder.find(buffer))
+                break
+
+            if isinstance(chunk, bytes):
+                chunk = chunk.decode(encoding=encoding, errors='backslashreplace')
+
+            buffer += chunk
+
+            lines = buffer.split('\n')
+            for line in lines[:-1]:
+                if len(line) >= MIN_PAN_LENGTH:
+                    finder = PanFinder()
+                    matches.extend(finder.find(line))
+
+            buffer = lines[-1]
+
         return matches
 
 

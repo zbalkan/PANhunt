@@ -2,6 +2,7 @@ import logging
 import os
 import threading
 import time
+from io import IOBase
 from typing import Optional
 
 import enums
@@ -55,9 +56,13 @@ class Dispatcher:
                             else:
                                 self.failures.append(res)
                     finally:
-                        job.payload = None  # Clear the payload to save memory ASAP
-                        job = None  # Clear the job to save memory ASAP
-                        # Mark the job as completed
+                        if job.payload and isinstance(job.payload, IOBase):
+                            try:
+                                job.payload.close()
+                            except Exception:
+                                pass
+                        job.payload = None
+                        job = None
                         job_queue.complete_job()
             else:
                 time.sleep(0.1)
@@ -66,13 +71,20 @@ class Dispatcher:
 
         logging.info(f"Processing job: {job.abspath}")
 
-        # Dispatch job logic goes here
-        # First, check the size of the job
         size: int
         if job.payload is not None:
-            size = len(job.payload)
+            if isinstance(job.payload, IOBase):
+                try:
+                    job.payload.seek(0, 2)
+                    size = job.payload.tell()
+                    job.payload.seek(0)
+                except (OSError, IOError):
+                    size = 0
+            else:
+                size = len(job.payload)
         else:
             size = os.stat(job.abspath).st_size
+
         if size > self.__size_limit:
             doc = Finding(basename=job.basename, dirname=job.dirname,
                           payload=job.payload, mimetype='Unknown', encoding='Unknown',

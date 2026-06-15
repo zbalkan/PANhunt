@@ -85,74 +85,45 @@ class GzipArchive(Archive):
 
     def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
 
-        gz_file: GzipFile
+        try:
+            gz_file: GzipFile
 
-        if self.payload is not None:
-            gz_file = GzipFile(
-                fileobj=BytesIO(self.payload), mode='r')
-            gz_file.name = self.path
-        else:
-            gz_file = GzipFile(filename=self.path, mode='r')
+            if self.payload is not None:
+                gz_file = GzipFile(
+                    fileobj=BytesIO(self.payload), mode='r')
+                gz_file.name = self.path
+            else:
+                gz_file = GzipFile(filename=self.path, mode='r')
 
-        compressed_filename: str = panutils.get_compressed_filename(
-            gz_file)
-        gz_file.seek(0)
+            compressed_filename: str = panutils.get_compressed_filename(
+                gz_file)
+            gz_file.seek(0)
 
-        size = 0
-        reached_eof = False
-        payload: bytes = b''
-        while size < PANHuntConfiguration().size_limit:
-            b = gz_file.read1()
-            if b == b'':
-                reached_eof = True
-                break
-            payload += gz_file.read1()
-            size += len(payload)
-
-        gz_file.close()
-
-        if not reached_eof:
-            return [], PANHuntException(
-                f'File size limit ({panutils.size_friendly(PANHuntConfiguration().size_limit)}) reached during decompressing. Skipping file.')
-        else:
             job = Job(
-                basename=compressed_filename, dirname=self.path, payload=payload)
+                basename=compressed_filename, dirname=self.path, payload=gz_file)
             return [job], None
+        except Exception as ex:
+            return [], PANHuntException(str(ex))
 
 
 class XzArchive(Archive):
 
     def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
 
-        xz_file: LZMAFile
+        try:
+            xz_file: LZMAFile
 
-        if self.payload is not None:
-            xz_file = LZMAFile(filename=BytesIO(self.payload), mode='r')
-        else:
-            xz_file = LZMAFile(filename=self.path, mode='r')
+            if self.payload is not None:
+                xz_file = LZMAFile(filename=BytesIO(self.payload), mode='r')
+            else:
+                xz_file = LZMAFile(filename=self.path, mode='r')
 
-        compressed_filename: str = os.path.basename(
-            self.path).replace('.xz', '')
-        xz_file.seek(0)
+            compressed_filename: str = os.path.basename(
+                self.path).replace('.xz', '')
+            xz_file.seek(0)
 
-        size = 0
-        reached_eof = False
-        payload: bytes = b''
-        while size < PANHuntConfiguration().size_limit:
-            b = xz_file.read1()
-            if b == b'':
-                reached_eof = True
-                break
-            payload += xz_file.read1()
-            size += len(payload)
-
-        xz_file.close()
-
-        if not reached_eof:
-            return [], PANHuntException(
-                f'File size limit ({panutils.size_friendly(PANHuntConfiguration().size_limit)}) reached during decompressing. Skipping file.')
-        else:
             job = Job(
-                basename=compressed_filename, dirname=self.path, payload=payload)
-            xz_file.close()
+                basename=compressed_filename, dirname=self.path, payload=xz_file)
             return [job], None
+        except Exception as ex:
+            return [], PANHuntException(str(ex))

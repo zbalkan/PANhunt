@@ -6,6 +6,7 @@ import struct
 import sys
 import unicodedata
 from gzip import FEXTRA, FNAME, GzipFile
+from io import IOBase
 from typing import Any, Optional, Union
 
 import magic
@@ -20,12 +21,15 @@ def get_root_dir() -> str:
         return './'
 
 
-def get_mimetype(path: Optional[str] = None, payload: Optional[bytes] = None) -> tuple[str, str, Optional[Exception]]:
+def get_mimetype(path: Optional[str] = None, payload: Optional[Union[bytes, IOBase]] = None) -> tuple[str, str, Optional[Exception]]:
 
     try:
         error: Optional[Exception] = None
         if payload is not None:
-            mime_type, encoding = __get_mime_data_from_buffer(payload)
+            if isinstance(payload, IOBase):
+                mime_type, encoding = __get_mime_data_from_stream(payload)
+            else:
+                mime_type, encoding = __get_mime_data_from_buffer(payload)
         elif path is not None:
             mime_type, encoding = __get_mime_data_from_file(path)
         else:
@@ -59,6 +63,27 @@ def __get_mime_data_from_file(path: str) -> tuple[str, str]:
     mime_type: str = mime_data[0].strip().lower()
     encoding: str = mime_data[1].replace(
         ' charset=', '').strip().lower()
+    return mime_type, encoding
+
+
+def __get_mime_data_from_stream(stream: IOBase) -> tuple[str, str]:
+    try:
+        stream.seek(0)
+    except (OSError, IOError):
+        pass
+
+    buffer: bytes = stream.read(2048)
+    m = magic.Magic(mime=True, mime_encoding=True)
+    mime_data: list[str] = m.from_buffer(buffer).split(';')  # type: ignore
+    mime_type: str = mime_data[0].strip().lower()
+    encoding: str = mime_data[1].replace(
+        ' charset=', '').strip().lower()
+
+    try:
+        stream.seek(0)
+    except (OSError, IOError):
+        pass
+
     return mime_type, encoding
 
 

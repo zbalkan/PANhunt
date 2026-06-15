@@ -1,8 +1,9 @@
 import os
 import time
+from io import IOBase
 from queue import Queue
 from threading import Lock
-from typing import Optional
+from typing import Optional, Union
 
 import psutil
 
@@ -11,10 +12,10 @@ class Job:
 
     basename: str
     dirname: str
-    payload: Optional[bytes]
+    payload: Optional[Union[bytes, IOBase]]
     abspath: str
 
-    def __init__(self, basename: str, dirname: str, payload: Optional[bytes] = None) -> None:
+    def __init__(self, basename: str, dirname: str, payload: Optional[Union[bytes, IOBase]] = None) -> None:
         self.basename = basename
         self.dirname = dirname
         self.payload = payload
@@ -87,13 +88,17 @@ class JobQueue:
     def ensure_memory_ready(self, job: Job) -> None:
         if job.payload is None:
             return
+
+        if isinstance(job.payload, IOBase):
+            return
+
         size = len(job.payload)
         if size >= psutil.virtual_memory().total:
             raise MemoryError(
                 f"Insufficient memory to process job: {job.abspath}")
 
         sleep_time = 0.0
-        while size >= psutil.virtual_memory().free / 2:  # We want to leave a buffer of free memory
+        while size >= psutil.virtual_memory().free / 2:
             sleep_time += 0.1
             if (sleep_time >= self._timeout):
                 raise MemoryError(
