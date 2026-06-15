@@ -1,7 +1,6 @@
 import logging
 import os
 import threading
-import time
 from io import IOBase
 from typing import Optional
 
@@ -21,25 +20,39 @@ class Dispatcher:
     findings: list[Finding]
     failures: list[Finding]
 
-    _stop_flag: bool
+    _stop_event: threading.Event
+    _threads: list[threading.Thread]
     __findings_lock: threading.Lock
 
     def __init__(self, buffer: JobBuffer, config: ScanConfiguration) -> None:
         self._buffer = buffer
         self._config = config
         self._scanner_factory = ScannerFactory(buffer=buffer, config=config)
-        self._stop_flag = False
+        self._stop_event = threading.Event()
+        self._threads = []
         self.findings = []
         self.failures = []
         self.__findings_lock = threading.Lock()
 
     def start(self) -> None:
-        self._stop_flag = False
-        dispatch_thread = threading.Thread(target=self._run_dispatch_loop, daemon=True)
-        dispatch_thread.start()
+        self._stop_event.clear()
+        self._threads = [
+            threading.Thread(
+                target=self._run_dispatch_loop,
+                name=f"panhunt-worker-{i}",
+                daemon=False,
+            )
+            for i in range(self._config.worker_count)
+        ]
+        for thread in self._threads:
+            thread.start()
 
     def stop(self) -> None:
-        self._stop_flag = True
+        self._stop_event.set()
+
+    def join(self) -> None:
+        for thread in self._threads:
+            thread.join()
 
     def get_findings(self) -> list[Finding]:
         with self.__findings_lock:
@@ -50,30 +63,29 @@ class Dispatcher:
             return list(self.failures)
 
     def _run_dispatch_loop(self) -> None:
-        while not self._stop_flag and not self._buffer.is_finished():
-            if self._buffer.has_jobs():
-                job: Optional[Job] = self._buffer.dequeue()
-
-                if job:
+        while not self._stop_event.is_set():
+            job: Optional[Job] = self._buffer.dequeue(timeout=0.1)
+            if job is None:
+                if self._buffer.is_finished():
+                    break
+                continue
+            try:
+                res: Optional[Finding] = self._dispatch_job(job)
+                if res is not None:
+                    with self.__findings_lock:
+                        if res.status == enums.ScanStatusEnum.Success:
+                            self.findings.append(res)
+                        else:
+                            self.failures.append(res)
+            finally:
+                if job.payload and isinstance(job.payload, IOBase):
                     try:
-                        res: Optional[Finding] = self._dispatch_job(job)
-                        if res is not None:
-                            with self.__findings_lock:
-                                if res.status == enums.ScanStatusEnum.Success:
-                                    self.findings.append(res)
-                                else:
-                                    self.failures.append(res)
-                    finally:
-                        if job.payload and isinstance(job.payload, IOBase):
-                            try:
-                                job.payload.close()
-                            except Exception as e:
-                                logging.warning(f"Failed to close payload for {job.abspath}: {e}")
-                        job.payload = None
-                        job = None
-                        self._buffer.complete_job()
-            else:
-                time.sleep(0.1)
+                        job.payload.close()
+                    except Exception as e:
+                        logging.warning(f"Failed to close payload for {job.abspath}: {e}")
+                job.payload = None
+                job = None
+                self._buffer.complete_job()
 
     def _dispatch_job(self, job: Job) -> Optional[Finding]:
         logging.info(f"Processing job: {job.abspath}")
