@@ -20,6 +20,5 @@ class PanFinder():
                     # Clear the PAN from memory ASAP
                     del pan
                     gc.collect()
-                    break
 
         return matches
