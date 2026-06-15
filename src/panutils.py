@@ -136,15 +136,15 @@ def get_safe_filename(filename: str) -> str:
 
 def size_friendly(size: int) -> str:
     if size < 1024:
-        return f'{"{:.2f}".format(round(size, 2))}B'
+        return f'{size:.2f}B'
     if size < 1024 * 1024:
-        return f'{"{:.2f}".format(round(size / 1024, 2))}KB'
+        return f'{size / 1024:.2f}KB'
     if size < 1024 * 1024 * 1024:
-        return f'{"{:.2f}".format(round(size / (1024 * 1024), 2))}MB'
+        return f'{size / (1024 * 1024):.2f}MB'
     if size < 1024 * 1024 * 1024 * 1024:
-        return f'{"{:.2f}".format(round(size / (1024 * 1024 * 1024), 2))}GB'
+        return f'{size / (1024 * 1024 * 1024):.2f}GB'
     else:
-        return f'{"{:.2f}".format(round(size / (1024 * 1024 * 1024 * 1024), 2))}TB'
+        return f'{size / (1024 * 1024 * 1024 * 1024):.2f}TB'
 
 
 def unpack_integer(format: str, buffer: bytes) -> int:
