@@ -104,6 +104,3 @@ class JobQueue:
                 raise MemoryError(
                     f"Insufficient memory to process job: {job.abspath}")
             time.sleep(0.1)
-
-    def _is_free_memory_insufficient_for_job(self, job: Job) -> bool:
-        return job.payload is not None and len(job.payload) >= psutil.virtual_memory().free
