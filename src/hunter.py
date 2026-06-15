@@ -1,6 +1,5 @@
 import logging
 import os
-import re
 import time
 
 from buffer import JobBuffer
@@ -42,11 +41,9 @@ class Hunter:
         return self._dispatcher.findings, self._dispatcher.failures
 
     def _is_directory_excluded(self, dirname: str, config: ScanConfiguration) -> bool:
+        sep = os.sep
+        lower_dirname = dirname.lower()
         for excluded_dir in config.excluded_directories:
-            if os.name == 'nt':
-                if re.match(f"{re.escape(excluded_dir.lower())}\\.*", re.escape(dirname.lower())):
-                    return True
-            else:
-                if re.match(f"{re.escape(excluded_dir)}/.*", re.escape(dirname)):
-                    return True
+            if lower_dirname.startswith(excluded_dir.lower() + sep):
+                return True
         return False
