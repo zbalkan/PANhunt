@@ -67,8 +67,8 @@ class Dispatcher:
                         if job.payload and isinstance(job.payload, IOBase):
                             try:
                                 job.payload.close()
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logging.warning(f"Failed to close payload for {job.abspath}: {e}")
                         job.payload = None
                         job = None
                         self._buffer.complete_job()

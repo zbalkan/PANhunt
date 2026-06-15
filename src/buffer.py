@@ -7,6 +7,7 @@ from typing import Optional
 
 import psutil
 
+from constants import MEMORY_CHECK_TIMEOUT_SECONDS
 from job import Job
 
 
@@ -40,8 +41,6 @@ class JobBuffer(ABC):
 
 class InMemoryJobBuffer(JobBuffer):
     """Thread-safe in-memory job buffer."""
-
-    _timeout: int = 20
 
     def __init__(self) -> None:
         self._job_queue: Queue[Job] = Queue()
@@ -96,6 +95,6 @@ class InMemoryJobBuffer(JobBuffer):
         sleep_time = 0.0
         while size >= psutil.virtual_memory().free / 2:
             sleep_time += 0.1
-            if sleep_time >= self._timeout:
+            if sleep_time >= MEMORY_CHECK_TIMEOUT_SECONDS:
                 raise MemoryError(f"Insufficient memory to process job: {job.abspath}")
             time.sleep(0.1)

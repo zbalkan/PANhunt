@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 from abc import ABC, abstractmethod
 from io import IOBase
@@ -6,6 +7,7 @@ from typing import Optional
 
 from buffer import JobBuffer
 from config import ScanConfiguration
+from constants import BLOCK_SIZE_BYTES, MIN_PAN_LENGTH, STREAM_CHUNK_SIZE_BYTES
 from finder import PanFinder
 from formats.eml import Eml
 from formats.mbox import Mbox
@@ -15,10 +17,6 @@ from formats.pst import PST
 from formats.pst import Attachment as PstAttachment
 from job import Job
 from pan import PAN
-
-BLOCK_SIZE: int = 31_457_280  # 30MB for file reads
-CHUNK_SIZE: int = 8_388_608   # 8MB for streaming/decompressed content
-MIN_PAN_LENGTH: int = 15
 
 
 class ScannerBase(ABC):
@@ -61,7 +59,7 @@ class PlainTextFileScanner(ScannerBase):
         if file_size < MIN_PAN_LENGTH:
             return []
 
-        if 0 < file_size < BLOCK_SIZE:
+        if 0 < file_size < BLOCK_SIZE_BYTES:
             with open(file=filepath, mode='r', encoding=encoding, errors='backslashreplace') as f:
                 text = f.read()
             matches.extend(self._pan_finder.find(text))
@@ -80,12 +78,14 @@ class PlainTextFileScanner(ScannerBase):
 
         try:
             stream.seek(0)
-        except (OSError, io.UnsupportedOperation):
-            pass
+        except io.UnsupportedOperation:
+            pass  # non-seekable stream; read from current position
+        except OSError as e:
+            logging.warning(f"Failed to seek stream to start: {e}")
 
         buffer = ''
         while True:
-            chunk = stream.read(CHUNK_SIZE)
+            chunk = stream.read(STREAM_CHUNK_SIZE_BYTES)
             if not chunk:
                 if buffer and len(buffer) >= MIN_PAN_LENGTH:
                     matches.extend(self._pan_finder.find(buffer))
