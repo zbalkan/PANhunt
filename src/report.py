@@ -1,6 +1,5 @@
 import platform
 import sys
-import time
 
 import panutils
 from models import ScanResult
@@ -13,7 +12,7 @@ class ReportGenerator:
         newline = '\n'
         sep = '=' * 100
         report = (
-            f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}{newline}'
+            f'PAN Hunt Report - {result.start_time.strftime("%H:%M:%S %d/%m/%Y")}{newline}'
             f'{sep}{newline}'
             f'Searched {result.config.search_dir}{newline}'
             f'Excluded {",".join(result.config.excluded_directories)}{newline}'
@@ -25,7 +24,8 @@ class ReportGenerator:
         )
 
         for file in result.matched_files:
-            report += f'FOUND PANs: {file.abspath}{newline}'
+            # size_friendly is called once per matched file by design — file size is part of the report spec.
+            report += f'FOUND PANs: {file.abspath} ({panutils.size_friendly(file.size)}){newline}'
             for pan in file.matches:
                 report += f'\t{pan}{newline}'
             report += newline

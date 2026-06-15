@@ -59,7 +59,7 @@ class Finding:
 
     def _set_file_stats(self, payload: Optional[bytes]) -> None:
         try:
-            self.size = len(payload) if payload else os.stat(self.abspath).st_size
+            self.size = len(payload) if payload is not None else os.stat(self.abspath).st_size
         except Exception as ex:
             self.size = -1
             self._set_error(str(ex))

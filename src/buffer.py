@@ -2,7 +2,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from io import IOBase
-from queue import Queue
+from queue import Empty, Queue
 from typing import Optional
 
 import psutil
@@ -57,12 +57,16 @@ class InMemoryJobBuffer(JobBuffer):
             self._jobs_enqueued += 1
 
     def dequeue(self) -> Optional[Job]:
-        if self._job_queue:
-            job = self._job_queue.get()
+        try:
+            job = self._job_queue.get_nowait()
+            # self._lock is intentional: Queue's internal lock guards only the
+            # queue itself, not _jobs_in_progress, which is also read/written
+            # by complete_job() and is_finished() under the same lock.
             with self._lock:
                 self._jobs_in_progress += 1
             return job
-        return None
+        except Empty:
+            return None
 
     def complete_job(self) -> None:
         with self._lock:
@@ -93,7 +97,7 @@ class InMemoryJobBuffer(JobBuffer):
             raise MemoryError(f"Insufficient memory to process job: {job.abspath}")
 
         sleep_time = 0.0
-        while size >= psutil.virtual_memory().free / 2:
+        while size >= psutil.virtual_memory().available / 2:
             sleep_time += 0.1
             if sleep_time >= MEMORY_CHECK_TIMEOUT_SECONDS:
                 raise MemoryError(f"Insufficient memory to process job: {job.abspath}")

@@ -23,7 +23,7 @@ class ScanConfiguration:
     def __init__(self) -> None:
         if os.name == 'nt':
             self.search_dir = 'C:\\'
-            self.excluded_directories = ['C:\\Windows', 'C:\\Program Files', 'C:\\Program Files(x86)']
+            self.excluded_directories = ['c:\\windows', 'c:\\program files', 'c:\\program files(x86)']
         else:
             self.search_dir = '/'
             self.excluded_directories = ['/mnt', '/dev', '/proc']
@@ -73,7 +73,7 @@ class ScanConfiguration:
         return config
 
     @classmethod
-    def from_file(cls, config_file: str) -> 'ScanConfiguration':
+    def from_file(cls, config_file: str, quiet: Optional[bool] = None) -> 'ScanConfiguration':
         if not os.path.isfile(config_file):
             raise ValueError("Invalid configuration file.")
 
@@ -87,7 +87,7 @@ class ScanConfiguration:
             excluded_directories_string=cls._try_parse(raw, 'exclude'),
             excluded_pans_string=cls._try_parse(raw, 'excludepans'),
             size_limit=cls._try_parse_int(raw, 'sizelimit'),
-            quiet=cls._try_parse_bool(raw, 'quiet')
+            quiet=quiet if quiet is not None else cls._try_parse_bool(raw, 'quiet'),
         )
 
     def _update(self,

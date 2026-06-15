@@ -72,10 +72,13 @@ class ScannerFactory:
 
         # Text/message types
         if mime_type in ['text', 'message']:
-            if mime_subtype in ['plain', 'rfc822'] and extension in ['.eml']:
+            if mime_subtype == 'rfc822':
                 return enums.FileTypeEnum.Eml
-            elif mime_subtype in ['plain'] and extension in ['.mbox']:
-                return enums.FileTypeEnum.Mbox
+            if mime_subtype == 'plain':
+                if extension == '.eml':
+                    return enums.FileTypeEnum.Eml
+                if extension == '.mbox':
+                    return enums.FileTypeEnum.Mbox
             return enums.FileTypeEnum.Plaintext
 
         # Application types

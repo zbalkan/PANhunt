@@ -55,7 +55,7 @@ def main() -> None:
     args = arg_parser.parse_args()
 
     if args.config:
-        config = ScanConfiguration.from_file(config_file=args.config)
+        config = ScanConfiguration.from_file(config_file=args.config, quiet=args.quiet or None)
     else:
         if args.search_dir is None and args.file_path is None:
             print('No search directory or single file path specified.')
