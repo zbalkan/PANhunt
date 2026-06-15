@@ -6,7 +6,7 @@
 # PANhunt: search directories and sub directories for documents with PANs
 # By BB
 #
-# Contributors: Zafer Balkan, 2023
+# Contributors: Zafer Balkan, 2023-2026
 
 
 import argparse
@@ -23,7 +23,7 @@ from presenter import CliPresenter
 from service import PanHuntService
 
 APP_NAME: Final[str] = 'PANhunt'
-APP_VERSION: Final[str] = '1.6'
+APP_VERSION: Final[str] = '2.0'
 
 
 def main() -> None:

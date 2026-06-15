@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.0] - TBD
+
+### Added
+
+- Thread‑safe `InMemoryJobBuffer` (`JobBuffer` interface) to decouple producers/consumer with memory checks.
+- `ScannerFactory` and `ArchiveFactory` for type‑driven scanner/archive selection.
+- `PanHuntService` and `CliPresenter` separate orchestration from output; new ScanResult DTO.
+
+### Changed
+
+- `ScanConfiguration` replaces the `PANHuntConfiguration` singleton; named constants in constants.py.
+- Refactored `ReportGenerator for` text/JSON formatting; added `pyproject.toml` and tests (≈135) with ~81% coverage.
+- Updated README to document the new layered architecture and usage.
+
+### Bug Fixes
+
+- Directory exclusion now works on Windows by escaping input paths.
+
 ## [1.6] - 2024-12-10
 
 ### Added

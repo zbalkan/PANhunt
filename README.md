@@ -66,7 +66,7 @@ Current coverage: **135 tests at ~81% coverage**.
 ```shell
 usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
 
-PAN Hunt v1.6: search directories and sub directories for documents containing PANs.
+PAN Hunt: search directories and sub directories for documents containing PANs.
 
 options:
   -h, --help       show this help message and exit
