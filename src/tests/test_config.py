@@ -32,6 +32,9 @@ class TestDefaults:
     def test_default_size_limit(self):
         assert ScanConfiguration().size_limit == 1_073_741_824
 
+    def test_default_worker_count(self):
+        assert ScanConfiguration().worker_count == 1
+
     def test_report_file_has_timestamp(self):
         c = ScanConfiguration()
         assert c.report_file.startswith('panhunt_')
@@ -66,6 +69,18 @@ class TestFromArgs:
     def test_size_limit_override(self):
         c = ScanConfiguration.from_args(size_limit=512)
         assert c.size_limit == 512
+
+    def test_worker_count_override(self):
+        c = ScanConfiguration.from_args(worker_count=4)
+        assert c.worker_count == 4
+
+    def test_invalid_worker_count_raises(self):
+        with pytest.raises(ValueError, match='worker_count'):
+            ScanConfiguration.from_args(worker_count=0)
+
+    def test_negative_worker_count_raises(self):
+        with pytest.raises(ValueError, match='worker_count'):
+            ScanConfiguration.from_args(worker_count=-1)
 
     def test_none_string_is_ignored(self):
         c = ScanConfiguration.from_args(search_dir='None')
@@ -108,6 +123,11 @@ class TestFromFile:
         ini = self._write_ini(tmp_path, '[DEFAULT]\nsizelimit=1024\n')
         c = ScanConfiguration.from_file(ini)
         assert c.size_limit == 1024
+
+    def test_workers_from_file(self, tmp_path):
+        ini = self._write_ini(tmp_path, '[DEFAULT]\nworkers=4\n')
+        c = ScanConfiguration.from_file(ini)
+        assert c.worker_count == 4
 
 
 class TestHelpers:

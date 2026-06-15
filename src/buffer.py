@@ -19,7 +19,7 @@ class JobBuffer(ABC):
         pass
 
     @abstractmethod
-    def dequeue(self) -> Optional[Job]:
+    def dequeue(self, timeout: float = 0.1) -> Optional[Job]:
         pass
 
     @abstractmethod
@@ -56,9 +56,9 @@ class InMemoryJobBuffer(JobBuffer):
             self._job_queue.put(job)
             self._jobs_enqueued += 1
 
-    def dequeue(self) -> Optional[Job]:
+    def dequeue(self, timeout: float = 0.1) -> Optional[Job]:
         try:
-            job = self._job_queue.get_nowait()
+            job = self._job_queue.get(timeout=timeout)
             # self._lock is intentional: Queue's internal lock guards only the
             # queue itself, not _jobs_in_progress, which is also read/written
             # by complete_job() and is_finished() under the same lock.
