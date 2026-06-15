@@ -4,6 +4,6 @@ colorama==0.4.6
 cryptography==44.0.2
 pdfminer.six==20240706
 psutil==7.0.0
-pycparser==2.22
+pycparser==3.0
 python-magic-bin==0.4.14 ; platform_system == 'Windows'
 python-magic==0.4.27 ; platform_system != 'Windows'
