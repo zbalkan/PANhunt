@@ -1,6 +1,7 @@
 import logging
 
 
-class PANHuntException(BaseException):
+class PANHuntException(Exception):
     def __init__(self, message: str) -> None:
+        super().__init__(message)
         logging.error(message)
