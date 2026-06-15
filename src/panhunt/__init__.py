@@ -48,6 +48,7 @@ def main() -> None:
     arg_parser.add_argument('-j', dest='json_dir', help='Report file directory for JSON formatted PAN report', default=None)
     arg_parser.add_argument('-C', dest='config', help='configuration file to use')
     arg_parser.add_argument('-X', dest='exclude_pan', help='PAN to exclude from search')
+    arg_parser.add_argument('-w', dest='workers', type=int, default=None, help='Number of worker threads (default: 1)')
     arg_parser.add_argument('-q', dest='quiet', action='store_true', default=False, help='No terminal output')
 
     args = arg_parser.parse_args()
@@ -69,6 +70,7 @@ def main() -> None:
             json_dir=args.json_dir,
             excluded_directories_string=args.exclude_dirs,
             excluded_pans_string=args.exclude_pan,
+            worker_count=args.workers,
             quiet=args.quiet)
 
     result = PanHuntService().scan(config)

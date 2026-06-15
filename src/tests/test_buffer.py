@@ -91,6 +91,60 @@ class TestThreadSafety:
         assert count == 200
 
 
+class TestBlockingDequeue:
+    def test_dequeue_returns_none_on_empty_with_timeout(self):
+        b = InMemoryJobBuffer()
+        start = time.monotonic()
+        result = b.dequeue(timeout=0.05)
+        elapsed = time.monotonic() - start
+        assert result is None
+        assert elapsed >= 0.05
+
+    def test_dequeue_returns_job_immediately_when_available(self):
+        b = InMemoryJobBuffer()
+        b.enqueue(_make_job())
+        start = time.monotonic()
+        result = b.dequeue(timeout=1.0)
+        elapsed = time.monotonic() - start
+        assert result is not None
+        assert elapsed < 0.5
+
+    def test_blocking_dequeue_safe_for_multiple_consumers(self):
+        b = InMemoryJobBuffer()
+        num_jobs = 40
+        for i in range(num_jobs):
+            b.enqueue(_make_job(f'file_{i}.txt'))
+        b.mark_input_complete()
+
+        results = []
+        lock = threading.Lock()
+        errors = []
+
+        def consumer():
+            try:
+                while True:
+                    job = b.dequeue(timeout=0.1)
+                    if job is None:
+                        if b.is_finished():
+                            break
+                        continue
+                    with lock:
+                        results.append(job.basename)
+                    b.complete_job()
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=consumer) for _ in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors
+        assert len(results) == num_jobs
+        assert len(set(results)) == num_jobs
+
+
 class TestMemoryCheck:
     def test_large_payload_raises_memory_error(self):
         from unittest.mock import MagicMock, patch

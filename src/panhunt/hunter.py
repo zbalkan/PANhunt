@@ -37,7 +37,10 @@ class Hunter:
         while not self._buffer.is_finished():
             time.sleep(0.1)
 
-        return self._dispatcher.findings, self._dispatcher.failures
+        self._dispatcher.stop()
+        self._dispatcher.join()
+
+        return self._dispatcher.get_findings(), self._dispatcher.get_failures()
 
     def _is_directory_excluded(self, dirname: str, config: ScanConfiguration) -> bool:
         sep = os.sep

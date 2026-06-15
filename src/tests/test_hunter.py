@@ -15,8 +15,8 @@ from panhunt.job import Job
 @pytest.fixture
 def mock_dispatcher():
     d = MagicMock(spec=Dispatcher)
-    d.findings = []
-    d.failures = []
+    d.get_findings.return_value = []
+    d.get_failures.return_value = []
     return d
 
 
@@ -70,11 +70,19 @@ class TestHuntResults:
     def test_returns_findings_and_failures(self, mock_dispatcher, mock_buffer, tmp_dir):
         finding = MagicMock(spec=Finding)
         failure = MagicMock(spec=Finding)
-        mock_dispatcher.findings = [finding]
-        mock_dispatcher.failures = [failure]
+        mock_dispatcher.get_findings.return_value = [finding]
+        mock_dispatcher.get_failures.return_value = [failure]
         config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=True)
         mock_buffer.is_finished.return_value = True
         h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
         findings, failures = h.hunt(config)
         assert findings == [finding]
         assert failures == [failure]
+
+    def test_stop_and_join_called_after_buffer_finished(self, mock_dispatcher, mock_buffer, tmp_dir):
+        config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=True)
+        mock_buffer.is_finished.return_value = True
+        h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
+        h.hunt(config)
+        mock_dispatcher.stop.assert_called_once()
+        mock_dispatcher.join.assert_called_once()

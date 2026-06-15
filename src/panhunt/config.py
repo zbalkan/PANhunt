@@ -16,6 +16,7 @@ class ScanConfiguration:
     excluded_directories: list[str]
     excluded_pans: list[str]
     size_limit: int
+    worker_count: int
     quiet: bool
     report_file: str
     json_file: str
@@ -33,6 +34,7 @@ class ScanConfiguration:
         self.json_dir = None
         self.excluded_pans = []
         self.size_limit = 1_073_741_824  # 1GB
+        self.worker_count = 1
         self.quiet = False
         self.report_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.report'
         self.json_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.json'
@@ -57,6 +59,7 @@ class ScanConfiguration:
                   excluded_directories_string: Optional[str] = None,
                   excluded_pans_string: Optional[str] = None,
                   size_limit: Optional[int] = None,
+                  worker_count: Optional[int] = None,
                   quiet: Optional[bool] = None) -> 'ScanConfiguration':
 
         config = cls()
@@ -68,6 +71,7 @@ class ScanConfiguration:
             excluded_directories_string=excluded_directories_string,
             excluded_pans_string=excluded_pans_string,
             size_limit=size_limit,
+            worker_count=worker_count,
             quiet=quiet
         )
         return config
@@ -87,6 +91,7 @@ class ScanConfiguration:
             excluded_directories_string=cls._try_parse(raw, 'exclude'),
             excluded_pans_string=cls._try_parse(raw, 'excludepans'),
             size_limit=cls._try_parse_int(raw, 'sizelimit'),
+            worker_count=cls._try_parse_int(raw, 'workers'),
             quiet=quiet if quiet is not None else cls._try_parse_bool(raw, 'quiet'),
         )
 
@@ -98,6 +103,7 @@ class ScanConfiguration:
                 excluded_directories_string: Optional[str],
                 excluded_pans_string: Optional[str],
                 size_limit: Optional[int],
+                worker_count: Optional[int] = None,
                 quiet: Optional[bool] = None) -> None:
 
         if search_dir and search_dir != 'None':
@@ -120,6 +126,11 @@ class ScanConfiguration:
 
         if size_limit is not None:
             self.size_limit = size_limit
+
+        if worker_count is not None:
+            if worker_count < 1:
+                raise ValueError("worker_count must be a positive integer")
+            self.worker_count = worker_count
 
         if quiet is not None:
             self.quiet = quiet
