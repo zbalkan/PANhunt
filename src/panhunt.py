@@ -12,87 +12,34 @@
 import argparse
 import logging
 import os
-import platform
 import sys
-from datetime import datetime
-from typing import Final, Optional
+from typing import Final
 
 import colorama
 
 import panutils
-from buffer import InMemoryJobBuffer
 from config import ScanConfiguration
-from dispatcher import Dispatcher
-from hunter import Hunter
-from report import Report
+from presenter import CliPresenter
+from service import PanHuntService
 
 APP_NAME: Final[str] = 'PANhunt'
 APP_VERSION: Final[str] = '1.6'
 
 
-def hunt_pans(config: ScanConfiguration) -> Report:
-    buffer = InMemoryJobBuffer()
-    dispatcher = Dispatcher(buffer=buffer, config=config)
-    hunter = Hunter(dispatcher=dispatcher, buffer=buffer)
-
-    start: datetime = datetime.now()
-    logging.info("Started searching in file(s).")
-
-    findings, failures = hunter.hunt(config)
-    logging.info("Finished searching.")
-
-    end: datetime = datetime.now()
-
-    return Report(
-        matched_files=findings,
-        interesting_files=failures,
-        start=start,
-        end=end,
-        config=config)
-
-
-def display_report(report: Report) -> None:
-    newline = '\n'
-    header: str = f'{"=" * 100}{newline}'
-    header += f'Searched {report.searched}{newline}'
-    header += f'Excluded {report.excluded}{newline}'
-    header += f'Command: {report.command}{newline}'
-    header += f'Uname: {" | ".join(platform.uname())}{newline}'
-    header += f'Elapsed time: {report.elapsed}{newline}'
-    header += f'Found {report.pan_count} possible PANs.{newline}'
-    header += f'{"=" * 100}{newline}{newline}'
-    print(colorama.Fore.WHITE + header)
-
-    pan_sep: str = '\n\t'
-    for sf in report.matched_files:
-        pan_header: str = f"FOUND PANs: {sf.abspath} ({panutils.size_friendly(sf.size)})"
-        print(colorama.Fore.RED + panutils.unicode_to_ascii(pan_header))
-        pan_list: str = '\t'
-        for pan in sf.matches:
-            pan_list += f"{pan}{pan_sep}"
-        print(colorama.Fore.YELLOW + panutils.unicode_to_ascii(pan_list))
-
-    if len(report.interesting_files) > 0:
-        print(colorama.Fore.RED + 'Interesting Files to check separately, probably a permission or file size issue:')
-        for interesting in report.interesting_files:
-            print(colorama.Fore.YELLOW + '\t- ' + f'{panutils.unicode_to_ascii(interesting.abspath)} ({panutils.unicode_to_ascii(panutils.size_friendly(interesting.size))})')
-
-    print(colorama.Fore.WHITE + f'Report written to {panutils.unicode_to_ascii(report.report_path)}')
-
-
 def main() -> None:
-    logging.basicConfig(filename=os.path.join(panutils.get_root_dir(), f'{APP_NAME}.log'),
-                        encoding='utf-8',
-                        format='%(asctime)s:%(levelname)s:%(message)s',
-                        datefmt="%Y-%m-%dT%H:%M:%S%z",
-                        level=logging.DEBUG)
+    logging.basicConfig(
+        filename=os.path.join(panutils.get_root_dir(), f'{APP_NAME}.log'),
+        encoding='utf-8',
+        format='%(asctime)s:%(levelname)s:%(message)s',
+        datefmt='%Y-%m-%dT%H:%M:%S%z',
+        level=logging.DEBUG)
 
     sys.excepthook = logging.error
     logging.info('Starting')
 
     colorama.init()
 
-    arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(
+    arg_parser = argparse.ArgumentParser(
         prog='panhunt',
         description=f'PAN Hunt v{APP_VERSION}: search directories and sub directories for documents containing PANs.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -105,9 +52,7 @@ def main() -> None:
     arg_parser.add_argument('-X', dest='exclude_pan', help='PAN to exclude from search')
     arg_parser.add_argument('-q', dest='quiet', action='store_true', default=False, help='No terminal output')
 
-    args: argparse.Namespace = arg_parser.parse_args()
-
-    config: ScanConfiguration
+    args = arg_parser.parse_args()
 
     if args.config:
         config = ScanConfiguration.from_file(config_file=args.config)
@@ -128,24 +73,17 @@ def main() -> None:
             excluded_pans_string=args.exclude_pan,
             quiet=args.quiet)
 
-    report: Report = hunt_pans(config)
-
-    report.create_text_report()
-
-    if config.json_dir:
-        report.create_json_report()
-
-    if not config.quiet:
-        display_report(report=report)
+    result = PanHuntService().scan(config)
+    CliPresenter().show(result)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     try:
         main()
         logging.info('Exiting')
     except KeyboardInterrupt:
         print('Cancelled by user.')
-        logging.error("Cancelled by user.")
+        logging.error('Cancelled by user.')
         logging.info('Exiting')
         try:
             sys.exit(0)
