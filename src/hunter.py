@@ -47,12 +47,16 @@ class Hunter:
 
     def __is_directory_excluded(self, dirname: str) -> bool:
         for excluded_dir in PANHuntConfiguration().excluded_directories:
-            escaped_dirname = re.escape(dirname)
-            escaped_excluded_dir = re.escape(excluded_dir)
             if os.name == 'nt':
+                # Windows: case-insensitive comparison
+                escaped_dirname = re.escape(dirname.lower())
+                escaped_excluded_dir = re.escape(excluded_dir.lower())
                 if re.match(f"{escaped_excluded_dir}\\.*", escaped_dirname):
                     return True
             else:
+                # Unix-like: case-sensitive comparison
+                escaped_dirname = re.escape(dirname)
+                escaped_excluded_dir = re.escape(excluded_dir)
                 if re.match(f"{escaped_excluded_dir}/.*", escaped_dirname):
                     return True
         return False
