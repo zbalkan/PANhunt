@@ -3,60 +3,50 @@ import os
 import re
 import time
 
-from config import PANHuntConfiguration
+from buffer import JobBuffer
+from config import ScanConfiguration
 from dispatcher import Dispatcher
 from finding import Finding
-from job import Job, JobQueue
+from job import Job
 
 
 class Hunter:
 
-    __dispatcher: Dispatcher
+    def __init__(self, dispatcher: Dispatcher, buffer: JobBuffer) -> None:
+        self._dispatcher = dispatcher
+        self._buffer = buffer
 
-    def __init__(self) -> None:
-        self.__dispatcher = Dispatcher()
+    def hunt(self, config: ScanConfiguration) -> tuple[list[Finding], list[Finding]]:
+        self._dispatcher.start()
 
-    def hunt(self) -> tuple[list[Finding], list[Finding]]:
-        """Enqueue all jobs into the job queue for processing by the dispatcher."""
+        logging.info(f"Search base: {config.search_dir}")
 
-        self.__dispatcher.start()
-
-        logging.info(f"Search base: {PANHuntConfiguration().search_dir}")
-
-        if PANHuntConfiguration().file_path is not None:
-            # To silence the type checker
-            p = str(PANHuntConfiguration().file_path)
+        if config.file_path is not None:
+            p = str(config.file_path)
             basename: str = os.path.basename(p)
-            dir: str = os.path.dirname(p)
-            if not self.__is_directory_excluded(dir):
-                JobQueue().enqueue(Job(basename, dirname=dir))
+            dirname: str = os.path.dirname(p)
+            if not self._is_directory_excluded(dirname, config):
+                self._buffer.enqueue(Job(basename, dirname=dirname))
         else:
-            for root, _, files in os.walk(PANHuntConfiguration().search_dir):
+            for root, _, files in os.walk(config.search_dir):
+                if self._is_directory_excluded(root, config):
+                    continue
                 for file in files:
-                    job = Job(
-                        basename=file, dirname=root, payload=None)
-                    JobQueue().enqueue(job)
+                    self._buffer.enqueue(Job(basename=file, dirname=root, payload=None))
 
-        # Mark the queue as finished so the dispatcher knows no more jobs are coming
-        JobQueue().mark_input_complete()
+        self._buffer.mark_input_complete()
 
-        while (not JobQueue().is_finished()):
+        while not self._buffer.is_finished():
             time.sleep(0.1)
 
-        return self.__dispatcher.findings, self.__dispatcher.failures
+        return self._dispatcher.findings, self._dispatcher.failures
 
-    def __is_directory_excluded(self, dirname: str) -> bool:
-        for excluded_dir in PANHuntConfiguration().excluded_directories:
+    def _is_directory_excluded(self, dirname: str, config: ScanConfiguration) -> bool:
+        for excluded_dir in config.excluded_directories:
             if os.name == 'nt':
-                # Windows: case-insensitive comparison
-                escaped_dirname = re.escape(dirname.lower())
-                escaped_excluded_dir = re.escape(excluded_dir.lower())
-                if re.match(f"{escaped_excluded_dir}\\.*", escaped_dirname):
+                if re.match(f"{re.escape(excluded_dir.lower())}\\.*", re.escape(dirname.lower())):
                     return True
             else:
-                # Unix-like: case-sensitive comparison
-                escaped_dirname = re.escape(dirname)
-                escaped_excluded_dir = re.escape(excluded_dir)
-                if re.match(f"{escaped_excluded_dir}/.*", escaped_dirname):
+                if re.match(f"{re.escape(excluded_dir)}/.*", re.escape(dirname)):
                     return True
         return False

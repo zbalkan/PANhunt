@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import panutils
-from config import PANHuntConfiguration
+from config import ScanConfiguration
 from finding import Finding
 
 
@@ -30,23 +30,26 @@ class Report:
                  matched_files: list[Finding],
                  interesting_files: list[Finding],
                  start: datetime,
-                 end: datetime) -> None:
-        '''excluded_dirs: list[str]'''
+                 end: datetime,
+                 config: ScanConfiguration) -> None:
         self.start = start
         self.end = end
         self.matched_files = matched_files
         self.interesting_files = interesting_files
-        self.searched = PANHuntConfiguration().search_dir
-        self.excluded = ','.join(PANHuntConfiguration().excluded_directories)
+        self.searched = config.search_dir
+        self.excluded = ','.join(config.excluded_directories)
         self.command = ' '.join(sys.argv)
         self.timestamp = datetime.now()
         self.elapsed = self.end - self.start
-        self.pan_count = len(
-            [pan for f in self.matched_files if f.matches for pan in f.matches])
+        self.pan_count = len([pan for f in self.matched_files if f.matches for pan in f.matches])
+        self._config = config
+
+    @property
+    def report_path(self) -> str:
+        return self._config.get_report_path()
 
     def create_text_report(self) -> None:
-
-        path: str = PANHuntConfiguration().get_report_path()
+        path: str = self._config.get_report_path()
         logging.info("Creating TXT report.")
         newline = '\n'
         report: str = f'PAN Hunt Report - {time.strftime("%H:%M:%S %d/%m/%Y")}{newline}{"=" * 100}{newline}'
@@ -78,49 +81,40 @@ class Report:
         logging.info("Created TXT report.")
 
     def create_json_report(self) -> None:
-
-        path: Optional[str] = PANHuntConfiguration().get_json_path()
+        path: Optional[str] = self._config.get_json_path()
         if path is None:
             return
 
         logging.info("Creating JSON report.")
 
-        report: dict = {}
-        report['timestamp'] = self.timestamp.strftime("%H:%M:%S %d/%m/%Y")
-        report['searched'] = self.searched
-        report['excluded'] = self.excluded
-        report['command'] = self.command
-        report['elapsed'] = str(self.elapsed)
-        report['pans_found'] = self.pan_count
+        report: dict = {
+            'timestamp': self.timestamp.strftime("%H:%M:%S %d/%m/%Y"),
+            'searched': self.searched,
+            'excluded': self.excluded,
+            'command': self.command,
+            'elapsed': str(self.elapsed),
+            'pans_found': self.pan_count,
+        }
 
         matched_items: dict[str, list[str]] = {}
         for file in self.matched_files:
-
-            items: list[str] = []
-            for pan in file.matches:
-                item: str = ''
-                item += str(pan)
-                items.append(item)
-            matched_items[file.abspath] = items
-
+            matched_items[file.abspath] = [str(pan) for pan in file.matches]
         report['pans_found_results'] = matched_items
 
         if len(self.interesting_files) > 0:
-            report['interesting_files'] = {}
-            report['interesting_files']['total'] = len(self.interesting_files)
-
-            report['interesting_files']['files'] = []
-            for interesting in self.interesting_files:
-                report['interesting_files']['files'].append(
-                    {'path': interesting.abspath, 'size': interesting.size, 'errors': interesting.errors})
-
-        final_report: str = json.dumps(report, indent=4)
+            report['interesting_files'] = {
+                'total': len(self.interesting_files),
+                'files': [
+                    {'path': f.abspath, 'size': f.size, 'errors': f.errors}
+                    for f in self.interesting_files
+                ]
+            }
 
         basedir: str = os.path.dirname(os.path.abspath(path=path))
         if not os.path.exists(basedir):
             os.makedirs(basedir)
 
-        with open(path, "w") as f:  # type: ignore
-            f.write(final_report)
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(json.dumps(report, indent=4))
 
         logging.info("Created JSON report.")

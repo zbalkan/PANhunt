@@ -8,7 +8,6 @@ from typing import IO, Optional
 from zipfile import ZipFile
 
 import panutils
-from config import PANHuntConfiguration
 from exceptions import PANHuntException
 from job import Job
 
