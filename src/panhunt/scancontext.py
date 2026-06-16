@@ -11,6 +11,7 @@ class ScanLimits:
     max_depth: int
     max_child_jobs: int
     max_total_expanded_bytes: int
+    max_path_length: int = 4096
 
 
 class ResourceBudget:
@@ -45,6 +46,18 @@ class ResourceBudget:
 
             self._child_jobs += 1
             self._expanded_bytes += payload_size
+
+    def reserve_expanded(self, logical_path: str, byte_count: int) -> None:
+        if byte_count <= 0:
+            return
+        with self._lock:
+            if self._expanded_bytes + byte_count > self.limits.max_total_expanded_bytes:
+                raise PANHuntException(
+                    f'Scan expanded-byte limit exceeded for "{logical_path}": '
+                    f'{panutils.size_friendly(size=self._expanded_bytes + byte_count)} over '
+                    f'{panutils.size_friendly(size=self.limits.max_total_expanded_bytes)}'
+                )
+            self._expanded_bytes += byte_count
 
     @property
     def child_jobs(self) -> int:
@@ -91,6 +104,11 @@ class ScanContext:
     def child(self, basename: str, payload_size: int = 0) -> 'ScanContext':
         logical_path = f'{self.logical_path}!/{basename}'
         depth = self.depth + 1
+        if len(logical_path) > self.budget.limits.max_path_length:
+            raise PANHuntException(
+                f'Scan path length limit exceeded for "{logical_path}": '
+                f'{len(logical_path)} over {self.budget.limits.max_path_length}'
+            )
         self.budget.reserve_child(logical_path=logical_path, depth=depth, payload_size=payload_size)
         return ScanContext(
             logical_path=logical_path,

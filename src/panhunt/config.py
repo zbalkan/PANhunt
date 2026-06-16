@@ -20,6 +20,12 @@ class ScanConfiguration:
     max_scan_depth: int
     max_child_jobs: int
     max_total_expanded_bytes: int
+    max_archive_members: int
+    max_archive_compression_ratio: int
+    max_archive_path_length: int
+    archive_spool_threshold: int
+    allowed_archive_types: list[str]
+    denied_archive_types: list[str]
     quiet: bool
     report_file: str
     json_file: str
@@ -41,6 +47,12 @@ class ScanConfiguration:
         self.max_scan_depth = 25
         self.max_child_jobs = 100_000
         self.max_total_expanded_bytes = self.size_limit
+        self.max_archive_members = 10_000
+        self.max_archive_compression_ratio = 100
+        self.max_archive_path_length = 4096
+        self.archive_spool_threshold = 8 * 1024 * 1024
+        self.allowed_archive_types = []
+        self.denied_archive_types = []
         self.quiet = False
         self.report_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.report'
         self.json_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.json'
@@ -69,6 +81,12 @@ class ScanConfiguration:
                   max_scan_depth: Optional[int] = None,
                   max_child_jobs: Optional[int] = None,
                   max_total_expanded_bytes: Optional[int] = None,
+                  max_archive_members: Optional[int] = None,
+                  max_archive_compression_ratio: Optional[int] = None,
+                  max_archive_path_length: Optional[int] = None,
+                  archive_spool_threshold: Optional[int] = None,
+                  allowed_archive_types_string: Optional[str] = None,
+                  denied_archive_types_string: Optional[str] = None,
                   quiet: Optional[bool] = None) -> 'ScanConfiguration':
 
         config = cls()
@@ -84,6 +102,12 @@ class ScanConfiguration:
             max_scan_depth=max_scan_depth,
             max_child_jobs=max_child_jobs,
             max_total_expanded_bytes=max_total_expanded_bytes,
+            max_archive_members=max_archive_members,
+            max_archive_compression_ratio=max_archive_compression_ratio,
+            max_archive_path_length=max_archive_path_length,
+            archive_spool_threshold=archive_spool_threshold,
+            allowed_archive_types_string=allowed_archive_types_string,
+            denied_archive_types_string=denied_archive_types_string,
             quiet=quiet
         )
         return config
@@ -107,6 +131,12 @@ class ScanConfiguration:
             max_scan_depth=cls._try_parse_int(raw, 'maxscandepth'),
             max_child_jobs=cls._try_parse_int(raw, 'maxchildjobs'),
             max_total_expanded_bytes=cls._try_parse_int(raw, 'maxtotalexpandedbytes'),
+            max_archive_members=cls._try_parse_int(raw, 'maxarchivemembers'),
+            max_archive_compression_ratio=cls._try_parse_int(raw, 'maxarchivecompressionratio'),
+            max_archive_path_length=cls._try_parse_int(raw, 'maxarchivepathlength'),
+            archive_spool_threshold=cls._try_parse_int(raw, 'archivespoolthreshold'),
+            allowed_archive_types_string=cls._try_parse(raw, 'allowedarchivetypes'),
+            denied_archive_types_string=cls._try_parse(raw, 'deniedarchivetypes'),
             quiet=quiet if quiet is not None else cls._try_parse_bool(raw, 'quiet'),
         )
 
@@ -122,6 +152,12 @@ class ScanConfiguration:
                 max_scan_depth: Optional[int] = None,
                 max_child_jobs: Optional[int] = None,
                 max_total_expanded_bytes: Optional[int] = None,
+                max_archive_members: Optional[int] = None,
+                max_archive_compression_ratio: Optional[int] = None,
+                max_archive_path_length: Optional[int] = None,
+                archive_spool_threshold: Optional[int] = None,
+                allowed_archive_types_string: Optional[str] = None,
+                denied_archive_types_string: Optional[str] = None,
                 quiet: Optional[bool] = None) -> None:
 
         if search_dir and search_dir != 'None':
@@ -165,6 +201,32 @@ class ScanConfiguration:
             if max_total_expanded_bytes < 0:
                 raise ValueError("max_total_expanded_bytes must be a non-negative integer")
             self.max_total_expanded_bytes = max_total_expanded_bytes
+
+        if max_archive_members is not None:
+            if max_archive_members < 1:
+                raise ValueError("max_archive_members must be a positive integer")
+            self.max_archive_members = max_archive_members
+
+        if max_archive_compression_ratio is not None:
+            if max_archive_compression_ratio < 1:
+                raise ValueError("max_archive_compression_ratio must be a positive integer")
+            self.max_archive_compression_ratio = max_archive_compression_ratio
+
+        if max_archive_path_length is not None:
+            if max_archive_path_length < 1:
+                raise ValueError("max_archive_path_length must be a positive integer")
+            self.max_archive_path_length = max_archive_path_length
+
+        if archive_spool_threshold is not None:
+            if archive_spool_threshold < 0:
+                raise ValueError("archive_spool_threshold must be a non-negative integer")
+            self.archive_spool_threshold = archive_spool_threshold
+
+        if allowed_archive_types_string and allowed_archive_types_string != 'None':
+            self.allowed_archive_types = [t.strip().lower() for t in allowed_archive_types_string.split(',') if t.strip()]
+
+        if denied_archive_types_string and denied_archive_types_string != 'None':
+            self.denied_archive_types = [t.strip().lower() for t in denied_archive_types_string.split(',') if t.strip()]
 
         if quiet is not None:
             self.quiet = quiet

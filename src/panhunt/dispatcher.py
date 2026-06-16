@@ -33,7 +33,8 @@ class Dispatcher:
         self._scan_limits = ScanLimits(
             max_depth=self._config.max_scan_depth,
             max_child_jobs=self._config.max_child_jobs,
-            max_total_expanded_bytes=self._config.max_total_expanded_bytes
+            max_total_expanded_bytes=self._config.max_total_expanded_bytes,
+            max_path_length=self._config.max_archive_path_length
         )
         self._resource_budget = ResourceBudget(self._scan_limits)
         self._stop_event = threading.Event()
@@ -144,11 +145,30 @@ class Dispatcher:
         )
 
         if archive_type is not None:
+            archive_name = archive_type.__name__.replace('Archive', '').lower()
+            if self._config.allowed_archive_types and archive_name not in self._config.allowed_archive_types:
+                return Finding(
+                    basename=job.basename, dirname=job.dirname, payload=job.payload,
+                    mimetype=mime_type, encoding=encoding,
+                    err=PANHuntException(f'Archive type "{archive_name}" is not allowed by policy'),
+                    context=job.context
+                )  # type: ignore
+            if archive_name in self._config.denied_archive_types:
+                return Finding(
+                    basename=job.basename, dirname=job.dirname, payload=job.payload,
+                    mimetype=mime_type, encoding=encoding,
+                    err=PANHuntException(f'Archive type "{archive_name}" is denied by policy'),
+                    context=job.context
+                )  # type: ignore
             archive = archive_type(
                 path=job.abspath,
                 payload=job.payload,
                 size_limit=self._config.size_limit,
-                context=job.context
+                context=job.context,
+                max_members=self._config.max_archive_members,
+                compression_ratio_limit=self._config.max_archive_compression_ratio,
+                max_path_length=self._config.max_archive_path_length,
+                spool_threshold=self._config.archive_spool_threshold
             )
             try:
                 children, e = archive.get_children()
