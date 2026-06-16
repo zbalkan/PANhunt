@@ -35,6 +35,12 @@ class TestDefaults:
     def test_default_worker_count(self):
         assert ScanConfiguration().worker_count == 1
 
+    def test_default_scan_limits(self):
+        c = ScanConfiguration()
+        assert c.max_scan_depth == 25
+        assert c.max_child_jobs == 100_000
+        assert c.max_total_expanded_bytes == c.size_limit
+
     def test_report_file_has_timestamp(self):
         c = ScanConfiguration()
         assert c.report_file.startswith('panhunt_')
@@ -73,6 +79,16 @@ class TestFromArgs:
     def test_worker_count_override(self):
         c = ScanConfiguration.from_args(worker_count=4)
         assert c.worker_count == 4
+
+    def test_scan_limit_overrides(self):
+        c = ScanConfiguration.from_args(
+            max_scan_depth=3,
+            max_child_jobs=7,
+            max_total_expanded_bytes=2048
+        )
+        assert c.max_scan_depth == 3
+        assert c.max_child_jobs == 7
+        assert c.max_total_expanded_bytes == 2048
 
     def test_invalid_worker_count_raises(self):
         with pytest.raises(ValueError, match='worker_count'):

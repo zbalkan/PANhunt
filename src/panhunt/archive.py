@@ -11,17 +11,25 @@ from . import panutils
 from .exceptions import PANHuntException
 from .job import Job
 from .limitedio import LimitedReader, read_limited
+from .scancontext import ScanContext
 
 
 class Archive:
     path: str
     payload: Optional[bytes]
     size_limit: int
+    context: Optional[ScanContext]
 
-    def __init__(self, path: str, payload: Optional[bytes] = None, size_limit: int = 1_073_741_824) -> None:
+    def __init__(
+            self,
+            path: str,
+            payload: Optional[bytes] = None,
+            size_limit: int = 1_073_741_824,
+            context: Optional[ScanContext] = None) -> None:
         self.path = path
         self.payload = payload
         self.size_limit = size_limit
+        self.context = context
 
     def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
         raise NotImplementedError()
@@ -31,6 +39,9 @@ class Archive:
             f'Archive expansion limit exceeded for "{self.path}": {detail} '
             f'(limit {panutils.size_friendly(size=self.size_limit)})'
         )
+
+    def _child_context(self, basename: str, payload_size: int = 0) -> Optional[ScanContext]:
+        return self.context.child(basename=basename, payload_size=payload_size) if self.context else None
 
 
 class ZipArchive(Archive):
@@ -68,7 +79,10 @@ class ZipArchive(Archive):
                         payload = read_limited(file, self.size_limit)
                     total_size += len(payload)
                     children.append(Job(
-                        basename=file_info.filename, dirname=self.path, payload=payload))
+                        basename=file_info.filename,
+                        dirname=self.path,
+                        payload=payload,
+                        context=self._child_context(file_info.filename, len(payload))))
         except PANHuntException as ex:
             return [], ex
         except Exception as ex:
@@ -107,7 +121,10 @@ class TarArchive(Archive):
                         payload = read_limited(extracted, self.size_limit)
                         total_size += len(payload)
                         children.append(Job(
-                            basename=file_info.path, dirname=self.path, payload=payload))
+                            basename=file_info.path,
+                            dirname=self.path,
+                            payload=payload,
+                            context=self._child_context(file_info.path, len(payload))))
 
         except PANHuntException as ex:
             return [], ex
@@ -138,7 +155,8 @@ class GzipArchive(Archive):
             job = Job(
                 basename=compressed_filename,
                 dirname=self.path,
-                payload=LimitedReader(gz_file, self.size_limit, self.path)
+                payload=LimitedReader(gz_file, self.size_limit, self.path),
+                context=self._child_context(compressed_filename)
             )
             return [job], None
         except Exception as ex:
@@ -164,7 +182,8 @@ class XzArchive(Archive):
             job = Job(
                 basename=compressed_filename,
                 dirname=self.path,
-                payload=LimitedReader(xz_file, self.size_limit, self.path)
+                payload=LimitedReader(xz_file, self.size_limit, self.path),
+                context=self._child_context(compressed_filename)
             )
             return [job], None
         except Exception as ex:

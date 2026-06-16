@@ -15,6 +15,7 @@ from .finding import Finding
 from .job import Job
 from .limitedio import LimitedReader
 from .pan import PAN
+from .scancontext import ResourceBudget, ScanContext, ScanLimits
 
 
 class Dispatcher:
@@ -29,6 +30,12 @@ class Dispatcher:
         self._buffer = buffer
         self._config = config
         self._scanner_factory = ScannerFactory(buffer=buffer, config=config)
+        self._scan_limits = ScanLimits(
+            max_depth=self._config.max_scan_depth,
+            max_child_jobs=self._config.max_child_jobs,
+            max_total_expanded_bytes=self._config.max_total_expanded_bytes
+        )
+        self._resource_budget = ResourceBudget(self._scan_limits)
         self._stop_event = threading.Event()
         self._threads = []
         self.findings = []
@@ -90,6 +97,12 @@ class Dispatcher:
 
     def _dispatch_job(self, job: Job) -> Optional[Finding]:
         logging.info(f"Processing job: {job.abspath}")
+        if job.context is None:
+            job.context = ScanContext.root(
+                logical_path=job.abspath,
+                limits=self._scan_limits,
+                budget=self._resource_budget
+            )
 
         if job.payload is not None:
             if isinstance(job.payload, LimitedReader):
@@ -113,7 +126,8 @@ class Dispatcher:
                 err=PANHuntException(
                     f'File size {panutils.size_friendly(size=size)} over limit of '
                     f'{panutils.size_friendly(size=self._config.size_limit)} for file "{job.basename}"'
-                )
+                ),
+                context=job.context
             )  # type: ignore
 
         mime_type, encoding, error = panutils.get_mimetype(path=job.abspath, payload=job.payload)
@@ -121,7 +135,7 @@ class Dispatcher:
         if error:
             return Finding(
                 basename=job.basename, dirname=job.dirname, payload=job.payload,
-                mimetype=mime_type, encoding=encoding, err=error
+                mimetype=mime_type, encoding=encoding, err=error, context=job.context
             )
 
         archive_type: Optional[type[Archive]] = ArchiveFactory.get_archive(
@@ -130,13 +144,18 @@ class Dispatcher:
         )
 
         if archive_type is not None:
-            archive = archive_type(path=job.abspath, payload=job.payload, size_limit=self._config.size_limit)
+            archive = archive_type(
+                path=job.abspath,
+                payload=job.payload,
+                size_limit=self._config.size_limit,
+                context=job.context
+            )
             try:
                 children, e = archive.get_children()
                 if e:
                     return Finding(
                         basename=job.basename, dirname=job.dirname, payload=job.payload,
-                        mimetype=mime_type, encoding=encoding, err=e
+                        mimetype=mime_type, encoding=encoding, err=e, context=job.context
                     )  # type: ignore
                 for child in children:
                     self._buffer.enqueue(child)
@@ -144,7 +163,7 @@ class Dispatcher:
             except Exception as ex:
                 return Finding(
                     basename=job.basename, dirname=job.dirname, payload=job.payload,
-                    mimetype=mime_type, encoding=encoding, err=ex
+                    mimetype=mime_type, encoding=encoding, err=ex, context=job.context
                 )  # type: ignore
 
         return self._scan_file(job, mime_type, encoding)
@@ -163,12 +182,12 @@ class Dispatcher:
             if matches:
                 finding = Finding(
                     basename=job.basename, dirname=job.dirname, payload=job.payload,
-                    mimetype=mimetype, encoding=encoding
+                    mimetype=mimetype, encoding=encoding, context=job.context
                 )
                 finding.matches = matches
         except Exception as ex:
             finding = Finding(
                 basename=job.basename, dirname=job.dirname, payload=job.payload,
-                mimetype=mimetype, encoding=encoding, err=ex
+                mimetype=mimetype, encoding=encoding, err=ex, context=job.context
             )  # type: ignore
         return finding

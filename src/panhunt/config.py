@@ -17,6 +17,9 @@ class ScanConfiguration:
     excluded_pans: list[str]
     size_limit: int
     worker_count: int
+    max_scan_depth: int
+    max_child_jobs: int
+    max_total_expanded_bytes: int
     quiet: bool
     report_file: str
     json_file: str
@@ -35,6 +38,9 @@ class ScanConfiguration:
         self.excluded_pans = []
         self.size_limit = 1_073_741_824  # 1GB
         self.worker_count = 1
+        self.max_scan_depth = 25
+        self.max_child_jobs = 100_000
+        self.max_total_expanded_bytes = self.size_limit
         self.quiet = False
         self.report_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.report'
         self.json_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.json'
@@ -60,6 +66,9 @@ class ScanConfiguration:
                   excluded_pans_string: Optional[str] = None,
                   size_limit: Optional[int] = None,
                   worker_count: Optional[int] = None,
+                  max_scan_depth: Optional[int] = None,
+                  max_child_jobs: Optional[int] = None,
+                  max_total_expanded_bytes: Optional[int] = None,
                   quiet: Optional[bool] = None) -> 'ScanConfiguration':
 
         config = cls()
@@ -72,6 +81,9 @@ class ScanConfiguration:
             excluded_pans_string=excluded_pans_string,
             size_limit=size_limit,
             worker_count=worker_count,
+            max_scan_depth=max_scan_depth,
+            max_child_jobs=max_child_jobs,
+            max_total_expanded_bytes=max_total_expanded_bytes,
             quiet=quiet
         )
         return config
@@ -92,6 +104,9 @@ class ScanConfiguration:
             excluded_pans_string=cls._try_parse(raw, 'excludepans'),
             size_limit=cls._try_parse_int(raw, 'sizelimit'),
             worker_count=cls._try_parse_int(raw, 'workers'),
+            max_scan_depth=cls._try_parse_int(raw, 'maxscandepth'),
+            max_child_jobs=cls._try_parse_int(raw, 'maxchildjobs'),
+            max_total_expanded_bytes=cls._try_parse_int(raw, 'maxtotalexpandedbytes'),
             quiet=quiet if quiet is not None else cls._try_parse_bool(raw, 'quiet'),
         )
 
@@ -104,6 +119,9 @@ class ScanConfiguration:
                 excluded_pans_string: Optional[str],
                 size_limit: Optional[int],
                 worker_count: Optional[int] = None,
+                max_scan_depth: Optional[int] = None,
+                max_child_jobs: Optional[int] = None,
+                max_total_expanded_bytes: Optional[int] = None,
                 quiet: Optional[bool] = None) -> None:
 
         if search_dir and search_dir != 'None':
@@ -126,11 +144,27 @@ class ScanConfiguration:
 
         if size_limit is not None:
             self.size_limit = size_limit
+            self.max_total_expanded_bytes = size_limit
 
         if worker_count is not None:
             if worker_count < 1:
                 raise ValueError("worker_count must be a positive integer")
             self.worker_count = worker_count
+
+        if max_scan_depth is not None:
+            if max_scan_depth < 0:
+                raise ValueError("max_scan_depth must be a non-negative integer")
+            self.max_scan_depth = max_scan_depth
+
+        if max_child_jobs is not None:
+            if max_child_jobs < 1:
+                raise ValueError("max_child_jobs must be a positive integer")
+            self.max_child_jobs = max_child_jobs
+
+        if max_total_expanded_bytes is not None:
+            if max_total_expanded_bytes < 0:
+                raise ValueError("max_total_expanded_bytes must be a non-negative integer")
+            self.max_total_expanded_bytes = max_total_expanded_bytes
 
         if quiet is not None:
             self.quiet = quiet

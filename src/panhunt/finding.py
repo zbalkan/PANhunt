@@ -6,6 +6,7 @@ from typing import Optional
 from . import panutils
 from .enums import ScanStatusEnum
 from .pan import PAN
+from .scancontext import ScanContext
 
 
 class Finding:
@@ -21,10 +22,13 @@ class Finding:
     encoding: str
     extension: str
     extensions: list[str]
+    logical_path: str
+    depth: int
+    container_chain: list[str]
 
     def __init__(self, basename: str, dirname: str, payload: Optional[bytes] = None,
                  mimetype: Optional[str] = None, encoding: Optional[str] = None,
-                 err: Optional[Exception] = None) -> None:
+                 err: Optional[Exception] = None, context: Optional[ScanContext] = None) -> None:
         self.basename = basename
         self.dirname = dirname
         self.abspath = str(Path(dirname) / basename)
@@ -33,6 +37,9 @@ class Finding:
         self.matches = []
         self.extension = panutils.get_ext(self.basename)
         self.extensions = panutils.get_exts(self.basename)
+        self.logical_path = context.logical_path if context else self.abspath
+        self.depth = context.depth if context else 0
+        self.container_chain = list(context.container_chain) if context else []
 
         if mimetype is not None:
             self.mime_type = mimetype

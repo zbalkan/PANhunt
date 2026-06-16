@@ -30,6 +30,16 @@ class ScannerBase(ABC):
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
         raise NotImplementedError()
 
+    def _child_job(self, parent: Job, basename: str, payload: Optional[bytes]) -> Job:
+        payload_size = len(payload) if payload is not None else 0
+        context = parent.context.child(basename=basename, payload_size=payload_size) if parent.context else None
+        return Job(
+            basename=basename,
+            dirname=parent.abspath,
+            payload=payload,
+            context=context
+        )
+
 
 class PlainTextFileScanner(ScannerBase):
 
@@ -118,11 +128,7 @@ class MsgScanner(ScannerBase):
                 matches.extend(self._pan_finder.find(msg.Body))
             if msg.attachments:
                 for att in msg.attachments:
-                    self._buffer.enqueue(Job(
-                        basename=att.Filename,
-                        dirname=job.abspath,
-                        payload=att.BinaryData
-                    ))
+                    self._buffer.enqueue(self._child_job(job, att.Filename, att.BinaryData))
 
         return matches
 
@@ -142,11 +148,7 @@ class EmlScanner(ScannerBase):
             matches.extend(self._pan_finder.find(eml.body))
         if eml.attachments:
             for att in eml.attachments:
-                self._buffer.enqueue(Job(
-                    basename=att.Filename,
-                    dirname=job.abspath,
-                    payload=att.BinaryData
-                ))
+                self._buffer.enqueue(self._child_job(job, att.Filename, att.BinaryData))
 
         return matches
 
@@ -167,11 +169,7 @@ class MboxScanner(ScannerBase):
                 matches.extend(self._pan_finder.find(mail.body))
             if mail.attachments:
                 for att in mail.attachments:
-                    self._buffer.enqueue(Job(
-                        basename=att.Filename,
-                        dirname=job.abspath,
-                        payload=att.BinaryData
-                    ))
+                    self._buffer.enqueue(self._child_job(job, att.Filename, att.BinaryData))
 
         return matches
 
@@ -205,7 +203,11 @@ class PstScanner(ScannerBase):
                                     self._buffer.enqueue(Job(
                                         basename=att.Filename,
                                         dirname=dirname,
-                                        payload=att.BinaryData
+                                        payload=att.BinaryData,
+                                        context=job.context.child(
+                                            basename=att.Filename,
+                                            payload_size=len(att.BinaryData) if att.BinaryData is not None else 0
+                                        ) if job.context else None
                                     ))
             self._pst.close()
 
