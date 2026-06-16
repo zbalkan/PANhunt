@@ -1,7 +1,7 @@
 from typing import Optional, Type
 
 from . import enums
-from .archive import Archive, GzipArchive, TarArchive, XzArchive, ZipArchive
+from .archive import Archive, GzipArchive, OpenDocumentArchive, TarArchive, XzArchive, ZipArchive
 from .buffer import JobBuffer
 from .config import ScanConfiguration
 from .finder import PanFinder
@@ -83,12 +83,16 @@ class ScannerFactory:
 
         # Application types
         if mime_type == 'application':
+            extension_file_type = ScannerFactory._get_filetype_from_extension(extension)
+
             if mime_subtype == 'octet-stream':
-                if extension in ['.mbox']:
-                    return enums.FileTypeEnum.Mbox
-                if extension in ['.pst']:
-                    return enums.FileTypeEnum.MsPst
+                if extension_file_type != enums.FileTypeEnum.Unknown:
+                    return extension_file_type
                 return enums.FileTypeEnum.Unknown
+
+            if (mime_subtype in ['zip', 'x-zip-compressed']
+                    and extension_file_type in ScannerFactory._opendocument_filetypes()):
+                return extension_file_type
 
             if mime_subtype == 'vnd.openxmlformats-officedocument.wordprocessingml.document':
                 return enums.FileTypeEnum.MsWord
@@ -96,6 +100,24 @@ class ScannerFactory:
                 return enums.FileTypeEnum.MsExcel
             elif mime_subtype == 'vnd.openxmlformats-officedocument.presentationml.presentation':
                 return enums.FileTypeEnum.MsPowerpoint
+            elif mime_subtype in ['vnd.oasis.opendocument.text', 'vnd.oasis.opendocument.text-template']:
+                return enums.FileTypeEnum.OpenDocumentText
+            elif mime_subtype == 'vnd.oasis.opendocument.text-flat-xml':
+                return enums.FileTypeEnum.Plaintext
+            elif mime_subtype in ['vnd.oasis.opendocument.spreadsheet', 'vnd.oasis.opendocument.spreadsheet-template']:
+                return enums.FileTypeEnum.OpenDocumentSpreadsheet
+            elif mime_subtype == 'vnd.oasis.opendocument.spreadsheet-flat-xml':
+                return enums.FileTypeEnum.Plaintext
+            elif mime_subtype in ['vnd.oasis.opendocument.presentation', 'vnd.oasis.opendocument.presentation-template']:
+                return enums.FileTypeEnum.OpenDocumentPresentation
+            elif mime_subtype == 'vnd.oasis.opendocument.presentation-flat-xml':
+                return enums.FileTypeEnum.Plaintext
+            elif mime_subtype in ['vnd.oasis.opendocument.graphics', 'vnd.oasis.opendocument.graphics-template']:
+                return enums.FileTypeEnum.OpenDocumentDrawing
+            elif mime_subtype == 'vnd.oasis.opendocument.formula':
+                return enums.FileTypeEnum.OpenDocumentFormula
+            elif mime_subtype == 'vnd.oasis.opendocument.text-master':
+                return enums.FileTypeEnum.OpenDocumentMaster
             elif mime_subtype in ['vnd.ms-powerpoint', 'vnd.ms-excel', 'msword']:
                 return enums.FileTypeEnum.Plaintext
             elif mime_subtype == 'vnd.ms-outlook':
@@ -113,6 +135,38 @@ class ScannerFactory:
 
         return enums.FileTypeEnum.Unknown
 
+    @staticmethod
+    def _opendocument_filetypes() -> set[enums.FileTypeEnum]:
+        return {
+            enums.FileTypeEnum.OpenDocumentText,
+            enums.FileTypeEnum.OpenDocumentSpreadsheet,
+            enums.FileTypeEnum.OpenDocumentPresentation,
+            enums.FileTypeEnum.OpenDocumentDrawing,
+            enums.FileTypeEnum.OpenDocumentFormula,
+            enums.FileTypeEnum.OpenDocumentMaster,
+        }
+
+    @staticmethod
+    def _get_filetype_from_extension(extension: str) -> enums.FileTypeEnum:
+        extension_map = {
+            '.mbox': enums.FileTypeEnum.Mbox,
+            '.pst': enums.FileTypeEnum.MsPst,
+            '.odt': enums.FileTypeEnum.OpenDocumentText,
+            '.ott': enums.FileTypeEnum.OpenDocumentText,
+            '.ods': enums.FileTypeEnum.OpenDocumentSpreadsheet,
+            '.ots': enums.FileTypeEnum.OpenDocumentSpreadsheet,
+            '.odp': enums.FileTypeEnum.OpenDocumentPresentation,
+            '.otp': enums.FileTypeEnum.OpenDocumentPresentation,
+            '.odg': enums.FileTypeEnum.OpenDocumentDrawing,
+            '.otg': enums.FileTypeEnum.OpenDocumentDrawing,
+            '.odf': enums.FileTypeEnum.OpenDocumentFormula,
+            '.odm': enums.FileTypeEnum.OpenDocumentMaster,
+            '.fodt': enums.FileTypeEnum.Plaintext,
+            '.fods': enums.FileTypeEnum.Plaintext,
+            '.fodp': enums.FileTypeEnum.Plaintext,
+        }
+        return extension_map.get(extension, enums.FileTypeEnum.Unknown)
+
 
 class ArchiveFactory:
     """Creates archive handler instances for supported archive formats."""
@@ -121,6 +175,12 @@ class ArchiveFactory:
         enums.FileTypeEnum.MsWord: ZipArchive,
         enums.FileTypeEnum.MsExcel: ZipArchive,
         enums.FileTypeEnum.MsPowerpoint: ZipArchive,
+        enums.FileTypeEnum.OpenDocumentText: OpenDocumentArchive,
+        enums.FileTypeEnum.OpenDocumentSpreadsheet: OpenDocumentArchive,
+        enums.FileTypeEnum.OpenDocumentPresentation: OpenDocumentArchive,
+        enums.FileTypeEnum.OpenDocumentDrawing: OpenDocumentArchive,
+        enums.FileTypeEnum.OpenDocumentFormula: OpenDocumentArchive,
+        enums.FileTypeEnum.OpenDocumentMaster: OpenDocumentArchive,
         enums.FileTypeEnum.Zip: ZipArchive,
         enums.FileTypeEnum.Tar: TarArchive,
         enums.FileTypeEnum.Gzip: GzipArchive,

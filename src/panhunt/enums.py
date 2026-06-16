@@ -156,3 +156,9 @@ class FileTypeEnum(Enum):
     Tar = 12
     Gzip = 13
     Xz = 14
+    OpenDocumentText = 15
+    OpenDocumentSpreadsheet = 16
+    OpenDocumentPresentation = 17
+    OpenDocumentDrawing = 18
+    OpenDocumentFormula = 19
+    OpenDocumentMaster = 20

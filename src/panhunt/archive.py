@@ -1,5 +1,6 @@
 import os
 import tarfile
+import xml.etree.ElementTree as ET
 from gzip import GzipFile
 from io import BytesIO, IOBase
 from lzma import LZMAFile
@@ -136,6 +137,112 @@ class ZipArchive(Archive):
             return [], PANHuntException(f'{type(ex).__name__}: {ex}')
 
         return children, None
+
+
+class OpenDocumentArchive(ZipArchive):
+    """Archive handler for OpenDocument files.
+
+    OpenDocument files are ZIP containers. This handler extracts text from
+    document XML members so PANs split across XML tags remain searchable, while
+    still enqueueing embedded non-XML files for recursive scanning.
+    """
+
+    _TEXT_XML_MEMBERS = {'content.xml', 'styles.xml', 'meta.xml', 'settings.xml'}
+    _MANIFEST_PATH = 'META-INF/manifest.xml'
+    _ENCRYPTION_MARKER = b'encryption-data'
+
+    def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
+        children: list[Job] = []
+        total_size = 0
+        try:
+            if isinstance(self.payload, bytes):
+                zip_source = BytesIO(self.payload)
+            elif self.payload is not None:
+                self.payload.seek(0)
+                zip_source = self.payload
+            else:
+                zip_source = self.path
+
+            with ZipFile(zip_source, 'r') as zip_ref:
+                infos = zip_ref.infolist()
+                if len(infos) > self.max_members:
+                    return [], self._limit_error(f'OpenDocument ZIP member count exceeds {self.max_members}')
+
+                encrypted, encryption_error = self._is_encrypted(zip_ref)
+                if encryption_error:
+                    return [], encryption_error
+                if encrypted:
+                    return [], PANHuntException('Encrypted OpenDocument files are not supported')
+
+                for file_info in infos:
+                    if file_info.is_dir() or file_info.filename == self._MANIFEST_PATH:
+                        continue
+
+                    limit_error = self._validate_member(file_info, total_size)
+                    if limit_error:
+                        self._close_children(children)
+                        return [], limit_error
+
+                    with zip_ref.open(file_info) as file:
+                        payload, payload_size, child_context = self._spool_child(file, file_info.filename)
+                    total_size += payload_size
+
+                    if file_info.filename in self._TEXT_XML_MEMBERS:
+                        text_payload = self._extract_xml_text(payload)
+                        payload.close()
+                        if text_payload:
+                            text_basename = f'{file_info.filename}.txt'
+                            text_stream = BytesIO(text_payload)
+                            children.append(Job(
+                                basename=text_basename,
+                                dirname=self.path,
+                                payload=text_stream,
+                                context=self._child_context(text_basename, len(text_payload))))
+                        continue
+
+                    children.append(Job(
+                        basename=file_info.filename,
+                        dirname=self.path,
+                        payload=payload,
+                        context=child_context))
+        except PANHuntException as ex:
+            self._close_children(children)
+            return [], ex
+        except Exception as ex:
+            self._close_children(children)
+            return [], PANHuntException(f'{type(ex).__name__}: {ex}')
+
+        return children, None
+
+    def _is_encrypted(self, zip_ref: ZipFile) -> tuple[bool, Optional[PANHuntException]]:
+        try:
+            manifest_info = zip_ref.getinfo(self._MANIFEST_PATH)
+        except KeyError:
+            return False, None
+
+        limit_error = self._validate_member(manifest_info, 0)
+        if limit_error:
+            return False, limit_error
+
+        with zip_ref.open(manifest_info) as manifest_stream:
+            manifest = manifest_stream.read(self.size_limit + 1)
+        if len(manifest) > self.size_limit:
+            return False, self._limit_error(
+                f'member "{self._MANIFEST_PATH}" declares {panutils.size_friendly(size=len(manifest))}'
+            )
+        return self._ENCRYPTION_MARKER in manifest, None
+
+    @staticmethod
+    def _extract_xml_text(payload: IO[bytes]) -> bytes:
+        payload.seek(0)
+        raw_payload = payload.read()
+        try:
+            root = ET.fromstring(raw_payload)
+        except ET.ParseError:
+            return raw_payload
+
+        text = ' '.join(part.strip() for part in root.itertext() if part and part.strip())
+        return text.encode('utf-8')
 
 
 class TarArchive(Archive):

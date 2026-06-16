@@ -101,3 +101,37 @@ class TestArchiveFactory:
     def test_plaintext_returns_none(self):
         cls = ArchiveFactory.get_archive('text/plain', '.txt')
         assert cls is None
+
+    def test_odt_is_open_document_archive(self):
+        from panhunt.archive import OpenDocumentArchive
+        cls = ArchiveFactory.get_archive(
+            'application/vnd.oasis.opendocument.text',
+            '.odt',
+        )
+        assert cls is OpenDocumentArchive
+
+    def test_ods_is_open_document_archive(self):
+        from panhunt.archive import OpenDocumentArchive
+        cls = ArchiveFactory.get_archive(
+            'application/vnd.oasis.opendocument.spreadsheet',
+            '.ods',
+        )
+        assert cls is OpenDocumentArchive
+
+    def test_odp_is_open_document_archive(self):
+        from panhunt.archive import OpenDocumentArchive
+        cls = ArchiveFactory.get_archive(
+            'application/vnd.oasis.opendocument.presentation',
+            '.odp',
+        )
+        assert cls is OpenDocumentArchive
+
+    def test_odt_zip_extension_fallback(self):
+        from panhunt.archive import OpenDocumentArchive
+        cls = ArchiveFactory.get_archive('application/zip', '.odt')
+        assert cls is OpenDocumentArchive
+
+    def test_odt_octet_stream_extension_fallback(self):
+        from panhunt.archive import OpenDocumentArchive
+        cls = ArchiveFactory.get_archive('application/octet-stream', '.odt')
+        assert cls is OpenDocumentArchive
