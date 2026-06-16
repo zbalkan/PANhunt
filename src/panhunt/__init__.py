@@ -24,6 +24,15 @@ from .service import PanHuntService
 APP_NAME: Final[str] = 'PANhunt'
 
 
+def _log_uncaught_exception(exc_type, exc_value, exc_traceback) -> None:
+    if issubclass(exc_type, KeyboardInterrupt):
+        print('\nInterrupted. Exiting cleanly.')
+        logging.info('Interrupted by user.')
+        return
+
+    logging.critical('Unhandled fatal error', exc_info=(exc_type, exc_value, exc_traceback))
+
+
 def main() -> None:
     logging.basicConfig(
         filename=os.path.join(panutils.get_root_dir(), f'{APP_NAME}.log'),
@@ -32,7 +41,7 @@ def main() -> None:
         datefmt='%Y-%m-%dT%H:%M:%S%z',
         level=logging.DEBUG)
 
-    sys.excepthook = logging.error
+    sys.excepthook = _log_uncaught_exception
     logging.info('Starting')
 
     colorama.init()
@@ -81,17 +90,12 @@ if __name__ == '__main__':
         main()
         logging.info('Exiting')
     except KeyboardInterrupt:
-        print('Cancelled by user.')
-        logging.error('Cancelled by user.')
+        print('\nInterrupted. Exiting cleanly.')
+        logging.info('Interrupted by user.')
         logging.info('Exiting')
-        try:
-            sys.exit(0)
-        except SystemExit:
-            os._exit(0)
+        raise SystemExit(130)
     except Exception as ex:
         print('ERROR: ' + str(ex))
+        logging.exception('Unhandled fatal error')
         logging.info('Exiting')
-        try:
-            sys.exit(1)
-        except SystemExit:
-            os._exit(1)
+        raise SystemExit(1)
