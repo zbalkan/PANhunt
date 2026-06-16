@@ -34,6 +34,9 @@ class Dispatcher:
             max_depth=self._config.max_scan_depth,
             max_child_jobs=self._config.max_child_jobs,
             max_total_expanded_bytes=self._config.max_total_expanded_bytes,
+            max_attachment_size=self._config.max_attachment_size,
+            max_attachments_per_message=self._config.max_attachments_per_message,
+            max_total_attachment_bytes=self._config.max_total_attachment_bytes,
             max_path_length=self._config.max_archive_path_length
         )
         self._resource_budget = ResourceBudget(self._scan_limits)

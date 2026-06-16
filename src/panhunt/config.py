@@ -24,6 +24,9 @@ class ScanConfiguration:
     max_archive_compression_ratio: int
     max_archive_path_length: int
     archive_spool_threshold: int
+    max_attachment_size: int
+    max_attachments_per_message: int
+    max_total_attachment_bytes: int
     allowed_archive_types: list[str]
     denied_archive_types: list[str]
     quiet: bool
@@ -51,6 +54,9 @@ class ScanConfiguration:
         self.max_archive_compression_ratio = 100
         self.max_archive_path_length = 4096
         self.archive_spool_threshold = 8 * 1024 * 1024
+        self.max_attachment_size = self.size_limit
+        self.max_attachments_per_message = 1_000
+        self.max_total_attachment_bytes = self.size_limit
         self.allowed_archive_types = []
         self.denied_archive_types = []
         self.quiet = False
@@ -85,6 +91,9 @@ class ScanConfiguration:
                   max_archive_compression_ratio: Optional[int] = None,
                   max_archive_path_length: Optional[int] = None,
                   archive_spool_threshold: Optional[int] = None,
+                  max_attachment_size: Optional[int] = None,
+                  max_attachments_per_message: Optional[int] = None,
+                  max_total_attachment_bytes: Optional[int] = None,
                   allowed_archive_types_string: Optional[str] = None,
                   denied_archive_types_string: Optional[str] = None,
                   quiet: Optional[bool] = None) -> 'ScanConfiguration':
@@ -106,6 +115,9 @@ class ScanConfiguration:
             max_archive_compression_ratio=max_archive_compression_ratio,
             max_archive_path_length=max_archive_path_length,
             archive_spool_threshold=archive_spool_threshold,
+            max_attachment_size=max_attachment_size,
+            max_attachments_per_message=max_attachments_per_message,
+            max_total_attachment_bytes=max_total_attachment_bytes,
             allowed_archive_types_string=allowed_archive_types_string,
             denied_archive_types_string=denied_archive_types_string,
             quiet=quiet
@@ -135,6 +147,9 @@ class ScanConfiguration:
             max_archive_compression_ratio=cls._try_parse_int(raw, 'maxarchivecompressionratio'),
             max_archive_path_length=cls._try_parse_int(raw, 'maxarchivepathlength'),
             archive_spool_threshold=cls._try_parse_int(raw, 'archivespoolthreshold'),
+            max_attachment_size=cls._try_parse_int(raw, 'maxattachmentsize'),
+            max_attachments_per_message=cls._try_parse_int(raw, 'maxattachmentspermessage'),
+            max_total_attachment_bytes=cls._try_parse_int(raw, 'maxtotalattachmentbytes'),
             allowed_archive_types_string=cls._try_parse(raw, 'allowedarchivetypes'),
             denied_archive_types_string=cls._try_parse(raw, 'deniedarchivetypes'),
             quiet=quiet if quiet is not None else cls._try_parse_bool(raw, 'quiet'),
@@ -156,6 +171,9 @@ class ScanConfiguration:
                 max_archive_compression_ratio: Optional[int] = None,
                 max_archive_path_length: Optional[int] = None,
                 archive_spool_threshold: Optional[int] = None,
+                max_attachment_size: Optional[int] = None,
+                max_attachments_per_message: Optional[int] = None,
+                max_total_attachment_bytes: Optional[int] = None,
                 allowed_archive_types_string: Optional[str] = None,
                 denied_archive_types_string: Optional[str] = None,
                 quiet: Optional[bool] = None) -> None:
@@ -181,6 +199,8 @@ class ScanConfiguration:
         if size_limit is not None:
             self.size_limit = size_limit
             self.max_total_expanded_bytes = size_limit
+            self.max_attachment_size = size_limit
+            self.max_total_attachment_bytes = size_limit
 
         if worker_count is not None:
             if worker_count < 1:
@@ -221,6 +241,21 @@ class ScanConfiguration:
             if archive_spool_threshold < 0:
                 raise ValueError("archive_spool_threshold must be a non-negative integer")
             self.archive_spool_threshold = archive_spool_threshold
+
+        if max_attachment_size is not None:
+            if max_attachment_size < 0:
+                raise ValueError("max_attachment_size must be a non-negative integer")
+            self.max_attachment_size = max_attachment_size
+
+        if max_attachments_per_message is not None:
+            if max_attachments_per_message < 1:
+                raise ValueError("max_attachments_per_message must be a positive integer")
+            self.max_attachments_per_message = max_attachments_per_message
+
+        if max_total_attachment_bytes is not None:
+            if max_total_attachment_bytes < 0:
+                raise ValueError("max_total_attachment_bytes must be a non-negative integer")
+            self.max_total_attachment_bytes = max_total_attachment_bytes
 
         if allowed_archive_types_string and allowed_archive_types_string != 'None':
             self.allowed_archive_types = [t.strip().lower() for t in allowed_archive_types_string.split(',') if t.strip()]

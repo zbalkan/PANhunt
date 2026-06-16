@@ -2,6 +2,8 @@ import json
 from email import message, parser
 from typing import Optional
 
+from ..scancontext import ScanContext
+
 from ..exceptions import PANHuntException
 
 
@@ -13,7 +15,14 @@ class Eml:
 
     __text: str
 
-    def __init__(self, path: str, payload: Optional[bytes] = None, size_limit: int = 1_073_741_824) -> None:
+    def __init__(
+            self,
+            path: str,
+            payload: Optional[bytes] = None,
+            size_limit: int = 1_073_741_824,
+            max_attachments: int = 1_000,
+            max_total_attachment_bytes: int = 1_073_741_824,
+            context: Optional[ScanContext] = None) -> None:
         if payload:
             msg = parser.BytesParser().parsebytes(payload)
         else:
@@ -24,6 +33,10 @@ class Eml:
         self.body = ''
         self.attachments = []
         self._size_limit = size_limit
+        self._max_attachments = max_attachments
+        self._max_total_attachment_bytes = max_total_attachment_bytes
+        self._decoded_attachment_bytes = 0
+        self._context = context
         self._extract_message(msg)
         self.__text = self.to_text()
 
@@ -61,8 +74,17 @@ class Eml:
         if binary_data is None:
             raw = attachment_payload.get_payload()
             binary_data = raw.encode('utf-8', errors='backslashreplace') if isinstance(raw, str) else bytes(raw)
-        if len(binary_data) > self._size_limit:
+        attachment_count = len(self.attachments) + 1
+        byte_count = len(binary_data)
+        if attachment_count > self._max_attachments:
+            raise PANHuntException(f'Attachment count limit exceeded for "{self.filename}": {attachment_count} over {self._max_attachments}')
+        if byte_count > self._size_limit:
             raise PANHuntException(f'Attachment "{filename}" exceeds configured size limit')
+        if self._decoded_attachment_bytes + byte_count > self._max_total_attachment_bytes:
+            raise PANHuntException(f'Decoded attachment bytes exceed configured message limit for "{self.filename}"')
+        if self._context:
+            self._context.reserve_attachment(filename, byte_count, attachment_count)
+        self._decoded_attachment_bytes += byte_count
         self.attachments.append(Attachment(filename=filename, payload=binary_data))
 
     def to_text(self) -> str:

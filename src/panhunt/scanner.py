@@ -8,6 +8,7 @@ from typing import Optional
 from .buffer import JobBuffer
 from .config import ScanConfiguration
 from .constants import BLOCK_SIZE_BYTES, MIN_PAN_LENGTH, STREAM_CHUNK_SIZE_BYTES
+from .exceptions import PANHuntException
 from .finder import PanFinder
 from .formats.eml import Eml
 from .formats.mbox import Mbox
@@ -29,6 +30,18 @@ class ScannerBase(ABC):
     @abstractmethod
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
         raise NotImplementedError()
+
+    def _validate_attachment(self, parent: Job, basename: str, payload: Optional[bytes], attachment_count: int) -> None:
+        payload_size = len(payload) if payload is not None else 0
+        if attachment_count > self._config.max_attachments_per_message:
+            raise PANHuntException(
+                f'Attachment count limit exceeded for "{parent.abspath}": '
+                f'{attachment_count} over {self._config.max_attachments_per_message}'
+            )
+        if payload_size > self._config.max_attachment_size:
+            raise PANHuntException(f'Attachment "{basename}" exceeds configured size limit')
+        if parent.context:
+            parent.context.reserve_attachment(basename, payload_size, attachment_count)
 
     def _child_job(self, parent: Job, basename: str, payload: Optional[bytes]) -> Job:
         payload_size = len(payload) if payload is not None else 0
@@ -127,7 +140,8 @@ class MsgScanner(ScannerBase):
             if msg.Body:
                 matches.extend(self._pan_finder.find(msg.Body))
             if msg.attachments:
-                for att in msg.attachments:
+                for index, att in enumerate(msg.attachments, start=1):
+                    self._validate_attachment(job, att.Filename, att.BinaryData, index)
                     self._buffer.enqueue(self._child_job(job, att.Filename, att.BinaryData))
 
         return matches
@@ -137,9 +151,22 @@ class EmlScanner(ScannerBase):
 
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
         eml = (
-            Eml(path=job.abspath, payload=job.payload, size_limit=self._config.size_limit)
+            Eml(
+                path=job.abspath,
+                payload=job.payload,
+                size_limit=self._config.max_attachment_size,
+                max_attachments=self._config.max_attachments_per_message,
+                max_total_attachment_bytes=self._config.max_total_attachment_bytes,
+                context=job.context
+            )
             if job.payload
-            else Eml(path=job.abspath, size_limit=self._config.size_limit)
+            else Eml(
+                path=job.abspath,
+                size_limit=self._config.max_attachment_size,
+                max_attachments=self._config.max_attachments_per_message,
+                max_total_attachment_bytes=self._config.max_total_attachment_bytes,
+                context=job.context
+            )
         )
 
         matches: list[PAN] = []
@@ -157,9 +184,22 @@ class MboxScanner(ScannerBase):
 
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
         mbox = (
-            Mbox(path=job.basename, payload=job.payload, size_limit=self._config.size_limit)
+            Mbox(
+                path=job.basename,
+                payload=job.payload,
+                size_limit=self._config.max_attachment_size,
+                max_attachments_per_message=self._config.max_attachments_per_message,
+                max_total_attachment_bytes=self._config.max_total_attachment_bytes,
+                context=job.context
+            )
             if job.payload
-            else Mbox(path=job.abspath, size_limit=self._config.size_limit)
+            else Mbox(
+                path=job.abspath,
+                size_limit=self._config.max_attachment_size,
+                max_attachments_per_message=self._config.max_attachments_per_message,
+                max_total_attachment_bytes=self._config.max_total_attachment_bytes,
+                context=job.context
+            )
         )
 
         matches: list[PAN] = []
@@ -188,18 +228,25 @@ class PstScanner(ScannerBase):
 
         if self._pst.header.validPST:
             pst_path: str = os.path.abspath(job.abspath)
+            folder_count = 0
+            message_count = 0
+            attachment_count = 0
             for folder in self._pst.folder_generator():
+                folder_count += 1
                 for message in self._pst.message_generator(folder=folder):
+                    message_count += 1
                     if message.Body:
                         matches.extend(self._pan_finder.find(message.Body))
 
                     if message.HasAttachments:
                         msg_path = os.path.join(folder.path, message.Subject or '[NoSubject]')
                         dirname = ':'.join([pst_path, msg_path])
-                        for subattachment in message.subattachments:
+                        for index, subattachment in enumerate(message.subattachments, start=1):
+                            attachment_count += 1
                             if subattachment.Filename:
                                 att: Optional[PstAttachment] = message.get_attachment(subattachment=subattachment)
                                 if att and att.Filename:
+                                    self._validate_attachment(job, att.Filename, att.BinaryData, index)
                                     self._buffer.enqueue(Job(
                                         basename=att.Filename,
                                         dirname=dirname,

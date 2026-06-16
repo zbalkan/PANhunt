@@ -11,6 +11,9 @@ class ScanLimits:
     max_depth: int
     max_child_jobs: int
     max_total_expanded_bytes: int
+    max_attachment_size: int = 1_073_741_824
+    max_attachments_per_message: int = 1_000
+    max_total_attachment_bytes: int = 1_073_741_824
     max_path_length: int = 4096
 
 
@@ -21,6 +24,7 @@ class ResourceBudget:
         self.limits = limits
         self._child_jobs = 0
         self._expanded_bytes = 0
+        self._attachment_bytes = 0
         self._lock = threading.Lock()
 
     def reserve_child(self, logical_path: str, depth: int, payload_size: int = 0) -> None:
@@ -59,6 +63,29 @@ class ResourceBudget:
                 )
             self._expanded_bytes += byte_count
 
+    def reserve_attachment(self, logical_path: str, byte_count: int, attachment_count: int = 1) -> None:
+        if attachment_count > self.limits.max_attachments_per_message:
+            raise PANHuntException(
+                f'Attachment count limit exceeded for "{logical_path}": '
+                f'{attachment_count} over {self.limits.max_attachments_per_message}'
+            )
+        if byte_count > self.limits.max_attachment_size:
+            raise PANHuntException(
+                f'Attachment size limit exceeded for "{logical_path}": '
+                f'{panutils.size_friendly(size=byte_count)} over '
+                f'{panutils.size_friendly(size=self.limits.max_attachment_size)}'
+            )
+        if byte_count <= 0:
+            return
+        with self._lock:
+            if self._attachment_bytes + byte_count > self.limits.max_total_attachment_bytes:
+                raise PANHuntException(
+                    f'Scan decoded attachment-byte limit exceeded for "{logical_path}": '
+                    f'{panutils.size_friendly(size=self._attachment_bytes + byte_count)} over '
+                    f'{panutils.size_friendly(size=self.limits.max_total_attachment_bytes)}'
+                )
+            self._attachment_bytes += byte_count
+
     @property
     def child_jobs(self) -> int:
         with self._lock:
@@ -68,6 +95,11 @@ class ResourceBudget:
     def expanded_bytes(self) -> int:
         with self._lock:
             return self._expanded_bytes
+
+    @property
+    def attachment_bytes(self) -> int:
+        with self._lock:
+            return self._attachment_bytes
 
 
 class ScanContext:
@@ -99,6 +131,14 @@ class ScanContext:
             budget=budget if budget else ResourceBudget(limits),
             parent_archive=None,
             container_chain=[]
+        )
+
+    def reserve_attachment(self, basename: str, byte_count: int, attachment_count: int = 1) -> None:
+        logical_path = f'{self.logical_path}!/{basename}'
+        self.budget.reserve_attachment(
+            logical_path=logical_path,
+            byte_count=byte_count,
+            attachment_count=attachment_count
         )
 
     def child(self, basename: str, payload_size: int = 0) -> 'ScanContext':

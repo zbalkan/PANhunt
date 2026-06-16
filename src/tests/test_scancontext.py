@@ -45,3 +45,42 @@ def test_child_context_enforces_expanded_byte_limit():
 
     with pytest.raises(PANHuntException, match='Scan expanded-byte limit exceeded'):
         root.child('two.txt', payload_size=5)
+
+
+def test_attachment_budget_tracks_decoded_bytes():
+    root = _root_context()
+
+    root.reserve_attachment('a.txt', 4)
+
+    assert root.budget.attachment_bytes == 4
+
+
+def test_attachment_budget_enforces_total_decoded_bytes():
+    limits = ScanLimits(
+        max_depth=2,
+        max_child_jobs=2,
+        max_total_expanded_bytes=10,
+        max_attachment_size=10,
+        max_attachments_per_message=2,
+        max_total_attachment_bytes=5,
+    )
+    root = ScanContext.root('/tmp/root.eml', limits, ResourceBudget(limits))
+
+    root.reserve_attachment('one.txt', 3)
+    with pytest.raises(PANHuntException, match='decoded attachment-byte limit'):
+        root.reserve_attachment('two.txt', 3)
+
+
+def test_attachment_budget_enforces_per_message_count():
+    limits = ScanLimits(
+        max_depth=2,
+        max_child_jobs=2,
+        max_total_expanded_bytes=10,
+        max_attachment_size=10,
+        max_attachments_per_message=1,
+        max_total_attachment_bytes=10,
+    )
+    root = ScanContext.root('/tmp/root.eml', limits, ResourceBudget(limits))
+
+    with pytest.raises(PANHuntException, match='Attachment count limit exceeded'):
+        root.reserve_attachment('two.txt', 1, attachment_count=2)

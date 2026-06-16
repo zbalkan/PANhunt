@@ -4,6 +4,8 @@ import os
 import tempfile
 from typing import Any, Optional
 
+from ..scancontext import ScanContext
+
 from ..exceptions import PANHuntException
 
 
@@ -12,10 +14,21 @@ class Mbox:
     filename: str
     mails: list['Mail']
 
-    def __init__(self, path: str, payload: Optional[bytes] = None, size_limit: int = 1_073_741_824) -> None:
+    def __init__(
+            self,
+            path: str,
+            payload: Optional[bytes] = None,
+            size_limit: int = 1_073_741_824,
+            max_attachments_per_message: int = 1_000,
+            max_total_attachment_bytes: int = 1_073_741_824,
+            context: Optional[ScanContext] = None) -> None:
         self.filename = path
         self.mails = []
         self._size_limit = size_limit
+        self._max_attachments_per_message = max_attachments_per_message
+        self._max_total_attachment_bytes = max_total_attachment_bytes
+        self._decoded_attachment_bytes = 0
+        self._context = context
 
         if payload:
             if len(payload) > size_limit:
@@ -35,7 +48,16 @@ class Mbox:
         mbox = mailbox.mbox(path)
         try:
             for message in mbox:
-                self.mails.append(Mail(message, size_limit=self._size_limit))
+                self.mails.append(Mail(
+                    message,
+                    size_limit=self._size_limit,
+                    max_attachments=self._max_attachments_per_message,
+                    max_total_attachment_bytes=self._max_total_attachment_bytes,
+                    context=self._context
+                ))
+                self._decoded_attachment_bytes += self.mails[-1].decoded_attachment_bytes
+                if self._decoded_attachment_bytes > self._max_total_attachment_bytes:
+                    raise PANHuntException(f'Decoded attachment bytes exceed configured mailbox limit for "{self.filename}"')
         finally:
             mbox.close()
 
@@ -54,11 +76,21 @@ class Mail:
     body: str
     attachments: list['Attachment']
 
-    def __init__(self, message: mailbox.mboxMessage, size_limit: int = 1_073_741_824) -> None:
+    def __init__(
+            self,
+            message: mailbox.mboxMessage,
+            size_limit: int = 1_073_741_824,
+            max_attachments: int = 1_000,
+            max_total_attachment_bytes: int = 1_073_741_824,
+            context: Optional[ScanContext] = None) -> None:
         self.subject = self.get_subject(message)
         self.body = ''
         self.attachments = []
         self._size_limit = size_limit
+        self._max_attachments = max_attachments
+        self._max_total_attachment_bytes = max_total_attachment_bytes
+        self.decoded_attachment_bytes = 0
+        self._context = context
         self._extract_message(message)
 
     def _extract_message(self, msg: mailbox.mboxMessage) -> None:
@@ -97,8 +129,17 @@ class Mail:
         if binary_data is None:
             raw = attachment_payload.get_payload()
             binary_data = raw.encode('utf-8', errors='backslashreplace') if isinstance(raw, str) else bytes(raw)
-        if len(binary_data) > self._size_limit:
+        attachment_count = len(self.attachments) + 1
+        byte_count = len(binary_data)
+        if attachment_count > self._max_attachments:
+            raise PANHuntException(f'Attachment count limit exceeded for "{self.subject}": {attachment_count} over {self._max_attachments}')
+        if byte_count > self._size_limit:
             raise PANHuntException(f'Attachment "{filename}" exceeds configured size limit')
+        if self.decoded_attachment_bytes + byte_count > self._max_total_attachment_bytes:
+            raise PANHuntException(f'Decoded attachment bytes exceed configured message limit for "{self.subject}"')
+        if self._context:
+            self._context.reserve_attachment(filename, byte_count, attachment_count)
+        self.decoded_attachment_bytes += byte_count
         self.attachments.append(Attachment(filename=filename, payload=binary_data))
 
     def __str__(self) -> str:

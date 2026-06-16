@@ -40,6 +40,9 @@ class TestDefaults:
         assert c.max_scan_depth == 25
         assert c.max_child_jobs == 100_000
         assert c.max_total_expanded_bytes == c.size_limit
+        assert c.max_attachment_size == c.size_limit
+        assert c.max_attachments_per_message == 1_000
+        assert c.max_total_attachment_bytes == c.size_limit
 
     def test_report_file_has_timestamp(self):
         c = ScanConfiguration()
@@ -84,11 +87,17 @@ class TestFromArgs:
         c = ScanConfiguration.from_args(
             max_scan_depth=3,
             max_child_jobs=7,
-            max_total_expanded_bytes=2048
+            max_total_expanded_bytes=2048,
+            max_attachment_size=128,
+            max_attachments_per_message=9,
+            max_total_attachment_bytes=4096
         )
         assert c.max_scan_depth == 3
         assert c.max_child_jobs == 7
         assert c.max_total_expanded_bytes == 2048
+        assert c.max_attachment_size == 128
+        assert c.max_attachments_per_message == 9
+        assert c.max_total_attachment_bytes == 4096
 
     def test_invalid_worker_count_raises(self):
         with pytest.raises(ValueError, match='worker_count'):
