@@ -1,7 +1,8 @@
 import logging
 import os
+from io import IOBase
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from . import panutils
 from .enums import ScanStatusEnum
@@ -26,7 +27,7 @@ class Finding:
     depth: int
     container_chain: list[str]
 
-    def __init__(self, basename: str, dirname: str, payload: Optional[bytes] = None,
+    def __init__(self, basename: str, dirname: str, payload: Optional[Union[bytes, IOBase]] = None,
                  mimetype: Optional[str] = None, encoding: Optional[str] = None,
                  err: Optional[Exception] = None, context: Optional[ScanContext] = None) -> None:
         self.basename = basename
@@ -64,9 +65,18 @@ class Finding:
     def __str__(self) -> str:
         return f'{self.abspath} ({self.mime_type} : {self.encoding})'
 
-    def _set_file_stats(self, payload: Optional[bytes]) -> None:
+    def _set_file_stats(self, payload: Optional[Union[bytes, IOBase]]) -> None:
         try:
-            self.size = len(payload) if payload is not None else os.stat(self.abspath).st_size
+            if isinstance(payload, IOBase):
+                if not payload.seekable():
+                    self.size = 0
+                else:
+                    position = payload.tell()
+                    payload.seek(0, os.SEEK_END)
+                    self.size = payload.tell()
+                    payload.seek(position)
+            else:
+                self.size = len(payload) if payload is not None else os.stat(self.abspath).st_size
         except Exception as ex:
             self.size = -1
             self._set_error(str(ex))
