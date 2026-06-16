@@ -7,12 +7,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import enums
-from buffer import InMemoryJobBuffer
-from config import ScanConfiguration
-from dispatcher import Dispatcher
-from finding import Finding
-from job import Job
+from panhunt import enums
+from panhunt.buffer import InMemoryJobBuffer
+from panhunt.config import ScanConfiguration
+from panhunt.dispatcher import Dispatcher
+from panhunt.finding import Finding
+from panhunt.job import Job
 
 
 def _make_job(name: str = 'test.txt') -> Job:
