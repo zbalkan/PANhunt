@@ -19,6 +19,8 @@ class Hunter:
         self._dispatcher.start()
 
         logging.info(f"Search base: {config.target_path}")
+        if not config.quiet:
+            print(f'Scanning {config.target_path}...', flush=True)
 
         target_path = str(config.target_path)
         if os.path.isfile(target_path):
@@ -34,8 +36,15 @@ class Hunter:
 
         self._buffer.mark_input_complete()
 
+        progress_printed = False
         while not self._buffer.is_finished():
+            if not config.quiet:
+                print('.', end='', flush=True)
+                progress_printed = True
             time.sleep(0.1)
+
+        if progress_printed:
+            print(flush=True)
 
         self._dispatcher.stop()
         self._dispatcher.join()

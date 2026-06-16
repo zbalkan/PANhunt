@@ -87,3 +87,25 @@ class TestHuntResults:
         h.hunt(config)
         mock_dispatcher.stop.assert_called_once()
         mock_dispatcher.join.assert_called_once()
+
+
+class TestHuntProgress:
+    def test_non_quiet_prints_progress_start(self, mock_dispatcher, mock_buffer, tmp_text_file, capsys):
+        config = ScanConfiguration.from_args(target_path=tmp_text_file, quiet=False)
+        mock_buffer.is_finished.return_value = True
+        h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
+
+        h.hunt(config)
+
+        captured = capsys.readouterr()
+        assert f'Scanning {tmp_text_file}...' in captured.out
+
+    def test_quiet_suppresses_progress_start(self, mock_dispatcher, mock_buffer, tmp_text_file, capsys):
+        config = ScanConfiguration.from_args(target_path=tmp_text_file, quiet=True)
+        mock_buffer.is_finished.return_value = True
+        h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
+
+        h.hunt(config)
+
+        captured = capsys.readouterr()
+        assert captured.out == ''
