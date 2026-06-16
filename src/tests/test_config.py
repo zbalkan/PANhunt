@@ -223,3 +223,38 @@ class TestParserLimitConfiguration:
         assert c.parser_memory_limit_bytes == 1024
         assert c.max_pdf_pages == 7
         assert c.max_pdf_text_bytes == 2048
+
+class TestValidation:
+    def test_negative_size_limit_raises(self):
+        with pytest.raises(ValueError, match='size_limit'):
+            ScanConfiguration.from_args(size_limit=-1)
+
+    def test_non_integer_worker_count_raises(self):
+        with pytest.raises(ValueError, match='worker_count'):
+            ScanConfiguration.from_args(worker_count='many')  # type: ignore[arg-type]
+
+    def test_validate_rejects_missing_target(self, tmp_path: Path):
+        c = ScanConfiguration.from_args(target_path=str(tmp_path / 'missing'))
+        with pytest.raises(ValueError, match='target_path does not exist'):
+            c.validate()
+
+    def test_validate_rejects_json_dir_that_is_a_file(self, tmp_path: Path):
+        target = tmp_path / 'target.txt'
+        target.write_text('x')
+        json_dir = tmp_path / 'json-file'
+        json_dir.write_text('not a directory')
+        c = ScanConfiguration.from_args(target_path=str(target), json_dir=str(json_dir))
+        with pytest.raises(ValueError, match='json_dir'):
+            c.validate()
+
+    def test_invalid_config_integer_reports_key(self, tmp_path: Path):
+        ini = tmp_path / 'config.ini'
+        ini.write_text('[DEFAULT]\nworkers=lots\n')
+        with pytest.raises(ValueError, match='Invalid integer value for workers'):
+            ScanConfiguration.from_file(str(ini))
+
+    def test_invalid_config_boolean_reports_key(self, tmp_path: Path):
+        ini = tmp_path / 'config.ini'
+        ini.write_text('[DEFAULT]\nquiet=perhaps\n')
+        with pytest.raises(ValueError, match='Invalid boolean value for quiet'):
+            ScanConfiguration.from_file(str(ini))

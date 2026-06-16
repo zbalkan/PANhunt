@@ -17,6 +17,10 @@ class PanHuntService:
 
     def scan(self, config: ScanConfiguration) -> ScanResult:
         """Run a scan and return structured results."""
+        if not isinstance(config, ScanConfiguration):
+            raise TypeError("config must be a ScanConfiguration instance")
+        config.validate()
+
         start_time = datetime.now()
         logging.info("Started searching in file(s).")
 

@@ -79,6 +79,34 @@ class ScanConfiguration:
             return os.path.join(self.json_dir, self.json_file)
         return None
 
+    def validate(self) -> None:
+        """Validate resolved configuration values before a scan starts."""
+        if not self.target_path:
+            raise ValueError("target_path is required")
+        if not os.path.exists(self.target_path):
+            raise ValueError(f'target_path does not exist: {self.target_path}')
+        if os.path.exists(self.report_dir) and not os.path.isdir(self.report_dir):
+            raise ValueError(f'report_dir exists and is not a directory: {self.report_dir}')
+        if self.json_dir is not None and os.path.exists(self.json_dir) and not os.path.isdir(self.json_dir):
+            raise ValueError(f'json_dir exists and is not a directory: {self.json_dir}')
+
+        self._validate_non_negative_int('size_limit', self.size_limit)
+        self._validate_positive_int('worker_count', self.worker_count)
+        self._validate_non_negative_int('max_scan_depth', self.max_scan_depth)
+        self._validate_positive_int('max_child_jobs', self.max_child_jobs)
+        self._validate_non_negative_int('max_total_expanded_bytes', self.max_total_expanded_bytes)
+        self._validate_positive_int('max_archive_members', self.max_archive_members)
+        self._validate_positive_int('max_archive_compression_ratio', self.max_archive_compression_ratio)
+        self._validate_positive_int('max_archive_path_length', self.max_archive_path_length)
+        self._validate_non_negative_int('archive_spool_threshold', self.archive_spool_threshold)
+        self._validate_non_negative_int('max_attachment_size', self.max_attachment_size)
+        self._validate_positive_int('max_attachments_per_message', self.max_attachments_per_message)
+        self._validate_non_negative_int('max_total_attachment_bytes', self.max_total_attachment_bytes)
+        self._validate_positive_int('parser_timeout_seconds', self.parser_timeout_seconds)
+        self._validate_non_negative_int('parser_memory_limit_bytes', self.parser_memory_limit_bytes)
+        self._validate_positive_int('max_pdf_pages', self.max_pdf_pages)
+        self._validate_non_negative_int('max_pdf_text_bytes', self.max_pdf_text_bytes)
+
     def is_excluded(self, pan: str) -> bool:
         return pan in self.excluded_pans
 
@@ -215,64 +243,54 @@ class ScanConfiguration:
             self.excluded_pans = excluded_pans_string.split(',')
 
         if size_limit is not None:
+            self._validate_non_negative_int('size_limit', size_limit)
             self.size_limit = size_limit
             self.max_total_expanded_bytes = size_limit
             self.max_attachment_size = size_limit
             self.max_total_attachment_bytes = size_limit
 
         if worker_count is not None:
-            if worker_count < 1:
-                raise ValueError("worker_count must be a positive integer")
+            self._validate_positive_int('worker_count', worker_count)
             self.worker_count = worker_count
 
         if max_scan_depth is not None:
-            if max_scan_depth < 0:
-                raise ValueError("max_scan_depth must be a non-negative integer")
+            self._validate_non_negative_int('max_scan_depth', max_scan_depth)
             self.max_scan_depth = max_scan_depth
 
         if max_child_jobs is not None:
-            if max_child_jobs < 1:
-                raise ValueError("max_child_jobs must be a positive integer")
+            self._validate_positive_int('max_child_jobs', max_child_jobs)
             self.max_child_jobs = max_child_jobs
 
         if max_total_expanded_bytes is not None:
-            if max_total_expanded_bytes < 0:
-                raise ValueError("max_total_expanded_bytes must be a non-negative integer")
+            self._validate_non_negative_int('max_total_expanded_bytes', max_total_expanded_bytes)
             self.max_total_expanded_bytes = max_total_expanded_bytes
 
         if max_archive_members is not None:
-            if max_archive_members < 1:
-                raise ValueError("max_archive_members must be a positive integer")
+            self._validate_positive_int('max_archive_members', max_archive_members)
             self.max_archive_members = max_archive_members
 
         if max_archive_compression_ratio is not None:
-            if max_archive_compression_ratio < 1:
-                raise ValueError("max_archive_compression_ratio must be a positive integer")
+            self._validate_positive_int('max_archive_compression_ratio', max_archive_compression_ratio)
             self.max_archive_compression_ratio = max_archive_compression_ratio
 
         if max_archive_path_length is not None:
-            if max_archive_path_length < 1:
-                raise ValueError("max_archive_path_length must be a positive integer")
+            self._validate_positive_int('max_archive_path_length', max_archive_path_length)
             self.max_archive_path_length = max_archive_path_length
 
         if archive_spool_threshold is not None:
-            if archive_spool_threshold < 0:
-                raise ValueError("archive_spool_threshold must be a non-negative integer")
+            self._validate_non_negative_int('archive_spool_threshold', archive_spool_threshold)
             self.archive_spool_threshold = archive_spool_threshold
 
         if max_attachment_size is not None:
-            if max_attachment_size < 0:
-                raise ValueError("max_attachment_size must be a non-negative integer")
+            self._validate_non_negative_int('max_attachment_size', max_attachment_size)
             self.max_attachment_size = max_attachment_size
 
         if max_attachments_per_message is not None:
-            if max_attachments_per_message < 1:
-                raise ValueError("max_attachments_per_message must be a positive integer")
+            self._validate_positive_int('max_attachments_per_message', max_attachments_per_message)
             self.max_attachments_per_message = max_attachments_per_message
 
         if max_total_attachment_bytes is not None:
-            if max_total_attachment_bytes < 0:
-                raise ValueError("max_total_attachment_bytes must be a non-negative integer")
+            self._validate_non_negative_int('max_total_attachment_bytes', max_total_attachment_bytes)
             self.max_total_attachment_bytes = max_total_attachment_bytes
 
         if allowed_archive_types_string and allowed_archive_types_string != 'None':
@@ -282,27 +300,33 @@ class ScanConfiguration:
             self.denied_archive_types = [t.strip().lower() for t in denied_archive_types_string.split(',') if t.strip()]
 
         if parser_timeout_seconds is not None:
-            if parser_timeout_seconds < 1:
-                raise ValueError("parser_timeout_seconds must be a positive integer")
+            self._validate_positive_int('parser_timeout_seconds', parser_timeout_seconds)
             self.parser_timeout_seconds = parser_timeout_seconds
 
         if parser_memory_limit_bytes is not None:
-            if parser_memory_limit_bytes < 0:
-                raise ValueError("parser_memory_limit_bytes must be a non-negative integer")
+            self._validate_non_negative_int('parser_memory_limit_bytes', parser_memory_limit_bytes)
             self.parser_memory_limit_bytes = parser_memory_limit_bytes
 
         if max_pdf_pages is not None:
-            if max_pdf_pages < 1:
-                raise ValueError("max_pdf_pages must be a positive integer")
+            self._validate_positive_int('max_pdf_pages', max_pdf_pages)
             self.max_pdf_pages = max_pdf_pages
 
         if max_pdf_text_bytes is not None:
-            if max_pdf_text_bytes < 0:
-                raise ValueError("max_pdf_text_bytes must be a non-negative integer")
+            self._validate_non_negative_int('max_pdf_text_bytes', max_pdf_text_bytes)
             self.max_pdf_text_bytes = max_pdf_text_bytes
 
         if quiet is not None:
             self.quiet = quiet
+
+    @staticmethod
+    def _validate_positive_int(name: str, value: int) -> None:
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
+
+    @staticmethod
+    def _validate_non_negative_int(name: str, value: int) -> None:
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ValueError(f"{name} must be a non-negative integer")
 
     @staticmethod
     def _parse_file(config_file: str) -> dict:
@@ -320,9 +344,21 @@ class ScanConfiguration:
     @staticmethod
     def _try_parse_int(raw: dict, key: str) -> Optional[int]:
         s = ScanConfiguration._try_parse(raw, key)
-        return int(s) if s else None
+        if not s:
+            return None
+        try:
+            return int(s)
+        except ValueError as ex:
+            raise ValueError(f"Invalid integer value for {key}: {s}") from ex
 
     @staticmethod
     def _try_parse_bool(raw: dict, key: str) -> Optional[bool]:
         s = ScanConfiguration._try_parse(raw, key)
-        return s.lower() == 'true' if s else None
+        if not s:
+            return None
+        normalized = s.strip().lower()
+        if normalized in ('true', '1', 'yes', 'y', 'on'):
+            return True
+        if normalized in ('false', '0', 'no', 'n', 'off'):
+            return False
+        raise ValueError(f"Invalid boolean value for {key}: {s}")

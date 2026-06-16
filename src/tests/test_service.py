@@ -89,3 +89,15 @@ class TestResultContent:
             MockHunter.return_value.hunt.return_value = ([], [failing])
             result = svc.scan(config)
         assert len(result.interesting_files) == 1
+
+class TestServiceValidation:
+    def test_scan_rejects_non_configuration(self):
+        service = PanHuntService()
+        with pytest.raises(TypeError, match='ScanConfiguration'):
+            service.scan(object())  # type: ignore[arg-type]
+
+    def test_scan_validates_target_exists(self, tmp_path):
+        service = PanHuntService()
+        config = ScanConfiguration.from_args(target_path=str(tmp_path / 'missing'), quiet=True)
+        with pytest.raises(ValueError, match='target_path does not exist'):
+            service.scan(config)
