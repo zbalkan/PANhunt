@@ -55,7 +55,7 @@ class CliPresenter:
         header = (
             f'PAN Hunt Report - {result.start_time.strftime("%H:%M:%S %d/%m/%Y")}{newline}'
             f'{sep}{newline}'
-            f'Searched {result.config.search_dir}{newline}'
+            f'Searched {result.config.target_path}{newline}'
             f'Excluded {",".join(result.config.excluded_directories)}{newline}'
             f'Command: {" ".join(sys.argv)}{newline}'
             f'Uname: {" | ".join(platform.uname())}{newline}'

@@ -2,6 +2,7 @@
 
 import configparser
 import os
+from pathlib import Path
 import tempfile
 
 import pytest
@@ -10,10 +11,10 @@ from panhunt.config import ScanConfiguration
 
 
 class TestDefaults:
-    def test_default_search_dir(self):
+    def test_default_target_path(self):
         c = ScanConfiguration()
         expected = 'C:\\' if os.name == 'nt' else '/'
-        assert c.search_dir == expected
+        assert c.target_path == expected
 
     def test_default_excluded_dirs_not_empty(self):
         c = ScanConfiguration()
@@ -56,9 +57,9 @@ class TestDefaults:
 
 
 class TestFromArgs:
-    def test_search_dir_is_resolved(self):
-        c = ScanConfiguration.from_args(search_dir='/tmp')
-        assert c.search_dir == os.path.abspath('/tmp')
+    def test_target_path_is_resolved(self):
+        c = ScanConfiguration.from_args(target_path='/tmp')
+        assert c.target_path == os.path.abspath('/tmp')
 
     def test_quiet_flag(self):
         c = ScanConfiguration.from_args(quiet=True)
@@ -108,17 +109,17 @@ class TestFromArgs:
             ScanConfiguration.from_args(worker_count=-1)
 
     def test_none_string_is_ignored(self):
-        c = ScanConfiguration.from_args(search_dir='None')
+        c = ScanConfiguration.from_args(target_path='None')
         default = ScanConfiguration()
-        assert c.search_dir == default.search_dir
+        assert c.target_path == default.target_path
 
-    def test_file_path_is_resolved(self, tmp_path):
+    def test_file_target_path_is_resolved(self, tmp_path):
         p = tmp_path / 'test.txt'
         p.write_text('x')
-        c = ScanConfiguration.from_args(file_path=str(p))
-        assert c.file_path == str(p.resolve())
+        c = ScanConfiguration.from_args(target_path=str(p))
+        assert c.target_path == str(p.resolve())
 
-    def test_json_dir_resolved(self, tmp_path):
+    def test_json_dir_resolved(self, tmp_path: Path):
         c = ScanConfiguration.from_args(json_dir=str(tmp_path))
         assert c.json_dir == str(tmp_path.resolve())
 
@@ -129,27 +130,40 @@ class TestFromFile:
         p.write_text(content)
         return str(p)
 
-    def test_basic_load(self, tmp_path):
+    def test_basic_load(self, tmp_path: Path):
         ini = self._write_ini(tmp_path, '[DEFAULT]\nsearch=/tmp\nquiet=true\n')
         c = ScanConfiguration.from_file(ini)
-        assert c.search_dir == os.path.abspath('/tmp')
+        assert c.target_path == os.path.abspath('/tmp')
         assert c.quiet is True
+
+    def test_target_takes_precedence(self, tmp_path):
+        ini = self._write_ini(
+            tmp_path, '[DEFAULT]\ntarget=/var\nsearch=/tmp\nfile=/tmp/file.txt\n')
+        c = ScanConfiguration.from_file(ini)
+        assert c.target_path == os.path.abspath('/var')
+
+    def test_legacy_file_loads_as_target(self, tmp_path):
+        legacy_file = tmp_path / 'legacy.txt'
+        legacy_file.write_text('x')
+        ini = self._write_ini(tmp_path, f'[DEFAULT]\nfile={legacy_file}\n')
+        c = ScanConfiguration.from_file(ini)
+        assert c.target_path == str(legacy_file.resolve())
 
     def test_invalid_file_raises(self):
         with pytest.raises(ValueError, match='Invalid configuration file'):
             ScanConfiguration.from_file('/no/such/file.ini')
 
-    def test_excludepans(self, tmp_path):
+    def test_excludepans(self, tmp_path: Path):
         ini = self._write_ini(tmp_path, '[DEFAULT]\nexcludepans=4111111111111111\n')
         c = ScanConfiguration.from_file(ini)
         assert '4111111111111111' in c.excluded_pans
 
-    def test_sizelimit(self, tmp_path):
+    def test_sizelimit(self, tmp_path: Path):
         ini = self._write_ini(tmp_path, '[DEFAULT]\nsizelimit=1024\n')
         c = ScanConfiguration.from_file(ini)
         assert c.size_limit == 1024
 
-    def test_workers_from_file(self, tmp_path):
+    def test_workers_from_file(self, tmp_path: Path):
         ini = self._write_ini(tmp_path, '[DEFAULT]\nworkers=4\n')
         c = ScanConfiguration.from_file(ini)
         assert c.worker_count == 4
@@ -177,7 +191,7 @@ class TestHelpers:
         c = ScanConfiguration()
         assert c.get_json_path() is None
 
-    def test_get_json_path_returns_path_when_dir_set(self, tmp_path):
+    def test_get_json_path_returns_path_when_dir_set(self, tmp_path: Path):
         c = ScanConfiguration.from_args(json_dir=str(tmp_path))
         path = c.get_json_path()
         assert path is not None

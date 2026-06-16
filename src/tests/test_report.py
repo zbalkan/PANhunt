@@ -1,12 +1,10 @@
 """Tests for ReportGenerator."""
 
 import os
-import tempfile
 from datetime import datetime, timedelta
 
 import pytest
 
-from panhunt.config import ScanConfiguration
 from panhunt.finding import Finding
 from panhunt.models import ScanResult
 from panhunt.pan import PAN
@@ -34,7 +32,7 @@ class TestGenerateText:
     def test_contains_searched_dir(self, generator, config):
         result = _make_result(config)
         text = generator.generate_text(result)
-        assert config.search_dir in text
+        assert config.target_path in text
 
     def test_contains_elapsed_time(self, generator, config):
         result = _make_result(config)
@@ -82,7 +80,7 @@ class TestGenerateJson:
         result = _make_result(config)
         data = generator.generate_json(result)
         assert 'searched' in data
-        assert data['searched'] == config.search_dir
+        assert data['searched'] == config.target_path
 
     def test_pans_found_key(self, generator, config):
         result = _make_result(config)

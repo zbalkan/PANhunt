@@ -41,8 +41,8 @@ def main() -> None:
         prog='panhunt',
         description='PANHunt : search directories and sub directories for documents containing PANs.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    arg_parser.add_argument('-s', dest='search_dir', help='base directory to search in')
-    arg_parser.add_argument('-f', dest='file_path', help='File path for single file scan')
+    arg_parser.add_argument('target_path', nargs='?',
+                            help='file or directory to search')
     arg_parser.add_argument('-x', dest='exclude_dirs', help='directories to exclude from the search (use absolute paths)')
     arg_parser.add_argument('-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
     arg_parser.add_argument('-j', dest='json_dir', help='Report file directory for JSON formatted PAN report', default=None)
@@ -56,16 +56,15 @@ def main() -> None:
     if args.config:
         config = ScanConfiguration.from_file(config_file=args.config, quiet=args.quiet or None)
     else:
-        if args.search_dir is None and args.file_path is None:
-            print('No search directory or single file path specified.')
+        if args.target_path is None:
+            print('No search target specified.')
             print('The default search target is the root directory ("/" for *Nix, "C:\\" for Windows).')
             response = input('Do you want to search the root directory? (y/N): ')
             if response.lower() != 'y':
                 sys.exit()
 
         config = ScanConfiguration.from_args(
-            search_dir=args.search_dir,
-            file_path=args.file_path,
+            target_path=args.target_path,
             report_dir=args.report_dir,
             json_dir=args.json_dir,
             excluded_directories_string=args.exclude_dirs,

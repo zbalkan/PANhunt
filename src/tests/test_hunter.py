@@ -1,7 +1,7 @@
 """Tests for Hunter."""
 
 import os
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -21,8 +21,9 @@ def mock_dispatcher():
 
 
 class TestHuntSingleFile:
-    def test_enqueues_file_path_job(self, mock_dispatcher, mock_buffer, tmp_text_file):
-        config = ScanConfiguration.from_args(file_path=tmp_text_file, quiet=True)
+    def test_enqueues_target_path_job(self, mock_dispatcher, mock_buffer, tmp_text_file):
+        config = ScanConfiguration.from_args(
+            target_path=tmp_text_file, quiet=True)
         mock_buffer.is_finished.return_value = True
         h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
         h.hunt(config)
@@ -31,7 +32,7 @@ class TestHuntSingleFile:
         assert job.basename == os.path.basename(tmp_text_file)
 
     def test_marks_input_complete(self, mock_dispatcher, mock_buffer, tmp_text_file):
-        config = ScanConfiguration.from_args(file_path=tmp_text_file, quiet=True)
+        config = ScanConfiguration.from_args(target_path=tmp_text_file, quiet=True)
         mock_buffer.is_finished.return_value = True
         h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
         h.hunt(config)
@@ -42,7 +43,7 @@ class TestHuntDirectory:
     def test_enqueues_files_from_directory(self, mock_dispatcher, mock_buffer, tmp_dir):
         open(os.path.join(tmp_dir, 'a.txt'), 'w').close()
         open(os.path.join(tmp_dir, 'b.txt'), 'w').close()
-        config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=True)
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
         mock_buffer.is_finished.return_value = True
         h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
         h.hunt(config)
@@ -56,7 +57,7 @@ class TestHuntDirectory:
         os.makedirs(nested)
         open(os.path.join(nested, 'file.txt'), 'w').close()
         config = ScanConfiguration.from_args(
-            search_dir=tmp_dir,
+            target_path=tmp_dir,
             excluded_directories_string=excl,
             quiet=True,
         )
@@ -72,7 +73,7 @@ class TestHuntResults:
         failure = MagicMock(spec=Finding)
         mock_dispatcher.get_findings.return_value = [finding]
         mock_dispatcher.get_failures.return_value = [failure]
-        config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=True)
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
         mock_buffer.is_finished.return_value = True
         h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
         findings, failures = h.hunt(config)
@@ -80,7 +81,7 @@ class TestHuntResults:
         assert failures == [failure]
 
     def test_stop_and_join_called_after_buffer_finished(self, mock_dispatcher, mock_buffer, tmp_dir):
-        config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=True)
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
         mock_buffer.is_finished.return_value = True
         h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
         h.hunt(config)

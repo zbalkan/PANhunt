@@ -133,7 +133,7 @@ class PlainTextFileScanner(ScannerBase):
 class MsgScanner(ScannerBase):
 
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
-        msg = MSMSG(msg_file_path=job.payload if job.payload else job.abspath)
+        msg = MSMSG(msg_target_path=job.payload if job.payload else job.abspath)
 
         matches: list[PAN] = []
 

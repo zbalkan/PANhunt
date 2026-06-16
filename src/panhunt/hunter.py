@@ -18,16 +18,16 @@ class Hunter:
     def hunt(self, config: ScanConfiguration) -> tuple[list[Finding], list[Finding]]:
         self._dispatcher.start()
 
-        logging.info(f"Search base: {config.search_dir}")
+        logging.info(f"Search base: {config.target_path}")
 
-        if config.file_path is not None:
-            p = str(config.file_path)
-            basename: str = os.path.basename(p)
-            dirname: str = os.path.dirname(p)
+        target_path = str(config.target_path)
+        if os.path.isfile(target_path):
+            basename: str = os.path.basename(target_path)
+            dirname: str = os.path.dirname(target_path)
             if not self._is_directory_excluded(dirname, config):
                 self._buffer.enqueue(Job(basename, dirname=dirname))
         else:
-            for root, dirs, files in os.walk(config.search_dir):
+            for root, dirs, files in os.walk(target_path):
                 dirs[:] = [d for d in dirs if not self._is_directory_excluded(os.path.join(root, d), config)]
                 for file in files:
                     self._buffer.enqueue(Job(basename=file, dirname=root, payload=None))

@@ -9,8 +9,7 @@ from . import panutils
 class ScanConfiguration:
     """Configuration for a single scan session. Created once and injected into all components."""
 
-    search_dir: str
-    file_path: Optional[str]
+    target_path: str
     report_dir: str
     json_dir: Optional[str]
     excluded_directories: list[str]
@@ -39,10 +38,11 @@ class ScanConfiguration:
 
     def __init__(self) -> None:
         if os.name == 'nt':
-            self.search_dir = 'C:\\'
-            self.excluded_directories = ['c:\\windows', 'c:\\program files', 'c:\\program files(x86)']
+            self.target_path = 'C:\\'
+            self.excluded_directories = [
+                'c:\\windows', 'c:\\program files', 'c:\\program files(x86)']
         else:
-            self.search_dir = '/'
+            self.target_path = '/'
             self.excluded_directories = ['/mnt', '/dev', '/proc']
 
         self.file_path = None
@@ -84,8 +84,7 @@ class ScanConfiguration:
 
     @classmethod
     def from_args(cls,
-                  search_dir: Optional[str] = None,
-                  file_path: Optional[str] = None,
+                  target_path: Optional[str] = None,
                   report_dir: Optional[str] = None,
                   json_dir: Optional[str] = None,
                   excluded_directories_string: Optional[str] = None,
@@ -112,8 +111,7 @@ class ScanConfiguration:
 
         config = cls()
         config._update(
-            search_dir=search_dir,
-            file_path=file_path,
+            target_path=target_path,
             report_dir=report_dir,
             json_dir=json_dir,
             excluded_directories_string=excluded_directories_string,
@@ -148,8 +146,8 @@ class ScanConfiguration:
         raw = cls._parse_file(config_file)
 
         return cls.from_args(
-            search_dir=cls._try_parse(raw, 'search'),
-            file_path=cls._try_parse(raw, 'file'),
+            target_path=cls._try_parse(raw, 'target') or cls._try_parse(
+                raw, 'search') or cls._try_parse(raw, 'file'),
             report_dir=cls._try_parse(raw, 'outfile'),
             json_dir=cls._try_parse(raw, 'json'),
             excluded_directories_string=cls._try_parse(raw, 'exclude'),
@@ -176,8 +174,7 @@ class ScanConfiguration:
         )
 
     def _update(self,
-                search_dir: Optional[str],
-                file_path: Optional[str],
+                target_path: Optional[str],
                 report_dir: Optional[str],
                 json_dir: Optional[str],
                 excluded_directories_string: Optional[str],
@@ -202,11 +199,8 @@ class ScanConfiguration:
                 max_pdf_text_bytes: Optional[int] = None,
                 quiet: Optional[bool] = None) -> None:
 
-        if search_dir and search_dir != 'None':
-            self.search_dir = os.path.abspath(path=search_dir)
-
-        if file_path and file_path != 'None':
-            self.file_path = os.path.abspath(path=file_path)
+        if target_path and target_path != 'None':
+            self.target_path = os.path.abspath(path=target_path)
 
         if report_dir and report_dir != 'None':
             self.report_dir = panutils.get_root_dir() if report_dir == './' else os.path.abspath(report_dir)

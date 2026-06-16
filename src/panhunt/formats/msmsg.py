@@ -717,11 +717,12 @@ class MSMSG:
     DisplayTo: str
     XOriginatingIP: str
 
-    def __init__(self, msg_file_path: _FilePathOrFileObject) -> None:
+
+    def __init__(self, msg_target_path: _FilePathOrFileObject) -> None:
         """msg_file is unicode or string filename or a file object"""
 
         self.set_property_types()
-        self.cfb = MSCFB(msg_file_path)
+        self.cfb = MSCFB(msg_target_path)
         self.validMSG = self.cfb.validCFB
 
         if self.validMSG is False:

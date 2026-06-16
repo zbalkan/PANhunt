@@ -2,10 +2,7 @@
 
 import threading
 import time
-from typing import Optional
 from unittest.mock import MagicMock
-
-import pytest
 
 from panhunt import enums
 from panhunt.buffer import InMemoryJobBuffer
@@ -20,7 +17,7 @@ def _make_job(name: str = 'test.txt') -> Job:
 
 
 def _make_config(worker_count: int = 1) -> ScanConfiguration:
-    return ScanConfiguration.from_args(search_dir='/tmp', quiet=True, worker_count=worker_count)
+    return ScanConfiguration.from_args(target_path='/tmp', quiet=True, worker_count=worker_count)
 
 
 def _success_finding() -> Finding:

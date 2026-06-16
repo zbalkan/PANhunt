@@ -20,7 +20,7 @@ def scanner_with_exclusion(mock_buffer):
     # The regex extracts '4111 1111 1111 1111' (with spaces); exclusion must match exactly
     from panhunt.config import ScanConfiguration
     cfg = ScanConfiguration.from_args(
-        search_dir='/tmp',
+        target_path='/tmp',
         excluded_pans_string='4111 1111 1111 1111',
         quiet=True,
     )

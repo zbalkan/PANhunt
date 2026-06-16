@@ -14,7 +14,7 @@ class ReportGenerator:
         report = (
             f'PAN Hunt Report - {result.start_time.strftime("%H:%M:%S %d/%m/%Y")}{newline}'
             f'{sep}{newline}'
-            f'Searched {result.config.search_dir}{newline}'
+            f'Searched {result.config.target_path}{newline}'
             f'Excluded {",".join(result.config.excluded_directories)}{newline}'
             f'Command: {" ".join(sys.argv)}{newline}'
             f'Uname: {" | ".join(platform.uname())}{newline}'
@@ -41,7 +41,7 @@ class ReportGenerator:
     def generate_json(self, result: ScanResult) -> dict:
         data: dict = {
             'timestamp': result.start_time.strftime('%H:%M:%S %d/%m/%Y'),
-            'searched': result.config.search_dir,
+            'searched': result.config.target_path,
             'excluded': ','.join(result.config.excluded_directories),
             'command': ' '.join(sys.argv),
             'elapsed': str(result.elapsed),

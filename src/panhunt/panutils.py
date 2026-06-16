@@ -21,7 +21,8 @@ def get_root_dir() -> str:
         return './'
 
 
-def get_mimetype(path: Optional[str] = None, payload: Optional[Union[bytes, IOBase]] = None) -> tuple[str, str, Optional[Exception]]:
+def get_mimetype(path: Optional[str] = None,
+                 payload: Optional[Union[bytes, IOBase]] = None) -> tuple[str, str, Optional[Exception]]:
 
     try:
         error: Optional[Exception] = None

@@ -1,15 +1,19 @@
 """Subprocess isolation utilities for high-risk parsers."""
 
 import multiprocessing as mp
-import os
 import queue
-import resource
 import signal
+import sys
 import traceback
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 from .exceptions import PANHuntException
+
+if sys.platform == 'win32':
+    resource = None
+else:
+    import resource
 
 
 @dataclass
@@ -30,13 +34,16 @@ class ParserWorkerError(PANHuntException):
 def _apply_memory_limit(limit_bytes: int) -> None:
     if limit_bytes <= 0:
         return
+    if resource is None:
+        return
     resource.setrlimit(resource.RLIMIT_AS, (limit_bytes, limit_bytes))
 
 
 def _worker_main(result_queue: mp.Queue, func: Callable[..., Any], args: tuple[Any, ...], memory_limit: int) -> None:
     try:
         _apply_memory_limit(memory_limit)
-        signal.alarm(0)
+        if hasattr(signal, 'alarm'):
+            signal.alarm(0)
         result_queue.put(ParserResult(value=func(*args)))
     except BaseException as exc:  # report parser failures to parent process
         result_queue.put(ParserResult(error=f'{type(exc).__name__}: {exc}', traceback_text=traceback.format_exc()))

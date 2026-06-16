@@ -5,8 +5,6 @@ import os
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-import pytest
-
 from panhunt.config import ScanConfiguration
 from panhunt.models import ScanResult
 from panhunt.presenter import CliPresenter, _write_file
@@ -38,7 +36,7 @@ class TestWriteFile:
 
 class TestSaveText:
     def test_text_report_written(self, tmp_dir):
-        config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=True)
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
         config.report_file = 'test_report.report'
         config.report_dir = tmp_dir
         result = _make_result(config)
@@ -48,7 +46,7 @@ class TestSaveText:
         assert os.path.exists(path)
 
     def test_text_report_contains_searched_dir(self, tmp_dir):
-        config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=True)
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
         config.report_file = 'test_report2.report'
         config.report_dir = tmp_dir
         result = _make_result(config)
@@ -61,7 +59,7 @@ class TestSaveText:
 
 class TestSaveJson:
     def test_json_report_written_when_dir_set(self, tmp_dir):
-        config = ScanConfiguration.from_args(search_dir=tmp_dir, json_dir=tmp_dir, quiet=True)
+        config = ScanConfiguration.from_args(target_path=tmp_dir, json_dir=tmp_dir, quiet=True)
         config.json_file = 'test_report.json'
         result = _make_result(config)
         presenter = CliPresenter()
@@ -71,7 +69,7 @@ class TestSaveJson:
         assert os.path.exists(path)
 
     def test_json_content_is_valid(self, tmp_dir):
-        config = ScanConfiguration.from_args(search_dir=tmp_dir, json_dir=tmp_dir, quiet=True)
+        config = ScanConfiguration.from_args(target_path=tmp_dir, json_dir=tmp_dir, quiet=True)
         config.json_file = 'test_report2.json'
         result = _make_result(config)
         presenter = CliPresenter()
@@ -81,7 +79,7 @@ class TestSaveJson:
         assert 'searched' in data
 
     def test_json_not_written_without_dir(self, tmp_dir):
-        config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=True)
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
         result = _make_result(config)
         presenter = CliPresenter()
         with patch.object(presenter, '_report_gen') as mock_gen:
@@ -91,7 +89,7 @@ class TestSaveJson:
 
 class TestShow:
     def test_show_quiet_skips_print(self, tmp_dir):
-        config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=True)
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
         config.report_file = 'show_test.report'
         config.report_dir = tmp_dir
         result = _make_result(config)
@@ -101,7 +99,7 @@ class TestShow:
             mock_print.assert_not_called()
 
     def test_show_non_quiet_calls_print(self, tmp_dir):
-        config = ScanConfiguration.from_args(search_dir=tmp_dir, quiet=False)
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=False)
         config.report_file = 'show_test2.report'
         config.report_dir = tmp_dir
         result = _make_result(config)
