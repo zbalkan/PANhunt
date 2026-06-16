@@ -13,6 +13,7 @@ from .exceptions import PANHuntException
 from .factory import ArchiveFactory, ScannerFactory
 from .finding import Finding
 from .job import Job
+from .limitedio import LimitedReader
 from .pan import PAN
 
 
@@ -91,7 +92,9 @@ class Dispatcher:
         logging.info(f"Processing job: {job.abspath}")
 
         if job.payload is not None:
-            if isinstance(job.payload, IOBase):
+            if isinstance(job.payload, LimitedReader):
+                size = 0
+            elif isinstance(job.payload, IOBase):
                 try:
                     job.payload.seek(0, 2)
                     size = job.payload.tell()
@@ -127,7 +130,7 @@ class Dispatcher:
         )
 
         if archive_type is not None:
-            archive = archive_type(path=job.abspath, payload=job.payload)
+            archive = archive_type(path=job.abspath, payload=job.payload, size_limit=self._config.size_limit)
             try:
                 children, e = archive.get_children()
                 if e:
@@ -168,5 +171,4 @@ class Dispatcher:
                 basename=job.basename, dirname=job.dirname, payload=job.payload,
                 mimetype=mimetype, encoding=encoding, err=ex
             )  # type: ignore
-        finally:
-            return finding
+        return finding

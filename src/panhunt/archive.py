@@ -5,46 +5,74 @@ from io import BytesIO
 from lzma import LZMAFile
 from tarfile import TarFile, TarInfo
 from typing import IO, Optional
-from zipfile import ZipFile
+from zipfile import ZipFile, ZipInfo
 
 from . import panutils
 from .exceptions import PANHuntException
 from .job import Job
+from .limitedio import LimitedReader, read_limited
 
 
 class Archive:
     path: str
     payload: Optional[bytes]
+    size_limit: int
 
-    def __init__(self, path: str, payload: Optional[bytes] = None) -> None:
+    def __init__(self, path: str, payload: Optional[bytes] = None, size_limit: int = 1_073_741_824) -> None:
         self.path = path
         self.payload = payload
+        self.size_limit = size_limit
 
     def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
         raise NotImplementedError()
 
+    def _limit_error(self, detail: str) -> PANHuntException:
+        return PANHuntException(
+            f'Archive expansion limit exceeded for "{self.path}": {detail} '
+            f'(limit {panutils.size_friendly(size=self.size_limit)})'
+        )
+
 
 class ZipArchive(Archive):
 
+    def _validate_member(self, file_info: ZipInfo, total_size: int) -> Optional[PANHuntException]:
+        if file_info.is_dir():
+            return None
+        if file_info.file_size > self.size_limit:
+            return self._limit_error(
+                f'member "{file_info.filename}" declares {panutils.size_friendly(size=file_info.file_size)}'
+            )
+        if total_size + file_info.file_size > self.size_limit:
+            return self._limit_error('total uncompressed ZIP size exceeds limit')
+        if file_info.compress_size > 0 and file_info.file_size / file_info.compress_size > 100:
+            return self._limit_error(f'member "{file_info.filename}" compression ratio exceeds 100:1')
+        return None
+
     def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
         children: list[Job] = []
+        total_size = 0
         try:
-            zip_ref: ZipFile
-            if self.payload is not None:
-                zip_ref = ZipFile(BytesIO(self.payload), 'r')
-            else:
-                zip_ref = ZipFile(self.path, 'r')
+            zip_source = BytesIO(self.payload) if self.payload is not None else self.path
+            with ZipFile(zip_source, 'r') as zip_ref:
+                infos = zip_ref.infolist()
+                if len(infos) > 10_000:
+                    return [], self._limit_error('ZIP member count exceeds 10000')
 
-            for file_info in zip_ref.infolist():
-                with zip_ref.open(file_info) as file:
-                    file.seek(0)
-                    payload: bytes = file.read()
-                    job = Job(
-                        basename=file_info.filename, dirname=self.path, payload=payload)
-                    children.append(job)
-            zip_ref.close()
+                for file_info in infos:
+                    if file_info.is_dir():
+                        continue
+                    limit_error = self._validate_member(file_info, total_size)
+                    if limit_error:
+                        return [], limit_error
+                    with zip_ref.open(file_info) as file:
+                        payload = read_limited(file, self.size_limit)
+                    total_size += len(payload)
+                    children.append(Job(
+                        basename=file_info.filename, dirname=self.path, payload=payload))
+        except PANHuntException as ex:
+            return [], ex
         except Exception as ex:
-            return [], PANHuntException(str(ex))
+            return [], PANHuntException(f'{type(ex).__name__}: {ex}')
 
         return children, None
 
@@ -53,29 +81,38 @@ class TarArchive(Archive):
 
     def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
         children: list[Job] = []
+        total_size = 0
 
         try:
-            tar_ref: TarFile
             if self.payload is not None:
-                tar_ref = tarfile.open(
-                    fileobj=BytesIO(self.payload), mode='r')
+                tar_ref: TarFile = tarfile.open(fileobj=BytesIO(self.payload), mode='r')
             else:
                 tar_ref = tarfile.open(self.path, 'r')
 
-            members: list[TarInfo] = tar_ref.getmembers()
-            for file_info in [m for m in members if m.isfile()]:
-                extracted: Optional[IO[bytes]] = tar_ref.extractfile(file_info)
-                if extracted is not None:
-                    extracted.seek(0)
-                    payload: bytes = extracted.read()
-                    job = Job(
-                        basename=file_info.path, dirname=self.path, payload=payload)
+            with tar_ref:
+                members: list[TarInfo] = tar_ref.getmembers()
+                if len(members) > 10_000:
+                    return [], self._limit_error('TAR member count exceeds 10000')
 
-                    children.append(job)
-            tar_ref.close()
+                for file_info in [m for m in members if m.isfile()]:
+                    if file_info.size > self.size_limit:
+                        return [], self._limit_error(
+                            f'member "{file_info.path}" declares {panutils.size_friendly(size=file_info.size)}'
+                        )
+                    if total_size + file_info.size > self.size_limit:
+                        return [], self._limit_error('total uncompressed TAR size exceeds limit')
 
+                    extracted: Optional[IO[bytes]] = tar_ref.extractfile(file_info)
+                    if extracted is not None:
+                        payload = read_limited(extracted, self.size_limit)
+                        total_size += len(payload)
+                        children.append(Job(
+                            basename=file_info.path, dirname=self.path, payload=payload))
+
+        except PANHuntException as ex:
+            return [], ex
         except Exception as ex:
-            return [], PANHuntException(str(ex))
+            return [], PANHuntException(f'{type(ex).__name__}: {ex}')
 
         return children, None
 
@@ -99,10 +136,13 @@ class GzipArchive(Archive):
             gz_file.seek(0)
 
             job = Job(
-                basename=compressed_filename, dirname=self.path, payload=gz_file)
+                basename=compressed_filename,
+                dirname=self.path,
+                payload=LimitedReader(gz_file, self.size_limit, self.path)
+            )
             return [job], None
         except Exception as ex:
-            return [], PANHuntException(str(ex))
+            return [], PANHuntException(f'{type(ex).__name__}: {ex}')
 
 
 class XzArchive(Archive):
@@ -122,7 +162,10 @@ class XzArchive(Archive):
             xz_file.seek(0)
 
             job = Job(
-                basename=compressed_filename, dirname=self.path, payload=xz_file)
+                basename=compressed_filename,
+                dirname=self.path,
+                payload=LimitedReader(xz_file, self.size_limit, self.path)
+            )
             return [job], None
         except Exception as ex:
-            return [], PANHuntException(str(ex))
+            return [], PANHuntException(f'{type(ex).__name__}: {ex}')

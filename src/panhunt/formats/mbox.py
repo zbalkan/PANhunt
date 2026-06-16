@@ -1,8 +1,10 @@
-import base64
 import json
 import mailbox
-import quopri
-from typing import IO, Any, Optional
+import os
+import tempfile
+from typing import Any, Optional
+
+from ..exceptions import PANHuntException
 
 
 class Mbox:
@@ -10,22 +12,32 @@ class Mbox:
     filename: str
     mails: list['Mail']
 
-    def __init__(self, path: str, payload: Optional[bytes] = None) -> None:
+    def __init__(self, path: str, payload: Optional[bytes] = None, size_limit: int = 1_073_741_824) -> None:
         self.filename = path
         self.mails = []
-        mbox: mailbox.mbox
-        mbox = mailbox.mbox(path)
+        self._size_limit = size_limit
+
         if payload:
-            mailbox.mbox(path=path,
-                         factory=self.__from_buffer)
+            if len(payload) > size_limit:
+                raise PANHuntException(f'MBOX payload exceeds configured size limit for "{path}"')
+            fd, temp_path = tempfile.mkstemp(prefix='panhunt-mbox-')
+            try:
+                with os.fdopen(fd, 'wb') as temp_file:
+                    temp_file.write(payload)
+                self._load_mailbox(temp_path)
+            finally:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+        else:
+            self._load_mailbox(path)
 
-        for message in mbox:
-            self.mails.append(Mail(message))
-
-    def __from_buffer(self, buffer: IO[Any]) -> mailbox.mboxMessage:
-        b: bytes = buffer.read()
-        m = mailbox.mboxMessage(message=b)
-        return m
+    def _load_mailbox(self, path: str) -> None:
+        mbox = mailbox.mbox(path)
+        try:
+            for message in mbox:
+                self.mails.append(Mail(message, size_limit=self._size_limit))
+        finally:
+            mbox.close()
 
     def __str__(self) -> str:
         d: dict = {}
@@ -42,99 +54,52 @@ class Mail:
     body: str
     attachments: list['Attachment']
 
-    def __init__(self, message: mailbox.mboxMessage) -> None:
+    def __init__(self, message: mailbox.mboxMessage, size_limit: int = 1_073_741_824) -> None:
         self.subject = self.get_subject(message)
-        payloads: Any = message.get_payload()
+        self.body = ''
+        self.attachments = []
+        self._size_limit = size_limit
+        self._extract_message(message)
 
-        if isinstance(payloads, list):
-            self.body = ''
-            self.attachments = []
-            self.extract_body_parts(payloads)
-            self.extract_attachments(payloads)
-        elif isinstance(payloads, str):
-            self.body = payloads
-            self.attachments = []
+    def _extract_message(self, msg: mailbox.mboxMessage) -> None:
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.is_multipart():
+                    continue
+                disposition = part.get_content_disposition()
+                filename = part.get_filename()
+                if disposition == 'attachment' or filename:
+                    self.parse_attachment(part)
+                elif part.get_content_type() == 'text/plain':
+                    self.parse_body(part)
         else:
-            raise TypeError(message)
+            payloads: Any = msg.get_payload()
+            if isinstance(payloads, str):
+                self.body = payloads
+            else:
+                self.parse_body(msg)
 
     def get_subject(self, message: mailbox.mboxMessage) -> str:
-        headers = dict(message._headers)  # type: ignore
-        return str(headers.get('Subject'))
-
-    def extract_body_parts(self, payloads) -> None:
-        body_data: Any = payloads[0]
-        body_payloads: Any = body_data.get_payload()
-        if isinstance(body_payloads, list):
-            for body_payload in body_payloads:
-                self.parse_body(body_payload)
-        if isinstance(body_payloads, str):
-            self.body = body_payloads
-        else:
-            self.parse_body(body_payloads)
-
-    def extract_attachments(self, payloads) -> None:
-        attachment_payloads: Any = payloads[1:]
-        for attachment in attachment_payloads:
-            if isinstance(attachment, list):
-                for att_payload in attachment:
-                    self.parse_attachment(att_payload)
-            else:
-                self.parse_attachment(attachment)
+        return str(message.get('Subject'))
 
     def parse_body(self, body_payload: Any) -> None:
-        # Body can be a list of messages when it is signed
-        # PGP signed messages are enveloped with two parts: signature and signed message
-        body_payload_list: list = []
-        if isinstance(body_payload, list):
-            body_payload_list = body_payload
+        charset = body_payload.get_content_charset() or 'utf-8'
+        decoded = body_payload.get_payload(decode=True)
+        if decoded is None:
+            payload = body_payload.get_payload()
+            self.body += payload if isinstance(payload, str) else str(payload)
         else:
-            body_payload_list.append(body_payload)
-        for bp in body_payload_list:
-            headers: dict = dict(bp._headers)
-
-            content_type: list[str] = str(
-                headers.get('Content-Type')).split(';')
-
-            if content_type[0] == 'text/plain':
-                charset: str = content_type[1].lstrip().removeprefix('\n').removeprefix('\t').removeprefix(
-                    'charset=').removeprefix('\"').removesuffix('\"').lower()
-                if charset == "utf-8":
-                    self.body += str(bp.get_payload())
-                else:
-                    utf8_text: str = str(bp.get_payload()).encode(
-                        charset).decode('utf-8')
-                    self.body += utf8_text
+            self.body += decoded.decode(charset, errors='backslashreplace')
 
     def parse_attachment(self, attachment_payload: Any) -> None:
-        headers = dict(attachment_payload._headers)
-        filename: str = str(
-            headers.get('Content-Disposition'))\
-            .removeprefix('attachment;')\
-            .removeprefix('\n')\
-            .removeprefix('\t')\
-            .removeprefix(' ')\
-            .removeprefix('filename=')\
-            .removeprefix('\"')\
-            .removesuffix('"')
-
-        encoding: str = str(headers.get('Content-Transfer-Encoding'))
-
-        if encoding == 'base64':
-            raw = str(attachment_payload.get_payload())
-            binary_data: bytes = base64.b64decode(raw)
-            self.attachments.append(Attachment(
-                filename=filename, payload=binary_data))
-        elif encoding == "7bit" or encoding == 'quoted-printable' or encoding == 'None':
-            if str(headers.get('Content-Type')).split(';')[0] == 'application/pgp-signature':
-                # Ignore signatures
-                return
-            else:
-                raw = str(attachment_payload.get_payload())
-                decoded: bytes = quopri.decodestring(raw)
-                self.attachments.append(Attachment(
-                    filename=filename, payload=decoded))
-        else:
-            raise NotImplementedError(encoding)
+        filename = attachment_payload.get_filename() or '[NoFilename]'
+        binary_data = attachment_payload.get_payload(decode=True)
+        if binary_data is None:
+            raw = attachment_payload.get_payload()
+            binary_data = raw.encode('utf-8', errors='backslashreplace') if isinstance(raw, str) else bytes(raw)
+        if len(binary_data) > self._size_limit:
+            raise PANHuntException(f'Attachment "{filename}" exceeds configured size limit')
+        self.attachments.append(Attachment(filename=filename, payload=binary_data))
 
     def __str__(self) -> str:
         d: dict = {}

@@ -130,7 +130,11 @@ class MsgScanner(ScannerBase):
 class EmlScanner(ScannerBase):
 
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
-        eml = Eml(path=job.abspath, payload=job.payload) if job.payload else Eml(path=job.abspath)
+        eml = (
+            Eml(path=job.abspath, payload=job.payload, size_limit=self._config.size_limit)
+            if job.payload
+            else Eml(path=job.abspath, size_limit=self._config.size_limit)
+        )
 
         matches: list[PAN] = []
 
@@ -150,7 +154,11 @@ class EmlScanner(ScannerBase):
 class MboxScanner(ScannerBase):
 
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
-        mbox = Mbox(path=job.basename, payload=job.payload) if job.payload else Mbox(path=job.abspath)
+        mbox = (
+            Mbox(path=job.basename, payload=job.payload, size_limit=self._config.size_limit)
+            if job.payload
+            else Mbox(path=job.abspath, size_limit=self._config.size_limit)
+        )
 
         matches: list[PAN] = []
 

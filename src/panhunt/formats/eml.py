@@ -1,10 +1,8 @@
-import base64
-import io
 import json
-import logging
-import quopri
 from email import message, parser
-from typing import Any, Optional
+from typing import Optional
+
+from ..exceptions import PANHuntException
 
 
 class Eml:
@@ -15,91 +13,57 @@ class Eml:
 
     __text: str
 
-    def __init__(self, path: str, payload: Optional[bytes] = None) -> None:
-        msg: message.Message
+    def __init__(self, path: str, payload: Optional[bytes] = None, size_limit: int = 1_073_741_824) -> None:
         if payload:
             msg = parser.BytesParser().parsebytes(payload)
         else:
-            f: io.BufferedReader = open(path, "rb")
-            msg = parser.BytesParser().parse(f)
-            f.close()
+            with open(path, "rb") as f:
+                msg = parser.BytesParser().parse(f)
 
         self.filename = path
-        payloads: Any = msg.get_payload()
-        if isinstance(payloads, list):
-            self.body = ''
-            self.attachments = []
-            self.extract_body_parts(payloads)
-            self.extract_attachments(payloads)
-            self.__text = self.to_text()
+        self.body = ''
+        self.attachments = []
+        self._size_limit = size_limit
+        self._extract_message(msg)
+        self.__text = self.to_text()
+
+    def _extract_message(self, msg: message.Message) -> None:
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.is_multipart():
+                    continue
+                self._parse_part(part)
         else:
-            raise TypeError(msg)
+            self._parse_part(msg)
 
-    def extract_body_parts(self, payloads) -> None:
-        body_data: message.Message = payloads[0]
-        body_payloads = body_data.get_payload()
-        if isinstance(body_payloads, list):
-            for body_payload in body_payloads:
-                self.parse_body(body_payload)
-        else:
-            self.parse_body(body_payloads)
+    def _parse_part(self, part: message.Message) -> None:
+        disposition = part.get_content_disposition()
+        filename = part.get_filename()
+        if disposition == 'attachment' or filename:
+            self.parse_attachment(part)
+        elif part.get_content_type() == 'text/plain':
+            self.parse_body(part)
 
-    def extract_attachments(self, payloads) -> None:
-        attachment_payloads: Any = payloads[1:]
-        for attachment in attachment_payloads:
-            if isinstance(attachment, list):
-                for att_payload in attachment:
-                    self.parse_attachment(att_payload)
-            else:
-                self.parse_attachment(attachment)
-
-    def parse_body(self, body_payload: Any) -> None:
+    def parse_body(self, body_payload) -> None:
         if isinstance(body_payload, message.Message):
-            headers: dict = dict(body_payload._headers)  # type: ignore
-
-            content_type: list[str] = str(
-                headers.get('Content-Type')).split(';')
-
-            if content_type[0] == 'text/plain':
-                charset: str = content_type[1].lstrip().removeprefix(
-                    'charset=\"').removesuffix('\"').lower()
-                if charset == "utf-8":
-                    self.body += str(body_payload.get_payload())
-                else:
-                    utf8_text: str = str(body_payload.get_payload()).encode(
-                        charset).decode('utf-8')
-                    self.body += utf8_text
+            charset = body_payload.get_content_charset() or 'utf-8'
+            decoded = body_payload.get_payload(decode=True)
+            if decoded is None:
+                self.body += str(body_payload.get_payload())
+            else:
+                self.body += decoded.decode(charset, errors='backslashreplace')
         elif isinstance(body_payload, str):
             self.body += body_payload
-        else:
-            logging.error(f"Unknown body type: {type(body_payload)}")
 
-    def parse_attachment(self, attachment_payload: Any) -> None:
-        headers = dict(attachment_payload._headers)
-        filename: str = str(
-            headers.get('Content-Disposition'))\
-            .removeprefix('attachment;')\
-            .removeprefix('\n')\
-            .removeprefix('\t')\
-            .removeprefix(' ')\
-            .removeprefix('filename=')\
-            .removeprefix('\"')\
-            .removesuffix('"')
-
-        encoding: str = str(headers.get('Content-Transfer-Encoding'))
-
-        if encoding == 'base64':
-            data = str(attachment_payload.get_payload())
-            binary_data: bytes = base64.b64decode(data)
-            self.attachments.append(Attachment(
-                filename=filename, payload=binary_data))
-        elif encoding == "7bit" or encoding == 'quoted-printable' or encoding == 'None':
-            raw = str(attachment_payload.get_payload())
-            decoded: bytes = quopri.decodestring(raw)
-            self.attachments.append(Attachment(
-                filename=filename, payload=decoded))
-        else:
-            raise NotImplementedError(encoding)
+    def parse_attachment(self, attachment_payload: message.Message) -> None:
+        filename = attachment_payload.get_filename() or '[NoFilename]'
+        binary_data = attachment_payload.get_payload(decode=True)
+        if binary_data is None:
+            raw = attachment_payload.get_payload()
+            binary_data = raw.encode('utf-8', errors='backslashreplace') if isinstance(raw, str) else bytes(raw)
+        if len(binary_data) > self._size_limit:
+            raise PANHuntException(f'Attachment "{filename}" exceeds configured size limit')
+        self.attachments.append(Attachment(filename=filename, payload=binary_data))
 
     def to_text(self) -> str:
         d: dict = {}
