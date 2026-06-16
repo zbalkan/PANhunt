@@ -189,3 +189,23 @@ class TestHelpers:
         assert c1.quiet is True
         assert c2.quiet is False
         assert c1 is not c2
+
+class TestParserLimitConfiguration:
+    def test_default_parser_limits(self):
+        c = ScanConfiguration()
+        assert c.parser_timeout_seconds == 30
+        assert c.parser_memory_limit_bytes == 512 * 1024 * 1024
+        assert c.max_pdf_pages == 100
+        assert c.max_pdf_text_bytes == 10 * 1024 * 1024
+
+    def test_parser_limit_overrides(self):
+        c = ScanConfiguration.from_args(
+            parser_timeout_seconds=5,
+            parser_memory_limit_bytes=1024,
+            max_pdf_pages=7,
+            max_pdf_text_bytes=2048,
+        )
+        assert c.parser_timeout_seconds == 5
+        assert c.parser_memory_limit_bytes == 1024
+        assert c.max_pdf_pages == 7
+        assert c.max_pdf_text_bytes == 2048

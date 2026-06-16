@@ -16,6 +16,7 @@ from .formats.msmsg import MSMSG
 from .formats.pdf import Pdf
 from .formats.pst import PST
 from .formats.pst import Attachment as PstAttachment
+from .parser_isolation import SubprocessParserRunner
 from .job import Job
 from .pan import PAN
 
@@ -264,5 +265,14 @@ class PstScanner(ScannerBase):
 class PdfScanner(ScannerBase):
 
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
-        pdf = Pdf(file=io.BytesIO(initial_bytes=job.payload)) if job.payload else Pdf(file=job.abspath)
+        runner = SubprocessParserRunner(
+            timeout_seconds=self._config.parser_timeout_seconds,
+            memory_limit_bytes=self._config.parser_memory_limit_bytes
+        )
+        pdf = Pdf(
+            file=io.BytesIO(initial_bytes=job.payload) if job.payload else job.abspath,
+            runner=runner,
+            max_pages=self._config.max_pdf_pages,
+            max_text_bytes=self._config.max_pdf_text_bytes
+        )
         return self._pan_finder.find(pdf.get_text())

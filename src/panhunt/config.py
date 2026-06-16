@@ -29,6 +29,10 @@ class ScanConfiguration:
     max_total_attachment_bytes: int
     allowed_archive_types: list[str]
     denied_archive_types: list[str]
+    parser_timeout_seconds: int
+    parser_memory_limit_bytes: int
+    max_pdf_pages: int
+    max_pdf_text_bytes: int
     quiet: bool
     report_file: str
     json_file: str
@@ -59,6 +63,10 @@ class ScanConfiguration:
         self.max_total_attachment_bytes = self.size_limit
         self.allowed_archive_types = []
         self.denied_archive_types = []
+        self.parser_timeout_seconds = 30
+        self.parser_memory_limit_bytes = 512 * 1024 * 1024
+        self.max_pdf_pages = 100
+        self.max_pdf_text_bytes = 10 * 1024 * 1024
         self.quiet = False
         self.report_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.report'
         self.json_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.json'
@@ -96,6 +104,10 @@ class ScanConfiguration:
                   max_total_attachment_bytes: Optional[int] = None,
                   allowed_archive_types_string: Optional[str] = None,
                   denied_archive_types_string: Optional[str] = None,
+                  parser_timeout_seconds: Optional[int] = None,
+                  parser_memory_limit_bytes: Optional[int] = None,
+                  max_pdf_pages: Optional[int] = None,
+                  max_pdf_text_bytes: Optional[int] = None,
                   quiet: Optional[bool] = None) -> 'ScanConfiguration':
 
         config = cls()
@@ -120,6 +132,10 @@ class ScanConfiguration:
             max_total_attachment_bytes=max_total_attachment_bytes,
             allowed_archive_types_string=allowed_archive_types_string,
             denied_archive_types_string=denied_archive_types_string,
+            parser_timeout_seconds=parser_timeout_seconds,
+            parser_memory_limit_bytes=parser_memory_limit_bytes,
+            max_pdf_pages=max_pdf_pages,
+            max_pdf_text_bytes=max_pdf_text_bytes,
             quiet=quiet
         )
         return config
@@ -152,6 +168,10 @@ class ScanConfiguration:
             max_total_attachment_bytes=cls._try_parse_int(raw, 'maxtotalattachmentbytes'),
             allowed_archive_types_string=cls._try_parse(raw, 'allowedarchivetypes'),
             denied_archive_types_string=cls._try_parse(raw, 'deniedarchivetypes'),
+            parser_timeout_seconds=cls._try_parse_int(raw, 'parsertimeoutseconds'),
+            parser_memory_limit_bytes=cls._try_parse_int(raw, 'parsermemorylimitbytes'),
+            max_pdf_pages=cls._try_parse_int(raw, 'maxpdfpages'),
+            max_pdf_text_bytes=cls._try_parse_int(raw, 'maxpdftextbytes'),
             quiet=quiet if quiet is not None else cls._try_parse_bool(raw, 'quiet'),
         )
 
@@ -176,6 +196,10 @@ class ScanConfiguration:
                 max_total_attachment_bytes: Optional[int] = None,
                 allowed_archive_types_string: Optional[str] = None,
                 denied_archive_types_string: Optional[str] = None,
+                parser_timeout_seconds: Optional[int] = None,
+                parser_memory_limit_bytes: Optional[int] = None,
+                max_pdf_pages: Optional[int] = None,
+                max_pdf_text_bytes: Optional[int] = None,
                 quiet: Optional[bool] = None) -> None:
 
         if search_dir and search_dir != 'None':
@@ -262,6 +286,26 @@ class ScanConfiguration:
 
         if denied_archive_types_string and denied_archive_types_string != 'None':
             self.denied_archive_types = [t.strip().lower() for t in denied_archive_types_string.split(',') if t.strip()]
+
+        if parser_timeout_seconds is not None:
+            if parser_timeout_seconds < 1:
+                raise ValueError("parser_timeout_seconds must be a positive integer")
+            self.parser_timeout_seconds = parser_timeout_seconds
+
+        if parser_memory_limit_bytes is not None:
+            if parser_memory_limit_bytes < 0:
+                raise ValueError("parser_memory_limit_bytes must be a non-negative integer")
+            self.parser_memory_limit_bytes = parser_memory_limit_bytes
+
+        if max_pdf_pages is not None:
+            if max_pdf_pages < 1:
+                raise ValueError("max_pdf_pages must be a positive integer")
+            self.max_pdf_pages = max_pdf_pages
+
+        if max_pdf_text_bytes is not None:
+            if max_pdf_text_bytes < 0:
+                raise ValueError("max_pdf_text_bytes must be a non-negative integer")
+            self.max_pdf_text_bytes = max_pdf_text_bytes
 
         if quiet is not None:
             self.quiet = quiet
