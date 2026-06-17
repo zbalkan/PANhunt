@@ -27,7 +27,7 @@ class Archive:
             self,
             path: str,
             payload: Optional[Union[bytes, IO[bytes]]] = None,
-            size_limit: int = 1_073_741_824,
+            size_limit: int = 8 * 1_073_741_824,
             context: Optional[ScanContext] = None,
             max_members: int = 10_000,
             compression_ratio_limit: int = 100,

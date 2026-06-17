@@ -20,9 +20,9 @@ class Mbox:
             self,
             path: str,
             payload: Optional[bytes] = None,
-            size_limit: int = 1_073_741_824,
+            size_limit: int = 8 * 1_073_741_824,
             max_attachments_per_message: int = 1_000,
-            max_total_attachment_bytes: int = 1_073_741_824,
+            max_total_attachment_bytes: int = 8 * 1_073_741_824,
             context: Optional[ScanContext] = None) -> None:
         self.filename = path
         self.mails = []
@@ -81,9 +81,9 @@ class Mail:
     def __init__(
             self,
             message: mailbox.mboxMessage,
-            size_limit: int = 1_073_741_824,
+            size_limit: int = 8 * 1_073_741_824,
             max_attachments: int = 1_000,
-            max_total_attachment_bytes: int = 1_073_741_824,
+            max_total_attachment_bytes: int = 8 * 1_073_741_824,
             context: Optional[ScanContext] = None) -> None:
         self.subject = self.get_subject(message)
         self.body = ''

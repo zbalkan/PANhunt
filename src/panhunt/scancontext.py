@@ -13,9 +13,9 @@ class ScanLimits:
     max_depth: int
     max_child_jobs: int
     max_total_expanded_bytes: int
-    max_attachment_size: int = 1_073_741_824
+    max_attachment_size: int = 8 * 1_073_741_824
     max_attachments_per_message: int = 1_000
-    max_total_attachment_bytes: int = 1_073_741_824
+    max_total_attachment_bytes: int = 8 * 1_073_741_824
     max_path_length: int = 4096
 
 

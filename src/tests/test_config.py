@@ -1,9 +1,7 @@
 """Tests for ScanConfiguration."""
 
-import configparser
 import os
 from pathlib import Path
-import tempfile
 
 import pytest
 
@@ -31,7 +29,7 @@ class TestDefaults:
         assert ScanConfiguration().quiet is False
 
     def test_default_size_limit(self):
-        assert ScanConfiguration().size_limit == 1_073_741_824
+        assert ScanConfiguration().size_limit == 8 * 1_073_741_824
 
     def test_default_worker_count(self):
         assert ScanConfiguration().worker_count == 1
@@ -204,6 +202,7 @@ class TestHelpers:
         assert c2.quiet is False
         assert c1 is not c2
 
+
 class TestParserLimitConfiguration:
     def test_default_parser_limits(self):
         c = ScanConfiguration()
@@ -223,6 +222,7 @@ class TestParserLimitConfiguration:
         assert c.parser_memory_limit_bytes == 1024
         assert c.max_pdf_pages == 7
         assert c.max_pdf_text_bytes == 2048
+
 
 class TestValidation:
     def test_negative_size_limit_raises(self):
