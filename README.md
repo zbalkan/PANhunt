@@ -84,7 +84,7 @@ The test suite uses `pytest` and covers the core scanning logic, configuration, 
 pytest src/tests/
 ```
 
-Current coverage: **135 tests at ~81% coverage**.
+To include coverage details, run `pytest --cov=panhunt src/tests/`.
 
 ## Usage
 
@@ -107,7 +107,7 @@ options:
   -q               No terminal output (default: False)
 ```
 
-Simply running it with no arguments will search the `C:\` drive on Windows and the filesystem under `/` on Linux, for documents containing PANs, and output to `panhunt_<timestamp>.report`.
+If you run PANhunt without a target path, it prompts before scanning the default root target (`C:\` on Windows or `/` on Linux). Reports are written as `panhunt_<timestamp>.report` in the report directory, and JSON reports are written as `panhunt_<timestamp>.json` when `-j` or the `json` configuration key is set.
 
 ## Example Output
 
@@ -233,13 +233,35 @@ Example `config.ini`:
 
 ```ini
 [DEFAULT]
+# Target can be supplied as target, search, or file.
 search = /data
 exclude = /data/logs,/data/tmp
 outfile = /var/reports
+json = /var/reports
 excludepans = 4111111111111111
+sizeLimit = 8589934592
+workers = 2
 quiet = false
+
+# Optional safety/resource limits. Values are bytes unless otherwise noted.
+maxScanDepth = 25
+maxChildJobs = 100000
+maxTotalExpandedBytes = 8589934592
+maxArchiveMembers = 10000
+maxArchiveCompressionRatio = 100
+maxArchivePathLength = 4096
+archiveSpoolThreshold = 8388608
+maxAttachmentSize = 8589934592
+maxAttachmentsPerMessage = 1000
+maxTotalAttachmentBytes = 8589934592
+allowedArchiveTypes =
+deniedArchiveTypes =
+parserTimeoutSeconds = 30
+parserMemoryLimitBytes = 536870912
+maxPdfPages = 100
+maxPdfTextBytes = 10485760
 ```
 
-Pass the config file with `-C config.ini`.
+Pass the config file with `-C config.ini`. Command-line quiet mode (`-q`) overrides the `quiet` value from the configuration file. The `sizeLimit` setting also updates the default total expanded-byte and attachment-byte limits unless those more specific settings are supplied.
 
 An important detail is that when working with large compressed files such as compressed log files larger than memory, panhunt may use all the CPU power, and it may be better to limit the CPU usage to prevent issues. If you are using systemd, a command like `systemd-run --scope -p CPUQuota=60% panhunt -C src/panhunt/resources/panhunt.ini` would save your resources.
