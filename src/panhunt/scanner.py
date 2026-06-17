@@ -54,6 +54,27 @@ class ScannerBase(ABC):
             context=context
         )
 
+    def _payload_bytes(self, job: Job) -> Optional[bytes]:
+        payload: bytes | IOBase | None = job.payload
+        if payload is None:
+            return None
+        if isinstance(payload, bytes):
+            return payload
+        if not isinstance(payload, IOBase):
+            return bytes(payload)
+
+        try:
+            payload.seek(0)
+        except io.UnsupportedOperation:
+            pass  # non-seekable stream; read from current position
+        except OSError as e:
+            logging.warning(f"Failed to seek stream to start: {e}")
+
+        stream_payload = payload.read()
+        if isinstance(stream_payload, bytes):
+            return stream_payload
+        return stream_payload.encode('utf8', errors='backslashreplace')
+
 
 class PlainTextFileScanner(ScannerBase):
 
@@ -133,7 +154,8 @@ class PlainTextFileScanner(ScannerBase):
 class MsgScanner(ScannerBase):
 
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
-        msg = MSMSG(msg_target_path=job.payload if job.payload else job.abspath)
+        payload = self._payload_bytes(job)
+        msg = MSMSG(msg_target_path=payload if payload is not None else job.abspath)
 
         matches: list[PAN] = []
 
@@ -151,16 +173,17 @@ class MsgScanner(ScannerBase):
 class EmlScanner(ScannerBase):
 
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
+        payload = self._payload_bytes(job)
         eml = (
             Eml(
                 path=job.abspath,
-                payload=job.payload,
+                payload=payload,
                 size_limit=self._config.max_attachment_size,
                 max_attachments=self._config.max_attachments_per_message,
                 max_total_attachment_bytes=self._config.max_total_attachment_bytes,
                 context=job.context
             )
-            if job.payload
+            if payload is not None
             else Eml(
                 path=job.abspath,
                 size_limit=self._config.max_attachment_size,
@@ -184,16 +207,17 @@ class EmlScanner(ScannerBase):
 class MboxScanner(ScannerBase):
 
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
+        payload = self._payload_bytes(job)
         mbox = (
             Mbox(
                 path=job.basename,
-                payload=job.payload,
+                payload=payload,
                 size_limit=self._config.max_attachment_size,
                 max_attachments_per_message=self._config.max_attachments_per_message,
                 max_total_attachment_bytes=self._config.max_total_attachment_bytes,
                 context=job.context
             )
-            if job.payload
+            if payload is not None
             else Mbox(
                 path=job.abspath,
                 size_limit=self._config.max_attachment_size,
@@ -269,8 +293,9 @@ class PdfScanner(ScannerBase):
             timeout_seconds=self._config.parser_timeout_seconds,
             memory_limit_bytes=self._config.parser_memory_limit_bytes
         )
+        payload = self._payload_bytes(job)
         pdf = Pdf(
-            file=io.BytesIO(initial_bytes=job.payload) if job.payload else job.abspath,
+            file=io.BytesIO(initial_bytes=payload) if payload is not None else job.abspath,
             runner=runner,
             max_pages=self._config.max_pdf_pages,
             max_text_bytes=self._config.max_pdf_text_bytes
