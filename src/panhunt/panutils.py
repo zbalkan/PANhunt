@@ -6,6 +6,7 @@ import os
 import pathlib
 import re
 import struct
+import threading
 import unicodedata
 import zipfile
 from gzip import FEXTRA, FNAME, GzipFile
@@ -17,6 +18,9 @@ except ImportError:
     from typing_extensions import TypeGuard
 
 import magic
+
+
+_thread_local = threading.local()
 
 
 class FileLikePayload(Protocol):
@@ -71,28 +75,41 @@ def get_mimetype(path: Optional[str] = None,
     return mime_type, encoding, error
 
 
+def _get_magic() -> magic.Magic:
+    """Return a per-thread libmagic detector.
+
+    Initialising ``magic.Magic`` loads the magic database, which is relatively
+    expensive and was previously repeated for every file, buffer, and stream.
+    Scanner workers are thread-based, so one detector per thread keeps the
+    object isolated while avoiding repeated database loads on each scan item.
+    """
+    detector = getattr(_thread_local, 'magic_detector', None)
+    if detector is None:
+        detector = magic.Magic(mime=True, mime_encoding=True)
+        _thread_local.magic_detector = detector
+    return detector
+
+
+def _parse_mime_data(raw_mime_data: str) -> tuple[str, str]:
+    mime_data: list[str] = raw_mime_data.split(';')
+    mime_type: str = mime_data[0].strip().lower()
+    encoding: str = mime_data[1].replace(
+        ' charset=', '').strip().lower()
+    return mime_type, encoding
+
+
 def __get_mime_data_from_buffer(payload: bytes) -> tuple[str, str]:
-    m = magic.Magic(mime=True, mime_encoding=True)
     buffer: bytes
     if (len(payload) < 2048):
         buffer = payload
     else:
         buffer = payload[:2048]
 
-    mime_data: list[str] = m.from_buffer(buffer).split(';')  # type: ignore
-    mime_type: str = mime_data[0].strip().lower()
-    encoding: str = mime_data[1].replace(
-        ' charset=', '').strip().lower()
-    return mime_type, encoding
+    return _parse_mime_data(_get_magic().from_buffer(buffer))  # type: ignore
 
 
 def __get_mime_data_from_file(path: str) -> tuple[str, str]:
-    m = magic.Magic(mime=True, mime_encoding=True)
-    mime_data: list[str] = m.from_file(filename=path).split(';')  # type: ignore
-    mime_type: str = mime_data[0].strip().lower()
-    encoding: str = mime_data[1].replace(
-        ' charset=', '').strip().lower()
-    return mime_type, encoding
+    return _parse_mime_data(_get_magic().from_file(filename=path))  # type: ignore
 
 
 def __get_mime_data_from_stream(stream: FileLikePayload) -> tuple[str, str]:
@@ -104,11 +121,7 @@ def __get_mime_data_from_stream(stream: FileLikePayload) -> tuple[str, str]:
             pass
 
     buffer: bytes = stream.read(2048)
-    m = magic.Magic(mime=True, mime_encoding=True)
-    mime_data: list[str] = m.from_buffer(buffer).split(';')  # type: ignore
-    mime_type: str = mime_data[0].strip().lower()
-    encoding: str = mime_data[1].replace(
-        ' charset=', '').strip().lower()
+    mime_type, encoding = _parse_mime_data(_get_magic().from_buffer(buffer))  # type: ignore
 
     if callable(seek):
         try:
