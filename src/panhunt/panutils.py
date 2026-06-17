@@ -20,7 +20,15 @@ import magic
 
 
 class FileLikePayload(Protocol):
-    def read(self, __size: int = -1) -> Any:
+    def read(self, __size: int = -1) -> bytes:
+        ...
+
+
+class SeekableFileLikePayload(FileLikePayload, Protocol):
+    def seek(self, __offset: int, __whence: int = 0) -> int:
+        ...
+
+    def tell(self) -> int:
         ...
 
 
@@ -32,6 +40,15 @@ def is_file_like(payload: Any) -> TypeGuard[FileLikePayload]:
     so use capability detection instead of relying only on isinstance(..., IOBase).
     """
     return hasattr(payload, 'read') and callable(payload.read)
+
+
+def is_seekable_file_like(payload: Any) -> TypeGuard[SeekableFileLikePayload]:
+    """Return True for readable streams that zipfile can probe safely."""
+    return (
+        is_file_like(payload)
+        and callable(getattr(payload, 'seek', None))
+        and callable(getattr(payload, 'tell', None))
+    )
 
 
 def get_mimetype(path: Optional[str] = None,
@@ -114,23 +131,19 @@ def is_valid_zip(path: Optional[str] = None,
     if payload is not None:
         if isinstance(payload, bytes):
             return zipfile.is_zipfile(io.BytesIO(payload))
-        if is_file_like(payload):
-            seek = getattr(payload, 'seek', None)
-            tell = getattr(payload, 'tell', None)
+        if is_seekable_file_like(payload):
             original_pos: Optional[int] = None
-            if callable(tell):
-                try:
-                    original_pos = int(tell())
-                except (OSError, IOError):
-                    original_pos = None
+            try:
+                original_pos = payload.tell()
+            except (OSError, IOError):
+                original_pos = None
             try:
                 return zipfile.is_zipfile(payload)
             finally:
-                if callable(seek):
-                    try:
-                        seek(0 if original_pos is None else original_pos)
-                    except (OSError, IOError):
-                        pass
+                try:
+                    payload.seek(0 if original_pos is None else original_pos)
+                except (OSError, IOError):
+                    pass
     if path is not None:
         return zipfile.is_zipfile(path)
     return False
