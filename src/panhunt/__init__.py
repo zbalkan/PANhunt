@@ -88,7 +88,7 @@ def main() -> None:
         raise
 
 
-if __name__ == '__main__':
+def run() -> None:
     try:
         main()
         logging.info('Exiting')
@@ -102,3 +102,7 @@ if __name__ == '__main__':
         logging.exception('Unhandled fatal error')
         logging.info('Exiting')
         raise SystemExit(1)
+
+
+if __name__ == '__main__':
+    run()

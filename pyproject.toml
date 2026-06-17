@@ -49,7 +49,7 @@ dev = [
 ]
 
 [project.scripts]
-panhunt = "panhunt:main"
+panhunt = "panhunt:run"
 
 [project.urls]
 Homepage = "https://github.com/zbalkan/PANhunt"
