@@ -52,7 +52,7 @@ class Dispatcher:
             threading.Thread(
                 target=self._run_dispatch_loop,
                 name=f"panhunt-worker-{i}",
-                daemon=False,
+                daemon=True,
             )
             for i in range(self._config.worker_count)
         ]
@@ -62,9 +62,9 @@ class Dispatcher:
     def stop(self) -> None:
         self._stop_event.set()
 
-    def join(self) -> None:
+    def join(self, timeout: float = 5.0) -> None:
         for thread in self._threads:
-            thread.join()
+            thread.join(timeout=timeout)
 
     def get_findings(self) -> list[Finding]:
         with self.__findings_lock:
