@@ -20,15 +20,15 @@ from panhunt.models import ScanResult
 
 @pytest.fixture
 def config() -> ScanConfiguration:
-    """Minimal ScanConfiguration pointing at /tmp."""
-    return ScanConfiguration.from_args(target_path='/tmp', quiet=True)
+    """Minimal ScanConfiguration pointing at the platform temp directory."""
+    return ScanConfiguration.from_args(target_path=tempfile.gettempdir(), quiet=True)
 
 
 @pytest.fixture
 def config_with_exclusion() -> ScanConfiguration:
     """Config that excludes a known test PAN."""
     return ScanConfiguration.from_args(
-        target_path='/tmp',
+        target_path=tempfile.gettempdir(),
         excluded_pans_string='4111111111111111',
         quiet=True,
     )
