@@ -10,9 +10,26 @@
 
 PANhunt is a tool that can be used to search drives for credit card numbers (PANs). This is useful for checking PCI DSS scope accuracy. PANhunt includes a Python PST file parser.
 
+## Acknowledgements
+
+PANhunt remains rooted in the original [Dionach PANhunt project](https://github.com/dionach/PANhunt), created and released by Dionach Ltd. The original project made a simple, practical PAN discovery tool available to the PCI and security community, including the PST parsing foundation that this fork continues to build on.
+
+This fork keeps the Dionach icon as a visible sign of respect for the original source, developer, and project history. The BSD-3-Clause license and copyright notice from Dionach Ltd. are preserved in this repository.
+
 ## Function
 
-PANhunt uses regular expressions to look for Visa, MasterCard or AMEX credit card numbers in document files. Archive files (ZIP, TAR, GZ, XZ) are recursed to look for document files. PST and MSG files are parsed and emails and attachments searched in.
+PANhunt uses regular expressions to look for Visa, MasterCard, and AMEX credit card numbers across a broad set of document, mail, and archive formats. Archive and container formats are recursed so nested documents, emails, and attachments can be searched.
+
+Currently supported searchable formats include:
+
+- Plain text and text-like files, including CSV, XML, HTML, logs, source files, and flat OpenDocument XML (`.fodt`, `.fods`, `.fodp`) when detected as text
+- Rich Text Format (`.rtf`)
+- Legacy Microsoft Office binary files (`.doc`, `.xls`, `.ppt`)
+- Modern Microsoft Office Open XML files (`.docx`, `.xlsx`, `.pptx`)
+- OpenDocument containers (`.odt`, `.ott`, `.ods`, `.ots`, `.odp`, `.otp`, `.odg`, `.otg`, `.odf`, `.odm`)
+- PDF documents (`.pdf`)
+- Outlook and email stores/messages (`.pst`, `.msg`, `.eml`, `.mbox`), including supported attachments
+- Recursive archives and compressed files (`.zip`, `.tar`, `.gz`, `.xz`), including Office and OpenDocument container files
 
 PANhunt will list but does not yet search Access databases.
 
