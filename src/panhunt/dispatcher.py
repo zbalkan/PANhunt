@@ -4,7 +4,7 @@ import threading
 from typing import IO, Optional, cast
 
 from . import enums, panutils
-from .archive import Archive
+from .archive import Archive, ZipArchive
 from .buffer import JobBuffer
 from .config import ScanConfiguration
 from .exceptions import PANHuntException
@@ -155,6 +155,11 @@ class Dispatcher:
         )
 
         if archive_type is not None:
+            if (issubclass(archive_type, ZipArchive)
+                    and not panutils.is_valid_zip(path=job.abspath, payload=job.payload)):
+                logging.warning(f"Skipping ZIP parser for invalid ZIP container: {job.abspath}")
+                return self._scan_file(job, mime_type, encoding)
+
             archive_name = archive_type.__name__.replace('Archive', '').lower()
             if self._config.allowed_archive_types and archive_name not in self._config.allowed_archive_types:
                 return Finding(

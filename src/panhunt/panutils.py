@@ -1,10 +1,12 @@
 import datetime as dt
+import io
 import os
 import pathlib
 import re
 import struct
 import sys
 import unicodedata
+import zipfile
 from gzip import FEXTRA, FNAME, GzipFile
 from typing import Any, Optional, Protocol, TypeGuard, Union
 
@@ -101,6 +103,40 @@ def __get_mime_data_from_stream(stream: FileLikePayload) -> tuple[str, str]:
             pass
 
     return mime_type, encoding
+
+
+def is_valid_zip(path: Optional[str] = None,
+                 payload: Optional[Union[bytes, FileLikePayload]] = None) -> bool:
+    """Return True only when Python can locate a valid ZIP central directory.
+
+    libmagic can classify partial or otherwise malformed files as ZIP data from
+    their header alone.  ``zipfile.is_zipfile`` performs the same end-of-file
+    central-directory check that ``ZipFile`` needs before extraction, so use it
+    as a cheap guard before dispatching a job to ZIP archive parsing.
+    """
+    if payload is not None:
+        if isinstance(payload, bytes):
+            return zipfile.is_zipfile(io.BytesIO(payload))
+        if is_file_like(payload):
+            seek = getattr(payload, 'seek', None)
+            tell = getattr(payload, 'tell', None)
+            original_pos: Optional[int] = None
+            if callable(tell):
+                try:
+                    original_pos = int(tell())
+                except (OSError, IOError):
+                    original_pos = None
+            try:
+                return zipfile.is_zipfile(payload)
+            finally:
+                if callable(seek):
+                    try:
+                        seek(0 if original_pos is None else original_pos)
+                    except (OSError, IOError):
+                        pass
+    if path is not None:
+        return zipfile.is_zipfile(path)
+    return False
 
 
 def unicode_to_ascii(unicode_str: str) -> str:

@@ -2,7 +2,8 @@
 
 import threading
 import time
-from unittest.mock import MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from panhunt import enums
 from panhunt.buffer import InMemoryJobBuffer
@@ -314,6 +315,20 @@ class TestArchiveChildJobs:
         d.join()
 
         assert set(processed) == {'outer.zip', 'inner.zip', 'leaf.txt'}
+
+    def test_invalid_zip_magic_falls_back_without_failure(self, tmp_path: Path):
+        fake_zip = tmp_path / 'fake.zip'
+        fake_zip.write_bytes(b'PK\x03\x04not a complete zip file')
+
+        buffer = InMemoryJobBuffer()
+        d = Dispatcher(buffer=buffer, config=_make_config(worker_count=1))
+        job = Job(basename=fake_zip.name, dirname=str(tmp_path))
+
+        with patch('panhunt.dispatcher.panutils.get_mimetype', return_value=('application/zip', 'binary', None)):
+            result = d._dispatch_job(job)
+
+        assert result is None
+        assert buffer.dequeue(timeout=0) is None
 
 
 class TestShutdownBehavior:
