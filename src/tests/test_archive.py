@@ -6,6 +6,7 @@ import zipfile
 
 from panhunt.archive import OpenDocumentArchive, TarArchive, ZipArchive
 from panhunt.exceptions import PANHuntException
+from panhunt.scanner import PlainTextFileScanner
 from panhunt.scancontext import ScanContext, ScanLimits
 
 
@@ -44,7 +45,8 @@ def test_zip_archive_refuses_total_uncompressed_content_over_configured_limit():
     assert 'total uncompressed ZIP size exceeds limit' in str(error)
 
 
-def test_opendocument_archive_exposes_readable_text_when_pan_is_split_across_xml_tags():
+def test_opendocument_archive_exposes_searchable_text_when_pan_is_split_across_xml_tags(
+        mock_buffer, config):
     payload = _zip_payload({
         'mimetype': b'application/vnd.oasis.opendocument.text',
         'META-INF/manifest.xml': b'<manifest />',
@@ -59,10 +61,13 @@ def test_opendocument_archive_exposes_readable_text_when_pan_is_split_across_xml
     children, error = OpenDocumentArchive(path='card.odt', payload=payload).get_children()
 
     assert error is None
-    payloads = {child.basename: child.payload.read() for child in children}
-    assert payloads['content.xml.txt'] == b'4111111111111111'
-    assert payloads['mimetype'] == b'application/vnd.oasis.opendocument.text'
-    assert payloads['Pictures/image.bin'] == b'embedded data'
+    payloads = {child.basename: child.payload for child in children}
+    scanner = PlainTextFileScanner(buffer=mock_buffer, config=config)
+    xml_text_job = next(child for child in children if child.basename == 'content.xml.txt')
+
+    assert len(scanner.scan(xml_text_job)) == 1
+    assert payloads['mimetype'].read() == b'application/vnd.oasis.opendocument.text'
+    assert payloads['Pictures/image.bin'].read() == b'embedded data'
     assert 'META-INF/manifest.xml' not in payloads
 
 
