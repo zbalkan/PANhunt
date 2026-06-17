@@ -65,19 +65,21 @@ Current coverage: **135 tests at ~81% coverage**.
 ## Usage
 
 ```shell
-usage: panhunt [-h] [-s SEARCH_DIR] [-f FILE_PATH] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-C CONFIG] [-X EXCLUDE_PAN] [-q]
+usage: panhunt [-h] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-C CONFIG] [-X EXCLUDE_PAN] [-w WORKERS] [-q] [target_path]
 
 PANHunt : search directories and sub directories for documents containing PANs.
 
+positional arguments:
+  target_path      file or directory to search (default: None)
+
 options:
   -h, --help       show this help message and exit
-  -s SEARCH_DIR    base directory to search in (default: None)
-  -f FILE_PATH     File path for single file scan (default: None)
   -x EXCLUDE_DIRS  directories to exclude from the search (use absolute paths) (default: None)
   -o REPORT_DIR    Report file directory for TXT formatted PAN report (default: ./)
   -j JSON_DIR      Report file directory for JSON formatted PAN report (default: None)
   -C CONFIG        configuration file to use (default: None)
   -X EXCLUDE_PAN   PAN to exclude from search (default: None)
+  -w WORKERS       Number of worker threads (default: 1) (default: None)
   -q               No terminal output (default: False)
 ```
 
@@ -215,3 +217,5 @@ quiet = false
 ```
 
 Pass the config file with `-C config.ini`.
+
+An important detail is that when working with large compressed files such as compressed log files larger than memory, panhunt may use all the CPU power, and it may be better to limit the CPU usage to prevent issues. If you are using systemd, a command like `systemd-run --scope -p CPUQuota=60% panhunt -C src/panhunt/resources/panhunt.ini` would save your resources.
