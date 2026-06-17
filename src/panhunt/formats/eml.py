@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from email import message, parser
 from typing import Optional, Union, cast

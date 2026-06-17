@@ -5,6 +5,8 @@
 #
 # Contributors: Zafer Balkan, 2023
 
+from __future__ import annotations
+
 import itertools
 import logging
 import math
