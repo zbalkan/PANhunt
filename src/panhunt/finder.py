@@ -23,4 +23,3 @@ class PanFinder:
 
         return matches
 
-

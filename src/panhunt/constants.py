@@ -6,5 +6,9 @@ BLOCK_SIZE_BYTES: int = 30 * 1024 * 1024   # 30 MB
 # Balances memory usage against system-call overhead.
 STREAM_CHUNK_SIZE_BYTES: int = 8 * 1024 * 1024   # 8 MB
 
+# Minimum character count for a string to be a valid PAN.
+# ISO/IEC 7812: card numbers are 13–19 digits; 15 is the practical minimum.
+MIN_PAN_LENGTH: int = 15
+
 # Seconds to wait for available memory before aborting a large payload enqueue.
 MEMORY_CHECK_TIMEOUT_SECONDS: int = 20

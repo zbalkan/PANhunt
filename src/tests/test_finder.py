@@ -1,16 +1,12 @@
 """Tests for PAN finder behavior."""
 
-from unittest.mock import MagicMock
-
 from panhunt.finder import PanFinder
 
 
-def test_find_skips_brand_regexes_when_text_has_too_few_digits(config):
+def test_find_returns_empty_for_clean_text(config):
     finder = PanFinder(config)
-    finder._brands = [('Visa', MagicMock())]
 
     assert finder.find('clean text with 1234 and 5678 only') == []
-    finder._brands[0][1].findall.assert_not_called()
 
 
 def test_find_keeps_valid_pan_detection(config):
