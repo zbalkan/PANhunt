@@ -109,7 +109,7 @@ class ScanConfiguration:
         self._validate_non_negative_int('max_pdf_text_bytes', self.max_pdf_text_bytes)
 
     def is_excluded(self, pan: str) -> bool:
-        return pan in self.excluded_pans
+        return self._canonicalize_pan(pan) in self.excluded_pans
 
     @classmethod
     def from_args(cls,
@@ -241,7 +241,11 @@ class ScanConfiguration:
             self.excluded_directories = [d.lower() for d in excluded_directories_string.split(',')]
 
         if excluded_pans_string and excluded_pans_string != 'None':
-            self.excluded_pans = excluded_pans_string.split(',')
+            self.excluded_pans = [
+                canonical
+                for raw_pan in excluded_pans_string.split(',')
+                if (canonical := self._canonicalize_pan(raw_pan))
+            ]
 
         if size_limit is not None:
             self._validate_non_negative_int('size_limit', size_limit)
@@ -318,6 +322,10 @@ class ScanConfiguration:
 
         if quiet is not None:
             self.quiet = quiet
+
+    @staticmethod
+    def _canonicalize_pan(pan: str) -> str:
+        return ''.join(ch for ch in pan if ch.isdigit())
 
     @staticmethod
     def _validate_positive_int(name: str, value: int) -> None:

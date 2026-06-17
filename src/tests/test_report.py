@@ -69,6 +69,11 @@ class TestGenerateText:
         result = _make_result(config)
         assert isinstance(generator.generate_text(result), str)
 
+    def test_text_report_omits_command_line(self, generator, config):
+        result = _make_result(config)
+        text = generator.generate_text(result)
+        assert 'Command:' not in text
+
 
 class TestGenerateJson:
     def test_returns_dict(self, generator, config):
@@ -114,3 +119,8 @@ class TestGenerateJson:
         result = _make_result(config)
         data = generator.generate_json(result)
         assert isinstance(data['elapsed'], str)
+
+    def test_json_report_omits_command_line(self, generator, config):
+        result = _make_result(config)
+        data = generator.generate_json(result)
+        assert 'command' not in data

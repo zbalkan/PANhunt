@@ -80,6 +80,10 @@ class TestFromArgs:
         assert '1234' in c.excluded_pans
         assert '5678' in c.excluded_pans
 
+    def test_excluded_pans_are_canonicalized(self):
+        c = ScanConfiguration.from_args(excluded_pans_string='4111 1111 1111 1111,5105-1051-0510-5100')
+        assert c.excluded_pans == ['4111111111111111', '5105105105105100']
+
     def test_size_limit_override(self):
         c = ScanConfiguration.from_args(size_limit=512)
         assert c.size_limit == 512
@@ -175,8 +179,9 @@ class TestFromFile:
 
 class TestHelpers:
     def test_is_excluded_match(self):
-        c = ScanConfiguration.from_args(excluded_pans_string='4111111111111111')
+        c = ScanConfiguration.from_args(excluded_pans_string='4111 1111 1111 1111')
         assert c.is_excluded('4111111111111111') is True
+        assert c.is_excluded('4111-1111-1111-1111') is True
 
     def test_is_excluded_no_match(self):
         c = ScanConfiguration.from_args(excluded_pans_string='4111111111111111')

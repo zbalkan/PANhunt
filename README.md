@@ -55,11 +55,43 @@ pipx install panhunt
 panhunt --help
 ```
 
+### libmagic prerequisite on non-Windows systems
+
+PANhunt uses `python-magic` for file type detection. On Windows, the packaged `python-magic-bin` dependency provides the native library. On Linux and macOS, `python-magic` usually requires the OS-level `libmagic` library to be installed before PANhunt can import and scan files successfully. Install it with your platform package manager before or after installing PANhunt, for example:
+
+```shell
+# Debian / Ubuntu
+sudo apt-get install libmagic1
+
+# Fedora
+sudo dnf install file-libs
+
+# macOS with Homebrew
+brew install libmagic
+```
+
 For local development, install the project with its development extras from the repository root:
 
 ```shell
 pip install -e .[dev]
 pytest
+```
+
+Before publishing, run a local pre-release smoke check from a clean checkout or clean working tree:
+
+```shell
+python -m venv .venv-smoke
+. .venv-smoke/bin/activate  # Windows PowerShell: .\.venv-smoke\Scripts\Activate.ps1
+python -m pip install --upgrade pip build twine
+rm -rf dist build *.egg-info src/*.egg-info
+python -m build
+python -m twine check dist/*
+python -m pip install dist/*.whl
+panhunt --help
+printf '4111111111111111\n' > /tmp/panhunt-smoke.txt
+panhunt /tmp/panhunt-smoke.txt -q
+deactivate
+rm -rf .venv-smoke /tmp/panhunt-smoke.txt
 ```
 
 To build and publish to PyPI, use the provided scripts. Pass `test` to upload to TestPyPI or `prod` to upload to the production PyPI index. If no virtual environment exists at `.venv`, the script creates one, installs the required tools, runs the build, uploads, then deletes the environment.
