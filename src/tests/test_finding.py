@@ -57,6 +57,48 @@ class TestInit:
         )
         assert f.size == len(payload)
 
+
+    def test_size_from_file_like_payload_without_iobase(self):
+        class FileLikePayload:
+            def __init__(self, data):
+                self._data = data
+                self._pos = 0
+
+            def read(self, size=-1):
+                if size == -1:
+                    chunk = self._data[self._pos:]
+                else:
+                    chunk = self._data[self._pos:self._pos + size]
+                self._pos += len(chunk)
+                return chunk
+
+            def seekable(self):
+                return True
+
+            def seek(self, offset, whence=0):
+                if whence == 0:
+                    self._pos = offset
+                elif whence == 1:
+                    self._pos += offset
+                elif whence == 2:
+                    self._pos = len(self._data) + offset
+                return self._pos
+
+            def tell(self):
+                return self._pos
+
+        payload = FileLikePayload(b'hello world')
+        f = Finding(
+            basename='payload.txt',
+            dirname='/tmp',
+            payload=payload,
+            mimetype='text/plain',
+            encoding='us-ascii',
+        )
+        assert f.status == ScanStatusEnum.Success
+        assert f.size == 11
+        assert payload.tell() == 0
+
     def test_explicit_exception_sets_failure(self, tmp_text_file):
         f = Finding(
             basename=os.path.basename(tmp_text_file),

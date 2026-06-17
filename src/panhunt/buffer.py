@@ -1,12 +1,12 @@
 import threading
 import time
 from abc import ABC, abstractmethod
-from io import IOBase
 from queue import Empty, Queue
 from typing import Optional
 
 import psutil
 
+from . import panutils
 from .constants import MEMORY_CHECK_TIMEOUT_SECONDS
 from .job import Job
 
@@ -89,7 +89,7 @@ class InMemoryJobBuffer(JobBuffer):
         return not self._job_queue.empty()
 
     def _ensure_memory_ready(self, job: Job) -> None:
-        if job.payload is None or isinstance(job.payload, IOBase):
+        if job.payload is None or not isinstance(job.payload, bytes):
             return
 
         size = len(job.payload)

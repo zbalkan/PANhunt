@@ -1,8 +1,7 @@
 import logging
 import os
 import threading
-from io import IOBase
-from typing import Optional
+from typing import IO, Optional, cast
 
 from . import enums
 from . import panutils
@@ -90,11 +89,13 @@ class Dispatcher:
                         else:
                             self.failures.append(res)
             finally:
-                if job.payload and isinstance(job.payload, IOBase):
-                    try:
-                        job.payload.close()
-                    except Exception as e:
-                        logging.warning(f"Failed to close payload for {job.abspath}: {e}")
+                if job.payload and panutils.is_file_like(job.payload):
+                    close = getattr(job.payload, 'close', None)
+                    if callable(close):
+                        try:
+                            close()
+                        except Exception as e:
+                            logging.warning(f"Failed to close payload for {job.abspath}: {e}")
                 job.payload = None
                 job = None
                 self._buffer.complete_job()
@@ -111,15 +112,22 @@ class Dispatcher:
         if job.payload is not None:
             if isinstance(job.payload, LimitedReader):
                 size = 0
-            elif isinstance(job.payload, IOBase):
-                try:
-                    job.payload.seek(0, 2)
-                    size = job.payload.tell()
-                    job.payload.seek(0)
-                except (OSError, IOError):
+            elif isinstance(job.payload, bytes):
+                size = len(job.payload)
+            elif panutils.is_file_like(job.payload):
+                seek = getattr(job.payload, 'seek', None)
+                tell = getattr(job.payload, 'tell', None)
+                if callable(seek) and callable(tell):
+                    try:
+                        seek(0, 2)
+                        size = cast(int, tell())
+                        seek(0)
+                    except (OSError, IOError):
+                        size = 0
+                else:
                     size = 0
             else:
-                size = len(job.payload)
+                size = 0
         else:
             size = os.stat(job.abspath).st_size
 
@@ -165,7 +173,7 @@ class Dispatcher:
                 )  # type: ignore
             archive = archive_type(
                 path=job.abspath,
-                payload=job.payload,
+                payload=cast(IO[bytes], job.payload) if job.payload is not None and not isinstance(job.payload, bytes) else job.payload,
                 size_limit=self._config.size_limit,
                 context=job.context,
                 max_members=self._config.max_archive_members,

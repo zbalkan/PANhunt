@@ -6,10 +6,24 @@ import struct
 import sys
 import unicodedata
 from gzip import FEXTRA, FNAME, GzipFile
-from io import IOBase
-from typing import Any, Optional, Union
+from typing import Any, Optional, Protocol, TypeGuard, Union
 
 import magic
+
+
+class FileLikePayload(Protocol):
+    def read(self, __size: int = -1) -> Any:
+        ...
+
+
+def is_file_like(payload: Any) -> TypeGuard[FileLikePayload]:
+    """Return True for readable stream objects, including older SpooledTemporaryFile implementations.
+
+    Some Python versions do not register tempfile.SpooledTemporaryFile as an
+    IOBase subclass. PANhunt passes spooled archive members between components,
+    so use capability detection instead of relying only on isinstance(..., IOBase).
+    """
+    return hasattr(payload, 'read') and callable(payload.read)
 
 
 def get_root_dir() -> str:
@@ -22,17 +36,17 @@ def get_root_dir() -> str:
 
 
 def get_mimetype(path: Optional[str] = None,
-                 payload: Optional[Union[bytes, IOBase]] = None) -> tuple[str, str, Optional[Exception]]:
+                 payload: Optional[Union[bytes, FileLikePayload]] = None) -> tuple[str, str, Optional[Exception]]:
     mime_type = 'Unknown/Unknown'
     encoding = 'Unknown'
     error: Optional[Exception] = None
 
     try:
         if payload is not None:
-            if isinstance(payload, IOBase):
-                mime_type, encoding = __get_mime_data_from_stream(payload)
-            else:
+            if isinstance(payload, bytes):
                 mime_type, encoding = __get_mime_data_from_buffer(payload)
+            elif is_file_like(payload):
+                mime_type, encoding = __get_mime_data_from_stream(payload)
         elif path is not None:
             mime_type, encoding = __get_mime_data_from_file(path)
     except Exception as ex:
@@ -65,11 +79,13 @@ def __get_mime_data_from_file(path: str) -> tuple[str, str]:
     return mime_type, encoding
 
 
-def __get_mime_data_from_stream(stream: IOBase) -> tuple[str, str]:
-    try:
-        stream.seek(0)
-    except (OSError, IOError):
-        pass
+def __get_mime_data_from_stream(stream: FileLikePayload) -> tuple[str, str]:
+    seek = getattr(stream, 'seek', None)
+    if callable(seek):
+        try:
+            seek(0)
+        except (OSError, IOError):
+            pass
 
     buffer: bytes = stream.read(2048)
     m = magic.Magic(mime=True, mime_encoding=True)
@@ -78,10 +94,11 @@ def __get_mime_data_from_stream(stream: IOBase) -> tuple[str, str]:
     encoding: str = mime_data[1].replace(
         ' charset=', '').strip().lower()
 
-    try:
-        stream.seek(0)
-    except (OSError, IOError):
-        pass
+    if callable(seek):
+        try:
+            seek(0)
+        except (OSError, IOError):
+            pass
 
     return mime_type, encoding
 

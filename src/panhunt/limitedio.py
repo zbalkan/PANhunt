@@ -1,5 +1,5 @@
 from io import IOBase
-from typing import Any, Optional
+from typing import Any, IO, Optional
 
 from . import panutils
 from .exceptions import PANHuntException
@@ -9,7 +9,7 @@ from .scancontext import ScanContext
 class LimitedReader(IOBase):
     """Reader wrapper that enforces a maximum number of bytes returned."""
 
-    def __init__(self, stream: IOBase, limit: int, name: str = '<stream>', context: Optional[ScanContext] = None) -> None:
+    def __init__(self, stream: IO[bytes], limit: int, name: str = '<stream>', context: Optional[ScanContext] = None) -> None:
         self._stream = stream
         self._limit = limit
         self._name = name
@@ -56,7 +56,7 @@ class LimitedReader(IOBase):
         super().close()
 
 
-def read_limited(stream: IOBase, limit: int, chunk_size: int = 1024 * 1024) -> bytes:
+def read_limited(stream: IO[bytes], limit: int, chunk_size: int = 1024 * 1024) -> bytes:
     chunks: list[bytes] = []
     total = 0
     while True:
@@ -73,8 +73,8 @@ def read_limited(stream: IOBase, limit: int, chunk_size: int = 1024 * 1024) -> b
     return b''.join(chunks)
 
 
-def spool_limited(stream: IOBase, limit: int, spool_threshold: int = 8 * 1024 * 1024,
-                  chunk_size: int = 1024 * 1024) -> tuple[IOBase, int]:
+def spool_limited(stream: IO[bytes], limit: int, spool_threshold: int = 8 * 1024 * 1024,
+                  chunk_size: int = 1024 * 1024) -> tuple[IO[bytes], int]:
     from tempfile import SpooledTemporaryFile
 
     total = 0

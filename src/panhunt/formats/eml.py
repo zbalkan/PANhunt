@@ -1,6 +1,6 @@
 import json
 from email import message, parser
-from typing import Optional
+from typing import Optional, cast
 
 from ..scancontext import ScanContext
 
@@ -57,10 +57,10 @@ class Eml:
         elif part.get_content_type() == 'text/plain':
             self.parse_body(part)
 
-    def parse_body(self, body_payload) -> None:
+    def parse_body(self, body_payload: message.Message | str) -> None:
         if isinstance(body_payload, message.Message):
             charset = body_payload.get_content_charset() or 'utf-8'
-            decoded = body_payload.get_payload(decode=True)
+            decoded = cast(Optional[bytes], body_payload.get_payload(decode=True))
             if decoded is None:
                 self.body += str(body_payload.get_payload())
             else:
@@ -70,10 +70,15 @@ class Eml:
 
     def parse_attachment(self, attachment_payload: message.Message) -> None:
         filename = attachment_payload.get_filename() or '[NoFilename]'
-        binary_data = attachment_payload.get_payload(decode=True)
+        binary_data = cast(Optional[bytes], attachment_payload.get_payload(decode=True))
         if binary_data is None:
             raw = attachment_payload.get_payload()
-            binary_data = raw.encode('utf-8', errors='backslashreplace') if isinstance(raw, str) else bytes(raw)
+            if isinstance(raw, str):
+                binary_data = raw.encode('utf-8', errors='backslashreplace')
+            elif isinstance(raw, bytes):
+                binary_data = raw
+            else:
+                binary_data = str(raw).encode('utf-8', errors='backslashreplace')
         attachment_count = len(self.attachments) + 1
         byte_count = len(binary_data)
         if attachment_count > self._max_attachments:

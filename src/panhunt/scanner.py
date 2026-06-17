@@ -2,9 +2,9 @@ import io
 import logging
 import os
 from abc import ABC, abstractmethod
-from io import IOBase
 from typing import Optional
 
+from . import panutils
 from .buffer import JobBuffer
 from .config import ScanConfiguration
 from .constants import BLOCK_SIZE_BYTES, MIN_PAN_LENGTH, STREAM_CHUNK_SIZE_BYTES
@@ -17,7 +17,7 @@ from .formats.pdf import Pdf
 from .formats.pst import PST
 from .formats.pst import Attachment as PstAttachment
 from .parser_isolation import SubprocessParserRunner
-from .job import Job
+from .job import FileLikePayload, Job
 from .pan import PAN
 
 
@@ -55,20 +55,22 @@ class ScannerBase(ABC):
         )
 
     def _payload_bytes(self, job: Job) -> Optional[bytes]:
-        payload: bytes | IOBase | None = job.payload
+        payload = job.payload
         if payload is None:
             return None
         if isinstance(payload, bytes):
             return payload
-        if not isinstance(payload, IOBase):
-            return bytes(payload)
+        if not panutils.is_file_like(payload):
+            return None
 
-        try:
-            payload.seek(0)
-        except io.UnsupportedOperation:
-            pass  # non-seekable stream; read from current position
-        except OSError as e:
-            logging.warning(f"Failed to seek stream to start: {e}")
+        seek = getattr(payload, 'seek', None)
+        if callable(seek):
+            try:
+                seek(0)
+            except io.UnsupportedOperation:
+                pass  # non-seekable stream; read from current position
+            except OSError as e:
+                logging.warning(f"Failed to seek stream to start: {e}")
 
         stream_payload = payload.read()
         if isinstance(stream_payload, bytes):
@@ -80,9 +82,10 @@ class PlainTextFileScanner(ScannerBase):
 
     def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
         if job.payload:
-            if isinstance(job.payload, IOBase):
+            if isinstance(job.payload, bytes):
+                return self._scan_bytes(job.payload, encoding)
+            if panutils.is_file_like(job.payload):
                 return self._scan_stream(job.payload, encoding)
-            return self._scan_bytes(job.payload, encoding)
         return self._scan_file(job.abspath, encoding)
 
     def _scan_bytes(self, payload: bytes, encoding: str = 'utf8') -> list[PAN]:
@@ -115,18 +118,20 @@ class PlainTextFileScanner(ScannerBase):
 
         return matches
 
-    def _scan_stream(self, stream: IOBase, encoding: str = 'utf8') -> list[PAN]:
+    def _scan_stream(self, stream: FileLikePayload, encoding: str = 'utf8') -> list[PAN]:
         matches: list[PAN] = []
 
         if encoding == 'binary':
             encoding = 'utf8'
 
-        try:
-            stream.seek(0)
-        except io.UnsupportedOperation:
-            pass  # non-seekable stream; read from current position
-        except OSError as e:
-            logging.warning(f"Failed to seek stream to start: {e}")
+        seek = getattr(stream, 'seek', None)
+        if callable(seek):
+            try:
+                seek(0)
+            except io.UnsupportedOperation:
+                pass  # non-seekable stream; read from current position
+            except OSError as e:
+                logging.warning(f"Failed to seek stream to start: {e}")
 
         buffer = ''
         while True:

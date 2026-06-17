@@ -2,10 +2,10 @@ import os
 import tarfile
 import xml.etree.ElementTree as ET
 from gzip import GzipFile
-from io import BytesIO, IOBase
+from io import BytesIO
 from lzma import LZMAFile
 from tarfile import TarFile, TarInfo
-from typing import IO, Optional, Union
+from typing import IO, Optional, Union, cast
 from zipfile import ZipFile, ZipInfo
 
 from . import panutils
@@ -17,14 +17,14 @@ from .scancontext import ScanContext
 
 class Archive:
     path: str
-    payload: Optional[Union[bytes, IOBase]]
+    payload: Optional[Union[bytes, IO[bytes]]]
     size_limit: int
     context: Optional[ScanContext]
 
     def __init__(
             self,
             path: str,
-            payload: Optional[Union[bytes, IOBase]] = None,
+            payload: Optional[Union[bytes, IO[bytes]]] = None,
             size_limit: int = 1_073_741_824,
             context: Optional[ScanContext] = None,
             max_members: int = 10_000,
@@ -73,8 +73,11 @@ class Archive:
     @staticmethod
     def _close_children(children: list[Job]) -> None:
         for child in children:
-            if isinstance(child.payload, IOBase):
-                child.payload.close()
+            payload = child.payload
+            if panutils.is_file_like(payload):
+                close = getattr(payload, 'close', None)
+                if callable(close):
+                    close()
 
 
 class ZipArchive(Archive):
@@ -105,8 +108,9 @@ class ZipArchive(Archive):
             if isinstance(self.payload, bytes):
                 zip_source = BytesIO(self.payload)
             elif self.payload is not None:
-                self.payload.seek(0)
-                zip_source = self.payload
+                payload_stream = cast(IO[bytes], self.payload)
+                payload_stream.seek(0)
+                zip_source = payload_stream
             else:
                 zip_source = self.path
             with ZipFile(zip_source, 'r') as zip_ref:
@@ -158,8 +162,9 @@ class OpenDocumentArchive(ZipArchive):
             if isinstance(self.payload, bytes):
                 zip_source = BytesIO(self.payload)
             elif self.payload is not None:
-                self.payload.seek(0)
-                zip_source = self.payload
+                payload_stream = cast(IO[bytes], self.payload)
+                payload_stream.seek(0)
+                zip_source = payload_stream
             else:
                 zip_source = self.path
 
@@ -255,8 +260,9 @@ class TarArchive(Archive):
             if isinstance(self.payload, bytes):
                 tar_ref: TarFile = tarfile.open(fileobj=BytesIO(self.payload), mode='r')
             elif self.payload is not None:
-                self.payload.seek(0)
-                tar_ref = tarfile.open(fileobj=self.payload, mode='r')
+                payload_stream = cast(IO[bytes], self.payload)
+                payload_stream.seek(0)
+                tar_ref = tarfile.open(fileobj=payload_stream, mode='r')
             else:
                 tar_ref = tarfile.open(self.path, 'r')
 
@@ -310,8 +316,9 @@ class GzipArchive(Archive):
                 gz_file = GzipFile(fileobj=BytesIO(self.payload), mode='r')
                 gz_file.name = self.path
             elif self.payload is not None:
-                self.payload.seek(0)
-                gz_file = GzipFile(fileobj=self.payload, mode='r')
+                payload_stream = cast(IO[bytes], self.payload)
+                payload_stream.seek(0)
+                gz_file = GzipFile(fileobj=payload_stream, mode='r')
                 gz_file.name = self.path
             else:
                 gz_file = GzipFile(filename=self.path, mode='r')
@@ -328,7 +335,7 @@ class GzipArchive(Archive):
             job = Job(
                 basename=compressed_filename,
                 dirname=self.path,
-                payload=LimitedReader(gz_file, self.size_limit, self.path, child_context),
+                payload=cast(IO[bytes], LimitedReader(cast(IO[bytes], gz_file), self.size_limit, self.path, child_context)),
                 context=child_context
             )
             return [job], None
@@ -346,8 +353,9 @@ class XzArchive(Archive):
             if isinstance(self.payload, bytes):
                 xz_file = LZMAFile(filename=BytesIO(self.payload), mode='r')
             elif self.payload is not None:
-                self.payload.seek(0)
-                xz_file = LZMAFile(filename=self.payload, mode='r')
+                payload_stream = cast(IO[bytes], self.payload)
+                payload_stream.seek(0)
+                xz_file = LZMAFile(filename=payload_stream, mode='r')
             else:
                 xz_file = LZMAFile(filename=self.path, mode='r')
 
@@ -363,7 +371,7 @@ class XzArchive(Archive):
             job = Job(
                 basename=compressed_filename,
                 dirname=self.path,
-                payload=LimitedReader(xz_file, self.size_limit, self.path, child_context),
+                payload=cast(IO[bytes], LimitedReader(xz_file, self.size_limit, self.path, child_context)),
                 context=child_context
             )
             return [job], None

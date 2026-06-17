@@ -105,6 +105,38 @@ class TestScanStream:
         result = scanner.scan(job)
         assert len(result) == 1
 
+
+    def test_finds_pan_in_file_like_payload_without_iobase(self, scanner):
+        class FileLikePayload:
+            def __init__(self, data):
+                self._data = data
+                self._pos = 0
+
+            def read(self, size=-1):
+                if size == -1:
+                    chunk = self._data[self._pos:]
+                else:
+                    chunk = self._data[self._pos:self._pos + size]
+                self._pos += len(chunk)
+                return chunk
+
+            def seek(self, offset, whence=0):
+                if whence == 0:
+                    self._pos = offset
+                elif whence == 1:
+                    self._pos += offset
+                elif whence == 2:
+                    self._pos = len(self._data) + offset
+                return self._pos
+
+            def tell(self):
+                return self._pos
+
+        stream = FileLikePayload(b'Ref: 4111111111111111\n')
+        job = Job(basename='stream.txt', dirname='/tmp', payload=stream)
+        result = scanner.scan(job)
+        assert len(result) == 1
+
     def test_empty_stream_returns_empty(self, scanner):
         stream = io.StringIO('')
         job = Job(basename='empty.txt', dirname='/tmp', payload=stream)

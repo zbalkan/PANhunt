@@ -1,7 +1,7 @@
 import os
-from io import IOBase
 from typing import Optional, Union
 
+from .panutils import FileLikePayload
 from .scancontext import ScanContext
 
 
@@ -9,7 +9,7 @@ class Job:
 
     basename: str
     dirname: str
-    payload: Optional[Union[bytes, IOBase]]
+    payload: Optional[Union[bytes, FileLikePayload]]
     abspath: str
     context: Optional[ScanContext]
 
@@ -17,7 +17,7 @@ class Job:
             self,
             basename: str,
             dirname: str,
-            payload: Optional[Union[bytes, IOBase]] = None,
+            payload: Optional[Union[bytes, FileLikePayload]] = None,
             context: Optional[ScanContext] = None) -> None:
         self.basename = basename
         self.dirname = dirname
