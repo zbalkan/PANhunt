@@ -150,6 +150,32 @@ class TestScanStream:
         result = scanner.scan(job)
         assert len(result) == 1
 
+
+    def test_finds_pan_split_across_stream_reads_without_newline(self, scanner):
+        class TinyChunkStream:
+            def __init__(self, chunks):
+                self._chunks = list(chunks)
+                self._index = 0
+
+            def read(self, size=-1):
+                if self._index >= len(self._chunks):
+                    return ''
+                chunk = self._chunks[self._index]
+                self._index += 1
+                return chunk
+
+            def seek(self, offset, whence=0):
+                if offset == 0 and whence == 0:
+                    self._index = 0
+                return self._index
+
+        stream = TinyChunkStream(['Invoice ', '41111111', '11111111', ' approved'])
+        job = Job(basename='stream.txt', dirname='/tmp', payload=stream)
+
+        result = scanner.scan(job)
+
+        assert len(result) == 1
+
     def test_empty_stream_returns_empty(self, scanner):
         stream = io.StringIO('')
         job = Job(basename='empty.txt', dirname='/tmp', payload=stream)
