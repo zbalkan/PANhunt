@@ -42,8 +42,9 @@ def _apply_memory_limit(limit_bytes: int) -> None:
 def _worker_main(result_queue: mp.Queue, func: Callable[..., Any], args: tuple[Any, ...], memory_limit: int) -> None:
     try:
         _apply_memory_limit(memory_limit)
-        if hasattr(signal, 'alarm'):
-            signal.alarm(0)
+        alarm: Any | None = getattr(signal, 'alarm', None)
+        if callable(alarm):
+            alarm(0)
         result_queue.put(ParserResult(value=func(*args)))
     except BaseException as exc:  # report parser failures to parent process
         result_queue.put(ParserResult(error=f'{type(exc).__name__}: {exc}', traceback_text=traceback.format_exc()))
