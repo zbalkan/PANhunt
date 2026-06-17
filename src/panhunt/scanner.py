@@ -16,9 +16,9 @@ from .formats.msmsg import MSMSG
 from .formats.pdf import Pdf
 from .formats.pst import PST
 from .formats.pst import Attachment as PstAttachment
-from .parser_isolation import SubprocessParserRunner
 from .job import FileLikePayload, Job
 from .pan import PAN
+from .parser_isolation import SubprocessParserRunner
 
 
 class ScannerBase(ABC):

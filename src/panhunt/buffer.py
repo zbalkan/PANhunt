@@ -6,7 +6,6 @@ from typing import Optional
 
 import psutil
 
-from . import panutils
 from .constants import MEMORY_CHECK_TIMEOUT_SECONDS
 from .job import Job
 

@@ -1,6 +1,3 @@
-#! /usr/bin/env python3
-# -*- coding: UTF-8 -*-
-#
 # Copyright (c) 2014, Dionach Ltd. All rights reserved. See LICENSE file.
 #
 # PANhunt: search directories and sub directories for documents with PANs

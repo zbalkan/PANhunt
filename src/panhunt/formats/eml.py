@@ -2,9 +2,8 @@ import json
 from email import message, parser
 from typing import Optional, cast
 
-from ..scancontext import ScanContext
-
 from ..exceptions import PANHuntException
+from ..scancontext import ScanContext
 
 
 class Eml:

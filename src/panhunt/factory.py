@@ -5,15 +5,7 @@ from .archive import Archive, GzipArchive, OpenDocumentArchive, TarArchive, XzAr
 from .buffer import JobBuffer
 from .config import ScanConfiguration
 from .finder import PanFinder
-from .scanner import (
-    EmlScanner,
-    MboxScanner,
-    MsgScanner,
-    PdfScanner,
-    PlainTextFileScanner,
-    PstScanner,
-    ScannerBase,
-)
+from .scanner import EmlScanner, MboxScanner, MsgScanner, PdfScanner, PlainTextFileScanner, PstScanner, ScannerBase
 
 
 class ScannerFactory:

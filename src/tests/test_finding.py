@@ -1,13 +1,9 @@
 """Tests for Finding class."""
 
 import os
-import tempfile
-
-import pytest
 
 from panhunt.enums import ScanStatusEnum
 from panhunt.finding import Finding
-from panhunt.pan import PAN
 
 
 class TestInit:
@@ -56,7 +52,6 @@ class TestInit:
             encoding='us-ascii',
         )
         assert f.size == len(payload)
-
 
     def test_size_from_file_like_payload_without_iobase(self):
         class FileLikePayload:

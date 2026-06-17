@@ -3,8 +3,7 @@ import os
 import threading
 from typing import IO, Optional, cast
 
-from . import enums
-from . import panutils
+from . import enums, panutils
 from .archive import Archive
 from .buffer import JobBuffer
 from .config import ScanConfiguration
