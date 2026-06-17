@@ -6,9 +6,12 @@
 
 ## Introduction
 
-> **Note:** This is a heavily modified fork of the original PANHunt, migrated to Python 3 and significantly refactored. The codebase has been restructured with a layered architecture to improve modularity, testability, and maintainability.
+PANhunt is a tool that can be used to search drives for [primary account numbers (PANs)](https://www.pcisecuritystandards.org/glossary/#glossary-p:~:text=to%2DPoint%20Encryption.%E2%80%9D-,PAN,-Acronym%20for%20%E2%80%9Cprimary).
 
-PANhunt is a tool that can be used to search drives for credit card numbers (PANs). This is useful for checking PCI DSS scope accuracy. PANhunt includes a Python PST file parser.
+> PAN
+>Acronym for “primary account number.” Unique payment card number (credit, debit, or prepaid cards, etc.) that identifies the issuer and the cardholder account.
+
+The tool is useful for checking PCI DSS scope accuracy. Ensuring PAN does not leak out of the authorized locations and there's no clear text PAN within the infrastructure, the tool may help as a simple control.
 
 ## Acknowledgements
 
@@ -18,7 +21,7 @@ This fork keeps the Dionach icon as a visible sign of respect for the original s
 
 ## Function
 
-PANhunt uses regular expressions to look for Visa, MasterCard, and AMEX credit card numbers across a broad set of document, mail, and archive formats. Archive and container formats are recursed so nested documents, emails, and attachments can be searched.
+PANhunt uses regular expressions to look for Visa, MasterCard, AMEX and other credit card numbers across a broad set of document, mail, and archive formats. Archive and container formats are recursed so nested documents, emails, and attachments can be searched.
 
 Currently supported searchable formats include:
 
@@ -77,37 +80,6 @@ pip install -e .[dev]
 pytest
 ```
 
-Before publishing, run a local pre-release smoke check from a clean checkout or clean working tree:
-
-```shell
-python -m venv .venv-smoke
-. .venv-smoke/bin/activate  # Windows PowerShell: .\.venv-smoke\Scripts\Activate.ps1
-python -m pip install --upgrade pip build twine
-rm -rf dist build *.egg-info src/*.egg-info
-python -m build
-python -m twine check dist/*
-python -m pip install dist/*.whl
-panhunt --help
-printf '4111111111111111\n' > /tmp/panhunt-smoke.txt
-panhunt /tmp/panhunt-smoke.txt -q
-deactivate
-rm -rf .venv-smoke /tmp/panhunt-smoke.txt
-```
-
-To build and publish to PyPI, use the provided scripts. Pass `test` to upload to TestPyPI or `prod` to upload to the production PyPI index. If no virtual environment exists at `.venv`, the script creates one, installs the required tools, runs the build, uploads, then deletes the environment.
-
-```shell
-# Linux / macOS
-bash publish.sh test    # upload to TestPyPI
-bash publish.sh prod    # upload to PyPI
-```
-
-```powershell
-# Windows
-.\publish.ps1 -Target test    # upload to TestPyPI
-.\publish.ps1 -Target prod    # upload to PyPI
-```
-
 ## Testing
 
 The test suite uses `pytest` and covers the core scanning logic, configuration, factories, service layer, and presenter.
@@ -121,9 +93,7 @@ To include coverage details, run `pytest --cov=panhunt src/tests/`.
 ## Usage
 
 ```shell
-usage: panhunt [-h] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR]
-               [-C CONFIG] [-X EXCLUDE_PAN] [-w WORKERS] [-q]
-               [target_path]
+usage: panhunt [-h] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-C CONFIG] [-X EXCLUDE_PAN] [-w WORKERS] [-q] [target_path]
 
 PANHunt : search directories and sub directories for documents containing PANs.
 
@@ -300,4 +270,6 @@ maxPdfTextBytes = 10485760
 
 Pass the config file with `-C config.ini`. The configuration file is the preferred way to use advanced scanning controls because it supports more options than the command-line parameters, including safety limits for nested archives, compressed data, attachments, parser isolation, and PDF extraction. Command-line quiet mode (`-q`) overrides the `quiet` value from the configuration file. The `sizeLimit` setting also updates the default total expanded-byte and attachment-byte limits unless those more specific settings are supplied.
 
-An important detail is that when working with large compressed files such as compressed log files larger than memory, panhunt may use all the CPU power, and it may be better to limit the CPU usage to prevent issues. If you are using systemd, a command like `systemd-run --scope -p CPUQuota=60% panhunt -C src/panhunt/resources/panhunt.ini` would save your resources.
+## Restricting memory usage
+
+An important detail is that when working with large compressed files such as compressed log files larger than memory, panhunt may use all the CPU power, and it may be better to limit the CPU usage to prevent issues. If you are using `systemd`, a command like `systemd-run --scope -p CPUQuota=60% panhunt <your parameters here>` would save your resources.
