@@ -51,7 +51,7 @@ class ScanConfiguration:
         self.report_dir = panutils.get_root_dir()
         self.json_dir = None
         self.excluded_pans = []
-        self.size_limit = 1_073_741_824  # 1GB
+        self.size_limit = 8 * 1_073_741_824  # 8GB
         self.worker_count = 1
         self.max_scan_depth = 25
         self.max_child_jobs = 100_000
