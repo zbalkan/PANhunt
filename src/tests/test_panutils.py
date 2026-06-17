@@ -1,4 +1,5 @@
 import gzip
+import threading
 from io import BytesIO
 
 from panhunt import panutils
@@ -65,6 +66,8 @@ def test_get_mimetype_reuses_magic_detector_for_buffers(monkeypatch):
 
 
 def test_get_mimetype_reuses_magic_detector_across_file_buffer_and_stream(monkeypatch, tmp_path):
+    calls = []
+
     class FakeMagic:
         instances = 0
 
@@ -73,23 +76,64 @@ def test_get_mimetype_reuses_magic_detector_across_file_buffer_and_stream(monkey
             self.kwargs = kwargs
 
         def from_buffer(self, buffer):
+            calls.append(('buffer', buffer, self.kwargs))
             return 'text/plain; charset=utf-8'
 
         def from_file(self, filename):
+            calls.append(('file', filename, self.kwargs))
             return 'text/plain; charset=utf-8'
 
     file_path = tmp_path / 'sample.txt'
     file_path.write_text('hello', encoding='utf-8')
-    stream = BytesIO(b'hello')
+    stream = BytesIO(b'stream payload')
+    stream.seek(3)
 
     monkeypatch.delattr(panutils._thread_local, 'magic_detector', raising=False)
     monkeypatch.setattr(panutils.magic, 'Magic', FakeMagic)
 
     assert panutils.get_mimetype(path=str(file_path)) == ('text/plain', 'utf-8', None)
-    assert panutils.get_mimetype(payload=b'hello') == ('text/plain', 'utf-8', None)
+    assert panutils.get_mimetype(payload=b'buffer payload') == ('text/plain', 'utf-8', None)
     assert panutils.get_mimetype(payload=stream) == ('text/plain', 'utf-8', None)
-    assert stream.tell() == 0
+
     assert FakeMagic.instances == 1
+    assert calls == [
+        ('file', str(file_path), {'mime': True, 'mime_encoding': True}),
+        ('buffer', b'buffer payload', {'mime': True, 'mime_encoding': True}),
+        ('buffer', b'stream payload', {'mime': True, 'mime_encoding': True}),
+    ]
+    assert stream.tell() == 0
+
+
+def test_get_mimetype_uses_thread_local_magic_cache(monkeypatch):
+    class FakeMagic:
+        instances = 0
+
+        def __init__(self, **kwargs):
+            FakeMagic.instances += 1
+
+    monkeypatch.delattr(panutils._thread_local, 'magic_detector', raising=False)
+    monkeypatch.setattr(panutils.magic, 'Magic', FakeMagic)
+
+    barrier = threading.Barrier(2)
+    detector_ids_by_thread = []
+
+    def get_detector_ids():
+        first = panutils._get_magic()
+        barrier.wait(timeout=5)
+        second = panutils._get_magic()
+        detector_ids_by_thread.append((id(first), id(second)))
+
+    threads = [threading.Thread(target=get_detector_ids) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert FakeMagic.instances == 2
+    assert len(detector_ids_by_thread) == 2
+    assert detector_ids_by_thread[0][0] == detector_ids_by_thread[0][1]
+    assert detector_ids_by_thread[1][0] == detector_ids_by_thread[1][1]
+    assert detector_ids_by_thread[0][0] != detector_ids_by_thread[1][0]
 
 
 def test_get_mimetype_uses_short_buffer_without_padding(monkeypatch):
