@@ -171,3 +171,22 @@ def test_get_mimetype_returns_error_fallback(monkeypatch):
     assert encoding == 'Unknown'
     assert isinstance(error, RuntimeError)
     assert str(error) == 'libmagic failed'
+
+
+def test_parse_mime_data_with_semicolon():
+    mime, enc = panutils._parse_mime_data('text/plain; charset=us-ascii')
+    assert mime == 'text/plain'
+    assert enc == 'us-ascii'
+
+
+def test_parse_mime_data_without_semicolon():
+    mime, enc = panutils._parse_mime_data('application/x-empty')
+    assert mime == 'application/x-empty'
+    assert enc == 'unknown'
+
+
+def test_get_mimetype_returns_defaults_for_empty_bytes():
+    mime, enc, err = panutils.get_mimetype(payload=b'')
+    assert mime is not None
+    assert enc is not None
+    assert err is None

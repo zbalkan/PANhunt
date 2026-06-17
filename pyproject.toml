@@ -74,9 +74,9 @@ addopts = "-v --tb=short"
 [tool.coverage.run]
 omit = [
     "src/tests/*",
-    "src/panhunt.py",
-    "src/formats/*",
-    "src/panutils.py",
+    "src/panhunt/__init__.py",
+    "src/panhunt/formats/*",
+    "src/panhunt/panutils.py",
 ]
 
 [tool.coverage.report]

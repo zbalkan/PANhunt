@@ -8,10 +8,11 @@ from .models import ScanResult
 class ReportGenerator:
     """Formats a ScanResult into text or JSON. Pure logic — no file I/O."""
 
-    def generate_text(self, result: ScanResult) -> str:
+    @staticmethod
+    def format_header(result: ScanResult) -> str:
         newline = '\n'
         sep = '=' * 100
-        report = (
+        return (
             f'PAN Hunt Report - {result.start_time.strftime("%H:%M:%S %d/%m/%Y")}{newline}'
             f'{sep}{newline}'
             f'Searched {result.config.target_path}{newline}'
@@ -20,8 +21,12 @@ class ReportGenerator:
             f'Uname: {" | ".join(platform.uname())}{newline}'
             f'Elapsed time: {result.elapsed}{newline}'
             f'Found {result.pan_count} possible PANs.{newline}'
-            f'{sep}{newline}{newline}'
+            f'{sep}{newline}'
         )
+
+    def generate_text(self, result: ScanResult) -> str:
+        newline = '\n'
+        report = self.format_header(result) + newline
 
         for file in result.matched_files:
             # size_friendly is called once per matched file by design — file size is part of the report spec.

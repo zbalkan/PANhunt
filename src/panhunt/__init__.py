@@ -81,11 +81,8 @@ def main() -> None:
             worker_count=args.workers,
             quiet=args.quiet)
 
-    try:
-        result = PanHuntService().scan(config)
-        CliPresenter().show(result)
-    except KeyboardInterrupt:
-        raise
+    result = PanHuntService().scan(config)
+    CliPresenter().show(result)
 
 
 def run() -> None:

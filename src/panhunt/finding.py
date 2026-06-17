@@ -44,18 +44,18 @@ class Finding:
         self.depth = context.depth if context else 0
         self.container_chain = list(context.container_chain) if context else []
 
-        if mimetype is not None:
-            self.mime_type = mimetype
-        if encoding is not None:
-            self.encoding = encoding
-
         if err is not None:
             self._set_error(str(err))
 
         if mimetype is None or encoding is None:
-            self.mime_type, self.encoding, mime_err = panutils.get_mimetype(self.abspath, payload)
+            detected_mime, detected_encoding, mime_err = panutils.get_mimetype(self.abspath, payload)
             if mime_err:
                 self._set_error(f'Failed to detect mimetype and encoding. Inner exception: {mime_err}')
+            self.mime_type = mimetype if mimetype is not None else detected_mime
+            self.encoding = encoding if encoding is not None else detected_encoding
+        else:
+            self.mime_type = mimetype
+            self.encoding = encoding
 
         self._set_file_stats(payload)
 

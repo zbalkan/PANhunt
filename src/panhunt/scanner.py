@@ -292,7 +292,7 @@ class MboxScanner(ScannerBase):
         payload = self._payload_bytes(job)
         mbox = (
             Mbox(
-                path=job.basename,
+                path=job.abspath,
                 payload=payload,
                 size_limit=self._config.max_attachment_size,
                 max_attachments_per_message=self._config.max_attachments_per_message,

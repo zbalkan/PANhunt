@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
+import time
 from typing import IO, Optional, cast
 
 from . import enums, panutils
@@ -63,8 +64,10 @@ class Dispatcher:
         self._stop_event.set()
 
     def join(self, timeout: float = 5.0) -> None:
+        deadline = time.monotonic() + timeout
         for thread in self._threads:
-            thread.join(timeout=timeout)
+            remaining = max(0.0, deadline - time.monotonic())
+            thread.join(timeout=remaining)
 
     def get_findings(self) -> list[Finding]:
         with self.__findings_lock:
@@ -89,6 +92,22 @@ class Dispatcher:
                             self.findings.append(res)
                         else:
                             self.failures.append(res)
+            except Exception as ex:
+                logging.error(f"Unhandled error processing {job.abspath}: {ex}", exc_info=True)
+                try:
+                    failure = Finding(
+                        basename=job.basename,
+                        dirname=job.dirname,
+                        payload=job.payload,
+                        mimetype='Unknown',
+                        encoding='Unknown',
+                        err=ex,
+                        context=job.context,
+                    )
+                    with self.__findings_lock:
+                        self.failures.append(failure)
+                except Exception:
+                    logging.error(f"Failed to record failure for {job.abspath}", exc_info=True)
             finally:
                 if job.payload and panutils.is_file_like(job.payload):
                     close = getattr(job.payload, 'close', None)

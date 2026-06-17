@@ -1,8 +1,6 @@
 import json
 import logging
 import os
-import platform
-import sys
 
 import colorama
 
@@ -50,19 +48,7 @@ class CliPresenter:
     # ------------------------------------------------------------------
 
     def _print(self, result: ScanResult) -> None:
-        newline = '\n'
-        sep = '=' * 100
-        header = (
-            f'PAN Hunt Report - {result.start_time.strftime("%H:%M:%S %d/%m/%Y")}{newline}'
-            f'{sep}{newline}'
-            f'Searched {result.config.target_path}{newline}'
-            f'Excluded {",".join(result.config.excluded_directories)}{newline}'
-            f'Command: {" ".join(sys.argv)}{newline}'
-            f'Uname: {" | ".join(platform.uname())}{newline}'
-            f'Elapsed time: {result.elapsed}{newline}'
-            f'Found {result.pan_count} possible PANs.{newline}'
-            f'{sep}{newline}'
-        )
+        header = ReportGenerator.format_header(result)
         print(colorama.Fore.WHITE + header)
 
         pan_sep = '\n\t'

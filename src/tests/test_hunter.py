@@ -109,3 +109,17 @@ class TestHuntProgress:
 
         captured = capsys.readouterr()
         assert captured.out == ''
+
+
+class TestHuntInterrupt:
+    def test_keyboard_interrupt_stops_and_joins_dispatcher(self, mock_dispatcher, mock_buffer, tmp_text_file):
+        config = ScanConfiguration.from_args(target_path=tmp_text_file, quiet=True)
+        mock_buffer.enqueue.side_effect = KeyboardInterrupt
+        h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
+
+        with pytest.raises(KeyboardInterrupt):
+            h.hunt(config)
+
+        mock_dispatcher.stop.assert_called_once()
+        mock_dispatcher.join.assert_called_once()
+        mock_buffer.mark_input_complete.assert_not_called()

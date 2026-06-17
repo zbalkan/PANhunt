@@ -68,8 +68,9 @@ class ScanConfiguration:
         self.max_pdf_pages = 100
         self.max_pdf_text_bytes = 10 * 1024 * 1024
         self.quiet = False
-        self.report_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.report'
-        self.json_file = f'panhunt_{time.strftime("%Y-%m-%d-%H%M%S")}.json'
+        timestamp = time.strftime("%Y-%m-%d-%H%M%S")
+        self.report_file = f'panhunt_{timestamp}.report'
+        self.json_file = f'panhunt_{timestamp}.json'
 
     def get_report_path(self) -> str:
         return os.path.join(self.report_dir, self.report_file)

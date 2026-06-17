@@ -53,6 +53,12 @@ class TestDefaults:
         assert c.json_file.startswith('panhunt_')
         assert c.json_file.endswith('.json')
 
+    def test_report_and_json_share_same_timestamp(self):
+        c = ScanConfiguration()
+        report_ts = c.report_file.removeprefix('panhunt_').removesuffix('.report')
+        json_ts = c.json_file.removeprefix('panhunt_').removesuffix('.json')
+        assert report_ts == json_ts
+
 
 class TestFromArgs:
     def test_target_path_is_resolved(self):

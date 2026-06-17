@@ -91,10 +91,11 @@ def _get_magic() -> magic.Magic:
 
 
 def _parse_mime_data(raw_mime_data: str) -> tuple[str, str]:
-    mime_data: list[str] = raw_mime_data.split(';')
+    mime_data: list[str] = raw_mime_data.split(';', 1)
     mime_type: str = mime_data[0].strip().lower()
-    encoding: str = mime_data[1].replace(
-        ' charset=', '').strip().lower()
+    encoding = 'unknown'
+    if len(mime_data) > 1:
+        encoding = mime_data[1].replace(' charset=', '').strip().lower()
     return mime_type, encoding
 
 
@@ -121,7 +122,7 @@ def __get_mime_data_from_stream(stream: FileLikePayload) -> tuple[str, str]:
             pass
 
     buffer: bytes = stream.read(2048)
-    mime_type, encoding = _parse_mime_data(_get_magic().from_buffer(buffer))  # type: ignore
+    result = _parse_mime_data(_get_magic().from_buffer(buffer))  # type: ignore
 
     if callable(seek):
         try:
@@ -129,7 +130,7 @@ def __get_mime_data_from_stream(stream: FileLikePayload) -> tuple[str, str]:
         except (OSError, IOError):
             pass
 
-    return mime_type, encoding
+    return result
 
 
 def is_valid_zip(path: Optional[str] = None,

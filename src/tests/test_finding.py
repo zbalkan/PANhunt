@@ -109,6 +109,39 @@ class TestInit:
         assert len(f.errors) > 0
 
 
+class TestMimeHandling:
+    def test_provided_mimetype_not_overwritten_when_encoding_also_provided(self):
+        f = Finding(
+            basename='test.txt',
+            dirname='/tmp',
+            payload=b'hello',
+            mimetype='text/plain',
+            encoding='us-ascii',
+        )
+        assert f.mime_type == 'text/plain'
+        assert f.encoding == 'us-ascii'
+
+    def test_provided_mimetype_preserved_when_encoding_is_none(self):
+        f = Finding(
+            basename='test.txt',
+            dirname='/tmp',
+            payload=b'hello',
+            mimetype='application/custom',
+            encoding=None,
+        )
+        assert f.mime_type == 'application/custom'
+
+    def test_provided_encoding_preserved_when_mimetype_is_none(self):
+        f = Finding(
+            basename='test.txt',
+            dirname='/tmp',
+            payload=b'hello',
+            mimetype=None,
+            encoding='utf-8',
+        )
+        assert f.encoding == 'utf-8'
+
+
 class TestEquality:
     def test_same_path_equal(self, tmp_text_file):
         f1 = Finding(

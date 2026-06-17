@@ -331,7 +331,73 @@ class TestArchiveChildJobs:
         assert buffer.dequeue(timeout=0) is None
 
 
+class TestWorkerResilience:
+    def test_unhandled_exception_does_not_kill_worker(self):
+        buffer = InMemoryJobBuffer()
+        buffer.enqueue(_make_job('crash.txt'))
+        buffer.enqueue(_make_job('ok.txt'))
+        buffer.mark_input_complete()
+
+        call_count = [0]
+        lock = threading.Lock()
+
+        def mock_dispatch(job):
+            with lock:
+                call_count[0] += 1
+            if job.basename == 'crash.txt':
+                raise FileNotFoundError('file vanished')
+            return None
+
+        d = Dispatcher(buffer=buffer, config=_make_config(worker_count=1))
+        d._dispatch_job = mock_dispatch
+        d.start()
+        _wait_for_finish(buffer)
+        d.stop()
+        d.join()
+
+        assert call_count[0] == 2
+        assert len(d.get_failures()) == 1
+        assert buffer.is_finished()
+
+    def test_exception_records_failure_finding(self):
+        buffer = InMemoryJobBuffer()
+        buffer.enqueue(_make_job('bad.txt'))
+        buffer.mark_input_complete()
+
+        def mock_dispatch(job):
+            raise PermissionError('access denied')
+
+        d = Dispatcher(buffer=buffer, config=_make_config(worker_count=1))
+        d._dispatch_job = mock_dispatch
+        d.start()
+        _wait_for_finish(buffer)
+        d.stop()
+        d.join()
+
+        failures = d.get_failures()
+        assert len(failures) == 1
+        assert failures[0].status == enums.ScanStatusEnum.Failure
+        assert any('access denied' in error for error in failures[0].errors)
+
+
 class TestShutdownBehavior:
+
+    def test_join_timeout_is_total_not_per_thread(self, monkeypatch):
+        d = Dispatcher(buffer=InMemoryJobBuffer(), config=_make_config(worker_count=3))
+        calls = []
+
+        class SlowThread:
+            def join(self, timeout=None):
+                calls.append(timeout)
+
+        times = iter([0.0, 1.0, 2.0, 3.0])
+        monkeypatch.setattr('panhunt.dispatcher.time.monotonic', lambda: next(times))
+        d._threads = [SlowThread(), SlowThread(), SlowThread()]
+
+        d.join(timeout=2.5)
+
+        assert calls == [1.5, 0.5, 0.0]
+
     def test_stop_signals_workers_to_exit(self):
         buffer = InMemoryJobBuffer()
         buffer.mark_input_complete()

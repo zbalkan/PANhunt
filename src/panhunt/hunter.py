@@ -34,37 +34,41 @@ class Hunter:
             )
             progress_thread.start()
 
-        target_path = str(config.target_path)
-        if os.path.isfile(target_path):
-            basename = os.path.basename(target_path)
-            dirname = os.path.dirname(target_path)
-            if not self._is_directory_excluded(dirname, config):
-                self._buffer.enqueue(Job(basename, dirname=dirname))
-        else:
-            for root, dirs, files in os.walk(target_path):
-                dirs[:] = [
-                    d for d in dirs
-                    if not self._is_directory_excluded(os.path.join(root, d), config)
-                ]
-                for file in files:
-                    self._buffer.enqueue(
-                        Job(basename=file, dirname=root, payload=None))
+        try:
+            target_path = str(config.target_path)
+            if os.path.isfile(target_path):
+                basename = os.path.basename(target_path)
+                dirname = os.path.dirname(target_path)
+                if not self._is_directory_excluded(dirname, config):
+                    self._buffer.enqueue(Job(basename, dirname=dirname))
+            else:
+                for root, dirs, files in os.walk(target_path):
+                    dirs[:] = [
+                        d for d in dirs
+                        if not self._is_directory_excluded(os.path.join(root, d), config)
+                    ]
+                    for file in files:
+                        self._buffer.enqueue(
+                            Job(basename=file, dirname=root, payload=None))
 
-        self._buffer.mark_input_complete()
+            self._buffer.mark_input_complete()
 
-        # Prefer a blocking wait method on the buffer if you can add one.
-        while not self._buffer.is_finished():
-            done.wait(0.25)  # cheap wait for reporter cadence; not a busy loop
+            # Prefer a blocking wait method on the buffer if you can add one.
+            while not self._buffer.is_finished():
+                done.wait(0.25)  # cheap wait for reporter cadence; not a busy loop
 
-        done.set()
-        if progress_thread is not None:
-            progress_thread.join()
-            print(flush=True)
+            return self._dispatcher.get_findings(), self._dispatcher.get_failures()
+        except KeyboardInterrupt:
+            logging.info("Interrupted by user; stopping scanner workers.")
+            raise
+        finally:
+            done.set()
+            if progress_thread is not None:
+                progress_thread.join(timeout=1.0)
+                print(flush=True)
 
-        self._dispatcher.stop()
-        self._dispatcher.join()
-
-        return self._dispatcher.get_findings(), self._dispatcher.get_failures()
+            self._dispatcher.stop()
+            self._dispatcher.join()
 
     def _print_progress(self, done: threading.Event) -> None:
         while not done.wait(0.25):
