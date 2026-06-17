@@ -1,9 +1,11 @@
 """Tests for Finding class."""
 
 import os
+from io import BytesIO
 
 from panhunt.enums import ScanStatusEnum
 from panhunt.finding import Finding
+from panhunt.scancontext import ScanContext, ScanLimits
 
 
 class TestInit:
@@ -94,6 +96,42 @@ class TestInit:
         assert f.size == 11
         assert payload.tell() == 0
 
+    def test_size_zero_for_non_seekable_file_like_payload(self):
+        class NonSeekablePayload:
+            def read(self, size=-1):
+                return b'payload'
+
+            def seekable(self):
+                return False
+
+        f = Finding(
+            basename='payload.txt',
+            dirname='/tmp',
+            payload=NonSeekablePayload(),
+            mimetype='text/plain',
+            encoding='us-ascii',
+        )
+
+        assert f.status == ScanStatusEnum.Success
+        assert f.size == 0
+
+    def test_size_error_sets_failure_and_negative_size(self):
+        class BrokenSeekablePayload(BytesIO):
+            def tell(self):
+                raise OSError('cannot tell')
+
+        f = Finding(
+            basename='payload.txt',
+            dirname='/tmp',
+            payload=BrokenSeekablePayload(b'payload'),
+            mimetype='text/plain',
+            encoding='us-ascii',
+        )
+
+        assert f.status == ScanStatusEnum.Failure
+        assert f.size == -1
+        assert f.errors == ['cannot tell']
+
     def test_explicit_exception_sets_failure(self, tmp_text_file):
         f = Finding(
             basename=os.path.basename(tmp_text_file),
@@ -107,6 +145,26 @@ class TestInit:
         f = Finding(basename='ghost.txt', dirname='/no/such/dir')
         assert f.status == ScanStatusEnum.Failure
         assert len(f.errors) > 0
+
+    def test_context_metadata_is_copied_from_scan_context(self):
+        root = ScanContext.root(
+            logical_path='/tmp/archive.zip',
+            limits=ScanLimits(max_depth=5, max_child_jobs=5, max_total_expanded_bytes=1024),
+        )
+        child = root.child('nested.txt', payload_size=7)
+
+        f = Finding(
+            basename='nested.txt',
+            dirname='/tmp',
+            payload=b'payload',
+            mimetype='text/plain',
+            encoding='us-ascii',
+            context=child,
+        )
+
+        assert f.logical_path == '/tmp/archive.zip!/nested.txt'
+        assert f.depth == 1
+        assert f.container_chain == ['/tmp/archive.zip']
 
 
 class TestMimeHandling:
