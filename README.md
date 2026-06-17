@@ -8,13 +8,13 @@
 
 > **Note:** This is a heavily modified fork of the original PANHunt, migrated to Python 3 and significantly refactored. The codebase has been restructured with a layered architecture to improve modularity, testability, and maintainability.
 
-PANhunt is a tool that can be used to search drives for credit card numbers (PANs). This is useful for checking PCI DSS scope accuracy. It's designed to be a simple, standalone tool that can be run from a USB stick. PANhunt includes a Python PST file parser.
+PANhunt is a tool that can be used to search drives for credit card numbers (PANs). This is useful for checking PCI DSS scope accuracy. PANhunt includes a Python PST file parser.
 
 ## Function
 
-The script uses regular expressions to look for Visa, MasterCard or AMEX credit card numbers in document files. Archive files (ZIP, TAR, GZ, XZ) are recursed to look for document files. PST and MSG files are parsed and emails and attachments searched in.
+PANhunt uses regular expressions to look for Visa, MasterCard or AMEX credit card numbers in document files. Archive files (ZIP, TAR, GZ, XZ) are recursed to look for document files. PST and MSG files are parsed and emails and attachments searched in.
 
-The script will list but does not yet search Access databases.
+PANhunt will list but does not yet search Access databases.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ PANhunt follows a layered, dependency-injected architecture:
 
 The service and presenter layers are fully decoupled, making it straightforward to embed PANhunt in a larger application or swap the CLI presenter for a different UI.
 
-## Install and package
+## Installation and publishing
 
 PANhunt requires Python 3.9 or later. For normal usage, install the package and run the console script:
 
@@ -45,11 +45,18 @@ pip install -e .[dev]
 pytest
 ```
 
-To build distribution artifacts for PyPI, run:
+To build and publish to PyPI, use the provided scripts. Pass `test` to upload to TestPyPI or `prod` to upload to the production PyPI index. If no virtual environment exists at `.venv`, the script creates one, installs the required tools, runs the build, uploads, then deletes the environment.
 
 ```shell
-python -m build
-python -m twine check dist/*
+# Linux / macOS
+bash publish.sh test    # upload to TestPyPI
+bash publish.sh prod    # upload to PyPI
+```
+
+```powershell
+# Windows
+.\publish.ps1 -Target test    # upload to TestPyPI
+.\publish.ps1 -Target prod    # upload to PyPI
 ```
 
 ## Testing
