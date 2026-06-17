@@ -206,29 +206,74 @@ def memoryview_to_bytes(mem_view: memoryview) -> Optional[bytes]:
         return None
 
 
+def _fallback_compressed_filename(gf: GzipFile) -> str:
+    fname = getattr(gf, 'name', 'unknown')
+    if fname.endswith('.gz'):
+        fname = os.path.basename(fname)[:-3]
+    return fname
+
+
+def _decode_gzip_header_filename(filename: bytes) -> str:
+    try:
+        return filename.decode('utf-8')
+    except UnicodeDecodeError:
+        return filename.decode('latin-1')
+
+
 def get_compressed_filename(gf: GzipFile) -> str:
-    gf.seek(0)
-    _ = gf.read(2)  # skip magic bytes
-    method, flag = struct.unpack("<BB", gf.read(2))
+    raw_file = getattr(gf, 'fileobj', None)
+    original_position = None
 
-    if not flag & FNAME:
-        # Filename is not stored in the header, use the filename minus .gz
-        fname = getattr(gf, 'name', 'unknown')
-        if fname.endswith('.gz'):
-            fname = os.path.basename(fname)[:-3]
-        return fname
+    if raw_file is None:
+        return _fallback_compressed_filename(gf)
 
-    if flag & FEXTRA:
-        # Read & discard the extra field, if present
-        extra_len = struct.unpack("<H", gf.read(2))[0]
-        gf.read(extra_len)
+    try:
+        original_position = raw_file.tell()
+        raw_file.seek(0)
+    except (AttributeError, OSError):
+        return _fallback_compressed_filename(gf)
 
-    # Read a null-terminated string containing the original filename
-    filename: list[str] = []
-    while True:
-        s: bytes = gf.read(1)
-        if not s or s == b'\000':
-            break
-        filename.append(s.decode())
+    try:
+        magic = raw_file.read(2)
+        if magic != b'\x1f\x8b':
+            return _fallback_compressed_filename(gf)
 
-    return ''.join(filename)
+        method_flag = raw_file.read(2)
+        if len(method_flag) < 2:
+            return _fallback_compressed_filename(gf)
+        method, flag = struct.unpack("<BB", method_flag)
+        if method != 8:
+            return _fallback_compressed_filename(gf)
+
+        if len(raw_file.read(6)) < 6:  # mtime, extra flags, and OS fields
+            return _fallback_compressed_filename(gf)
+
+        if flag & FEXTRA:
+            extra_len_bytes = raw_file.read(2)
+            if len(extra_len_bytes) < 2:
+                return _fallback_compressed_filename(gf)
+            extra_len = struct.unpack("<H", extra_len_bytes)[0]
+            if len(raw_file.read(extra_len)) < extra_len:
+                return _fallback_compressed_filename(gf)
+
+        if not flag & FNAME:
+            return _fallback_compressed_filename(gf)
+
+        # Read a null-terminated string containing the original filename from
+        # the raw gzip header. Prefer UTF-8 for gzip files produced by tools
+        # that write Unicode names, but fall back to Latin-1 so every single-byte
+        # FNAME value can be represented without raising UnicodeDecodeError.
+        filename = bytearray()
+        while True:
+            s: bytes = raw_file.read(1)
+            if not s or s == b'\000':
+                break
+            filename.extend(s)
+
+        return _decode_gzip_header_filename(bytes(filename)) or _fallback_compressed_filename(gf)
+    finally:
+        if original_position is not None:
+            try:
+                raw_file.seek(original_position)
+            except OSError:
+                pass
