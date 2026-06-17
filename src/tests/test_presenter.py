@@ -6,7 +6,9 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from panhunt.config import ScanConfiguration
+from panhunt.finding import Finding
 from panhunt.models import ScanResult
+from panhunt.pan import PAN
 from panhunt.presenter import CliPresenter, _write_file
 
 
@@ -107,3 +109,35 @@ class TestShow:
         with patch.object(presenter, '_print') as mock_print:
             presenter.show(result)
             mock_print.assert_called_once_with(result)
+
+
+class TestPrint:
+    def test_print_outputs_matches_interesting_files_and_report_path(self, tmp_dir, capsys):
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=False)
+        config.report_file = 'printed.report'
+        config.report_dir = tmp_dir
+        matched = Finding('cards.txt', tmp_dir, payload=b'Payment card', mimetype='text/plain', encoding='utf-8')
+        matched.matches.append(PAN('VISA', '4111111111111111'))
+        interesting = Finding('large.bin', tmp_dir, payload=b'large', mimetype='application/octet-stream', encoding='binary')
+        result = _make_result(config, matched=[matched], interesting=[interesting])
+
+        CliPresenter()._print(result)
+
+        output = capsys.readouterr().out
+        assert 'FOUND PANs:' in output
+        assert 'VISA:411111******1111' in output
+        assert 'Interesting Files to check separately' in output
+        assert 'large.bin' in output
+        assert f'Report written to {config.get_report_path()}' in output
+
+    def test_show_writes_json_when_json_dir_is_configured(self, tmp_dir):
+        config = ScanConfiguration.from_args(target_path=tmp_dir, json_dir=tmp_dir, quiet=True)
+        config.report_file = 'show_json.report'
+        config.json_file = 'show_json.json'
+        config.report_dir = tmp_dir
+        result = _make_result(config)
+
+        CliPresenter().show(result)
+
+        assert os.path.exists(config.get_report_path())
+        assert os.path.exists(config.get_json_path())

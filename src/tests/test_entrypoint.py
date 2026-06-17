@@ -71,3 +71,20 @@ def test_run_converts_fatal_exception_to_exit_code(monkeypatch, capsys):
 
     assert exc_info.value.code == 1
     assert capsys.readouterr().out == 'ERROR: boom\n'
+
+
+def test_dunder_main_module_delegates_to_package_run(monkeypatch):
+    import runpy
+    import panhunt
+
+    called = False
+
+    def fake_run():
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(panhunt, 'run', fake_run)
+
+    runpy.run_module('panhunt.__main__', run_name='__main__')
+
+    assert called is True

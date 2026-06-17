@@ -64,3 +64,24 @@ def test_spool_limited_closes_partial_payload_when_limit_is_exceeded():
         spool_limited(io.BytesIO(b'abcdef'), limit=5, chunk_size=2)
 
     assert 'Read limit exceeded' in str(excinfo.value)
+
+
+def test_limited_reader_reports_readable_seekable_tell_and_resets_after_rewind():
+    stream = io.BytesIO(b'abcdef')
+    reader = LimitedReader(stream, limit=3)
+
+    assert reader.readable() is True
+    assert reader.seekable() is True
+    assert reader.read(3) == b'abc'
+    assert reader.tell() == 3
+    assert reader.seek(0) == 0
+    assert reader.read(3) == b'abc'
+
+
+def test_limited_reader_close_closes_wrapped_stream():
+    stream = io.BytesIO(b'abc')
+    reader = LimitedReader(stream, limit=3)
+
+    reader.close()
+
+    assert stream.closed is True
