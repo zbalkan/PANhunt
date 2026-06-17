@@ -5,6 +5,8 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from panhunt import enums
 from panhunt.buffer import InMemoryJobBuffer
 from panhunt.config import ScanConfiguration
@@ -379,6 +381,25 @@ class TestWorkerResilience:
         assert failures[0].status == enums.ScanStatusEnum.Failure
         assert any('access denied' in error for error in failures[0].errors)
 
+    @pytest.mark.filterwarnings("ignore::pytest.PytestUnhandledThreadExceptionWarning")
+    def test_attribute_error_propagates_and_kills_worker(self):
+        buffer = InMemoryJobBuffer()
+        buffer.enqueue(_make_job('bad.txt'))
+        buffer.mark_input_complete()
+
+        def mock_dispatch(job):
+            raise AttributeError('missing_attr')
+
+        d = Dispatcher(buffer=buffer, config=_make_config(worker_count=1))
+        d._dispatch_job = mock_dispatch
+        d.start()
+        _wait_for_finish(buffer)
+        d.stop()
+        d.join()
+
+        assert len(d.get_failures()) == 0
+        assert len(d.get_findings()) == 0
+
 
 class TestShutdownBehavior:
 
@@ -386,8 +407,8 @@ class TestShutdownBehavior:
         d = Dispatcher(buffer=InMemoryJobBuffer(), config=_make_config(worker_count=3))
         calls = []
 
-        class SlowThread:
-            def join(self, timeout=None):
+        class SlowThread(threading.Thread):
+            def join(self, timeout=None) -> None:
                 calls.append(timeout)
 
         times = iter([0.0, 1.0, 2.0, 3.0])
@@ -396,7 +417,7 @@ class TestShutdownBehavior:
 
         d.join(timeout=2.5)
 
-        assert calls == [1.5, 0.5, 0.0]
+        assert calls == [1.5, 0.5, 0.05]
 
     def test_stop_signals_workers_to_exit(self):
         buffer = InMemoryJobBuffer()

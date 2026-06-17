@@ -19,7 +19,6 @@ except ImportError:
 
 import magic
 
-
 _thread_local = threading.local()
 
 
@@ -91,11 +90,14 @@ def _get_magic() -> magic.Magic:
 
 
 def _parse_mime_data(raw_mime_data: str) -> tuple[str, str]:
-    mime_data: list[str] = raw_mime_data.split(';', 1)
-    mime_type: str = mime_data[0].strip().lower()
-    encoding = 'unknown'
-    if len(mime_data) > 1:
-        encoding = mime_data[1].replace(' charset=', '').strip().lower()
+    parts = raw_mime_data.split(';')
+    mime_type: str = parts[0].strip().lower()
+    encoding = 'Unknown'
+    for part in parts[1:]:
+        stripped = part.strip().lower()
+        if stripped.startswith('charset='):
+            encoding = stripped[len('charset='):]
+            break
     return mime_type, encoding
 
 

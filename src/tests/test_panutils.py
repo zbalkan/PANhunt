@@ -182,7 +182,19 @@ def test_parse_mime_data_with_semicolon():
 def test_parse_mime_data_without_semicolon():
     mime, enc = panutils._parse_mime_data('application/x-empty')
     assert mime == 'application/x-empty'
-    assert enc == 'unknown'
+    assert enc == 'Unknown'
+
+
+def test_parse_mime_data_with_multiple_parameters():
+    mime, enc = panutils._parse_mime_data('text/plain; charset=utf-8; format=flowed')
+    assert mime == 'text/plain'
+    assert enc == 'utf-8'
+
+
+def test_parse_mime_data_non_charset_parameter_ignored():
+    mime, enc = panutils._parse_mime_data('application/pdf; title=report')
+    assert mime == 'application/pdf'
+    assert enc == 'Unknown'
 
 
 def test_get_mimetype_returns_defaults_for_empty_bytes():

@@ -50,7 +50,14 @@ class Finding:
         if mimetype is None or encoding is None:
             detected_mime, detected_encoding, mime_err = panutils.get_mimetype(self.abspath, payload)
             if mime_err:
-                self._set_error(f'Failed to detect mimetype and encoding. Inner exception: {mime_err}')
+                needed = []
+                if mimetype is None:
+                    needed.append('MIME type')
+                if encoding is None:
+                    needed.append('encoding')
+                self._set_error(
+                    f'Failed to detect {" and ".join(needed)}. Inner exception: {mime_err}'
+                )
             self.mime_type = mimetype if mimetype is not None else detected_mime
             self.encoding = encoding if encoding is not None else detected_encoding
         else:

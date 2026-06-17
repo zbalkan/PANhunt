@@ -66,7 +66,7 @@ class Dispatcher:
     def join(self, timeout: float = 5.0) -> None:
         deadline = time.monotonic() + timeout
         for thread in self._threads:
-            remaining = max(0.0, deadline - time.monotonic())
+            remaining = max(0.05, deadline - time.monotonic())
             thread.join(timeout=remaining)
 
     def get_findings(self) -> list[Finding]:
@@ -93,12 +93,14 @@ class Dispatcher:
                         else:
                             self.failures.append(res)
             except Exception as ex:
+                if isinstance(ex, (AttributeError, NameError, AssertionError)):
+                    raise
                 logging.error(f"Unhandled error processing {job.abspath}: {ex}", exc_info=True)
                 try:
                     failure = Finding(
                         basename=job.basename,
                         dirname=job.dirname,
-                        payload=job.payload,
+                        payload=None,
                         mimetype='Unknown',
                         encoding='Unknown',
                         err=ex,

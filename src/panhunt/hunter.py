@@ -17,8 +17,6 @@ class Hunter:
         self._buffer = buffer
 
     def hunt(self, config: ScanConfiguration) -> tuple[list[Finding], list[Finding]]:
-        self._dispatcher.start()
-
         logging.info("Search base: %s", config.target_path)
         if not config.quiet:
             print(f"Scanning {config.target_path}...", flush=True)
@@ -35,6 +33,7 @@ class Hunter:
             progress_thread.start()
 
         try:
+            self._dispatcher.start()
             target_path = str(config.target_path)
             if os.path.isfile(target_path):
                 basename = os.path.basename(target_path)
@@ -64,7 +63,7 @@ class Hunter:
         finally:
             done.set()
             if progress_thread is not None:
-                progress_thread.join(timeout=1.0)
+                progress_thread.join()
                 print(flush=True)
 
             self._dispatcher.stop()
