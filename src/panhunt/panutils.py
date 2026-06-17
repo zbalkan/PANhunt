@@ -23,9 +23,11 @@ def get_root_dir() -> str:
 
 def get_mimetype(path: Optional[str] = None,
                  payload: Optional[Union[bytes, IOBase]] = None) -> tuple[str, str, Optional[Exception]]:
+    mime_type = 'Unknown/Unknown'
+    encoding = 'Unknown'
+    error: Optional[Exception] = None
 
     try:
-        error: Optional[Exception] = None
         if payload is not None:
             if isinstance(payload, IOBase):
                 mime_type, encoding = __get_mime_data_from_stream(payload)
@@ -33,14 +35,10 @@ def get_mimetype(path: Optional[str] = None,
                 mime_type, encoding = __get_mime_data_from_buffer(payload)
         elif path is not None:
             mime_type, encoding = __get_mime_data_from_file(path)
-        else:
-            mime_type, encoding = 'Unknown/Unknown', 'Unknown'
     except Exception as ex:
-        mime_type = 'Unknown/Unknown'
-        encoding = 'Unknown'
         error = ex
-    finally:
-        return mime_type, encoding, error
+
+    return mime_type, encoding, error
 
 
 def __get_mime_data_from_buffer(payload: bytes) -> tuple[str, str]:
