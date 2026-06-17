@@ -42,7 +42,7 @@ def _apply_memory_limit(limit_bytes: int) -> None:
 def _worker_main(result_queue: mp.Queue, func: Callable[..., Any], args: tuple[Any, ...], memory_limit: int) -> None:
     try:
         _apply_memory_limit(memory_limit)
-        alarm: Any | None = getattr(signal, 'alarm', None)
+        alarm: Optional[Any] = getattr(signal, 'alarm', None)
         if callable(alarm):
             alarm(0)
         result_queue.put(ParserResult(value=func(*args)))

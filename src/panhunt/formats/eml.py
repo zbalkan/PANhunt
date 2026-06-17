@@ -1,6 +1,6 @@
 import json
 from email import message, parser
-from typing import Optional, cast
+from typing import Optional, Union, cast
 
 from ..exceptions import PANHuntException
 from ..scancontext import ScanContext
@@ -56,7 +56,7 @@ class Eml:
         elif part.get_content_type() == 'text/plain':
             self.parse_body(part)
 
-    def parse_body(self, body_payload: message.Message | str) -> None:
+    def parse_body(self, body_payload: Union[message.Message, str]) -> None:
         if isinstance(body_payload, message.Message):
             charset = body_payload.get_content_charset() or 'utf-8'
             decoded = cast(Optional[bytes], body_payload.get_payload(decode=True))
