@@ -8,7 +8,12 @@ import sys
 import unicodedata
 import zipfile
 from gzip import FEXTRA, FNAME, GzipFile
-from typing import Any, Optional, Protocol, TypeGuard, Union
+from typing import Any, Optional, Protocol, Union
+
+try:
+    from typing import TypeGuard
+except ImportError:
+    from typing_extensions import TypeGuard
 
 import magic
 
