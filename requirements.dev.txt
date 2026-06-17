@@ -2,11 +2,16 @@
 # For development and testing only; end users should use: pip install panhunt
 # These versions include build, test, and type-checking tools beyond runtime requirements.
 # Update via: pip install -e .[dev] && pip freeze > requirements.dev.txt
+build==1.5.0
 colorama==0.4.6
 mypy==2.1.0
 mypy-extensions==1.1.0
 pdfminer.six==20260107
 psutil==7.2.2
+pytest==9.1.0
+pytest-cov==7.1.0
 python-magic-bin==0.4.14 ; platform_system == 'Windows'
 python-magic==0.4.27 ; platform_system != 'Windows'
+twine==6.2.0
 typing-extensions==4.15
+vermin==1.8.0
