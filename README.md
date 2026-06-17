@@ -121,7 +121,9 @@ To include coverage details, run `pytest --cov=panhunt src/tests/`.
 ## Usage
 
 ```shell
-usage: panhunt [-h] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-C CONFIG] [-X EXCLUDE_PAN] [-w WORKERS] [-q] [target_path]
+usage: panhunt [-h] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR]
+               [-C CONFIG] [-X EXCLUDE_PAN] [-w WORKERS] [-q]
+               [target_path]
 
 PANHunt : search directories and sub directories for documents containing PANs.
 
@@ -137,9 +139,11 @@ options:
   -X EXCLUDE_PAN   PAN to exclude from search (default: None)
   -w WORKERS       Number of worker threads (default: 1) (default: None)
   -q               No terminal output (default: False)
+
+For advanced scanning controls, use -C config.ini. The configuration file supports additional options beyond the command-line parameters.
 ```
 
-If you run PANhunt without a target path, it prompts before scanning the default root target (`C:\` on Windows or `/` on Linux). Reports are written as `panhunt_<timestamp>.report` in the report directory, and JSON reports are written as `panhunt_<timestamp>.json` when `-j` or the `json` configuration key is set.
+Running PANhunt without a target path or `-C config.ini` no longer starts a root-directory scan. It prints a short reminder to use `-h` or `--help` and exits without scanning. Reports are written as `panhunt_<timestamp>.report` in the report directory, and JSON reports are written as `panhunt_<timestamp>.json` when `-j` or the `json` configuration key is set.
 
 ## Example Output
 
@@ -294,6 +298,6 @@ maxPdfPages = 100
 maxPdfTextBytes = 10485760
 ```
 
-Pass the config file with `-C config.ini`. Command-line quiet mode (`-q`) overrides the `quiet` value from the configuration file. The `sizeLimit` setting also updates the default total expanded-byte and attachment-byte limits unless those more specific settings are supplied.
+Pass the config file with `-C config.ini`. The configuration file is the preferred way to use advanced scanning controls because it supports more options than the command-line parameters, including safety limits for nested archives, compressed data, attachments, parser isolation, and PDF extraction. Command-line quiet mode (`-q`) overrides the `quiet` value from the configuration file. The `sizeLimit` setting also updates the default total expanded-byte and attachment-byte limits unless those more specific settings are supplied.
 
 An important detail is that when working with large compressed files such as compressed log files larger than memory, panhunt may use all the CPU power, and it may be better to limit the CPU usage to prevent issues. If you are using systemd, a command like `systemd-run --scope -p CPUQuota=60% panhunt -C src/panhunt/resources/panhunt.ini` would save your resources.

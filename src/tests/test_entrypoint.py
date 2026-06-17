@@ -88,3 +88,52 @@ def test_dunder_main_module_delegates_to_package_run(monkeypatch):
     runpy.run_module('panhunt.__main__', run_name='__main__')
 
     assert called is True
+
+
+def test_main_without_arguments_prints_short_help_and_does_not_scan(monkeypatch, capsys):
+    import panhunt
+
+    def fail_scan(self, config):
+        raise AssertionError('scan should not be called')
+
+    monkeypatch.setattr('sys.argv', ['panhunt'])
+    monkeypatch.setattr(panhunt.PanHuntService, 'scan', fail_scan)
+
+    panhunt.main()
+
+    output = capsys.readouterr().out
+    assert 'usage: panhunt' in output
+    assert 'No scan target or configuration file specified; no scan was started.' in output
+    assert 'Use -h or --help for more information.' in output
+
+
+def test_main_with_options_but_no_target_does_not_scan(monkeypatch, capsys):
+    import panhunt
+
+    def fail_scan(self, config):
+        raise AssertionError('scan should not be called')
+
+    monkeypatch.setattr('sys.argv', ['panhunt', '-q'])
+    monkeypatch.setattr(panhunt.PanHuntService, 'scan', fail_scan)
+
+    panhunt.main()
+
+    output = capsys.readouterr().out
+    assert 'No scan target or configuration file specified; no scan was started.' in output
+    assert 'usage: panhunt' in output
+    assert 'Use -h or --help for more information.' in output
+
+
+def test_help_mentions_config_has_additional_options(monkeypatch, capsys):
+    import pytest
+    import panhunt
+
+    monkeypatch.setattr('sys.argv', ['panhunt', '--help'])
+
+    with pytest.raises(SystemExit) as exc_info:
+        panhunt.main()
+
+    assert exc_info.value.code == 0
+    output = capsys.readouterr().out
+    assert 'For advanced scanning controls, use -C config.ini.' in output
+    assert 'additional options beyond the command-line parameters' in output

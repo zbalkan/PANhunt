@@ -25,6 +25,8 @@ PANhunt follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Updated PAN detection patterns and dependency constraints.
 - Replaced PyInstaller build scripts with wheel publication scripts.
 - Improved friendly file-size formatting and stream payload size reporting.
+- Changed targetless CLI invocations to print a short `-h`/`--help` reminder instead of prompting for, or starting, a default root-directory scan.
+- Documented that `config.ini` exposes advanced scanning controls beyond the short command-line parameter set.
 - Updated README documentation for the new architecture, usage, packaging, and behavior.
 
 ### Removed
