@@ -7,8 +7,6 @@ from .constants import MIN_PAN_LENGTH
 from .pan import PAN
 from .patterns import CardPatterns
 
-_MIN_PAN_DIGITS = 12
-
 
 class PanFinder:
 
@@ -17,9 +15,6 @@ class PanFinder:
         self._brands: list[tuple[str, Pattern[str]]] = CardPatterns().brands()
 
     def find(self, text: str) -> list[PAN]:
-        if sum(character.isdigit() for character in text) < _MIN_PAN_DIGITS:
-            return []
-
         matches: list[PAN] = []
 
         if not self._has_pan_candidate(text):
