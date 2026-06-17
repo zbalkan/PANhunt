@@ -10,6 +10,7 @@ import threading
 import unicodedata
 import zipfile
 from gzip import FEXTRA, FNAME, GzipFile
+from types import SimpleNamespace
 from typing import Any, Optional, Protocol, Union
 
 try:
@@ -17,7 +18,88 @@ try:
 except ImportError:
     from typing_extensions import TypeGuard
 
-import magic
+_magic_module: Any
+try:
+    import magic as _magic
+except ImportError:
+    class _FallbackMagic:
+        _MIME_BY_EXTENSION = {
+            '.csv': 'text/plain',
+            '.eml': 'message/rfc822',
+            '.fodp': 'application/vnd.oasis.opendocument.presentation-flat-xml',
+            '.fods': 'application/vnd.oasis.opendocument.spreadsheet-flat-xml',
+            '.fodt': 'application/vnd.oasis.opendocument.text-flat-xml',
+            '.htm': 'text/html',
+            '.html': 'text/html',
+            '.json': 'application/json',
+            '.log': 'text/plain',
+            '.mbox': 'text/plain',
+            '.odf': 'application/vnd.oasis.opendocument.formula',
+            '.odg': 'application/vnd.oasis.opendocument.graphics',
+            '.odm': 'application/vnd.oasis.opendocument.text-master',
+            '.odp': 'application/vnd.oasis.opendocument.presentation',
+            '.ods': 'application/vnd.oasis.opendocument.spreadsheet',
+            '.odt': 'application/vnd.oasis.opendocument.text',
+            '.otg': 'application/vnd.oasis.opendocument.graphics-template',
+            '.otp': 'application/vnd.oasis.opendocument.presentation-template',
+            '.ots': 'application/vnd.oasis.opendocument.spreadsheet-template',
+            '.ott': 'application/vnd.oasis.opendocument.text-template',
+            '.pdf': 'application/pdf',
+            '.rtf': 'text/rtf',
+            '.tar': 'application/x-tar',
+            '.txt': 'text/plain',
+            '.xml': 'text/xml',
+            '.xz': 'application/x-xz',
+            '.zip': 'application/zip',
+        }
+
+        def __init__(self, **kwargs: Any) -> None:
+            self.kwargs = kwargs
+
+        def from_buffer(self, buffer: bytes) -> str:
+            return f'{self._guess_buffer_mime(buffer)}; charset={self._guess_encoding(buffer)}'
+
+        def from_file(self, filename: str) -> str:
+            try:
+                with open(filename, 'rb') as file:
+                    buffer = file.read(2048)
+            except OSError:
+                buffer = b''
+            extension = pathlib.Path(filename).suffix.lower()
+            mime_type = self._MIME_BY_EXTENSION.get(extension, self._guess_buffer_mime(buffer))
+            return f'{mime_type}; charset={self._guess_encoding(buffer)}'
+
+        @staticmethod
+        def _guess_buffer_mime(buffer: bytes) -> str:
+            if buffer.startswith(b'%PDF'):
+                return 'application/pdf'
+            if buffer.startswith(b'PK\x03\x04') or buffer.startswith(b'PK\x05\x06') or buffer.startswith(b'PK\x07\x08'):
+                return 'application/zip'
+            if buffer.startswith(b'\x1f\x8b'):
+                return 'application/gzip'
+            if buffer.startswith(b'\xfd7zXZ\x00'):
+                return 'application/x-xz'
+            if not buffer:
+                return 'application/x-empty'
+            if b'\x00' in buffer:
+                return 'application/octet-stream'
+            return 'text/plain'
+
+        @staticmethod
+        def _guess_encoding(buffer: bytes) -> str:
+            if not buffer:
+                return 'binary'
+            try:
+                buffer.decode('utf-8')
+            except UnicodeDecodeError:
+                return 'binary'
+            return 'utf-8'
+
+    _magic_module = SimpleNamespace(Magic=_FallbackMagic)
+else:
+    _magic_module = _magic
+
+magic = _magic_module
 
 _thread_local = threading.local()
 
@@ -74,13 +156,18 @@ def get_mimetype(path: Optional[str] = None,
     return mime_type, encoding, error
 
 
-def _get_magic() -> magic.Magic:
+def _get_magic() -> Any:
     """Return a per-thread libmagic detector.
 
     Initialising ``magic.Magic`` loads the magic database, which is relatively
     expensive and was previously repeated for every file, buffer, and stream.
     Scanner workers are thread-based, so one detector per thread keeps the
     object isolated while avoiding repeated database loads on each scan item.
+
+    Use a conservative fallback detector when python-magic cannot be imported
+    because libmagic is unavailable.  The fallback keeps scans usable for common
+    text, archive, PDF, and OpenDocument files instead of treating every target
+    as a MIME detection failure.
     """
     detector = getattr(_thread_local, 'magic_detector', None)
     if detector is None:
