@@ -162,3 +162,6 @@ class FileTypeEnum(Enum):
     OpenDocumentDrawing = 18
     OpenDocumentFormula = 19
     OpenDocumentMaster = 20
+    MsWordLegacy = 21
+    MsExcelLegacy = 22
+    MsPowerpointLegacy = 23

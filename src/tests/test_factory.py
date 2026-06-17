@@ -10,6 +10,7 @@ from panhunt.scanner import (
     EmlScanner,
     MboxScanner,
     MsgScanner,
+    LegacyOfficeScanner,
     PdfScanner,
     PlainTextFileScanner,
     PstScanner,
@@ -46,6 +47,21 @@ class TestScannerFactory:
         s = factory.get_scanner('application/octet-stream', '.pst')
         assert isinstance(s, PstScanner)
 
+    @pytest.mark.parametrize('extension', ['.doc', '.xls', '.ppt'])
+    def test_legacy_office_octet_stream_extension(self, factory, extension):
+        s = factory.get_scanner('application/octet-stream', extension)
+        assert isinstance(s, LegacyOfficeScanner)
+
+    @pytest.mark.parametrize('mime_type', ['text/plain', 'application/octet-stream'])
+    @pytest.mark.parametrize('extension', ['.doc', '.xls', '.ppt'])
+    def test_legacy_office_extension_overrides_generic_mime(self, factory, mime_type, extension):
+        s = factory.get_scanner(mime_type, extension)
+        assert isinstance(s, LegacyOfficeScanner)
+
+    def test_legacy_office_ole_mime(self, factory):
+        s = factory.get_scanner('application/x-ole-storage', '.doc')
+        assert isinstance(s, LegacyOfficeScanner)
+
     def test_unknown_mime_returns_none(self, factory):
         s = factory.get_scanner('video/mp4', '.mp4')
         assert s is None
@@ -71,6 +87,15 @@ class TestArchiveFactory:
         cls = ArchiveFactory.get_archive('application/zip', '.zip')
         assert cls is ZipArchive
 
+    def test_zip_octet_stream_extension_does_not_force_archive(self):
+        cls = ArchiveFactory.get_archive('application/octet-stream', '.zip')
+        assert cls is None
+
+    def test_x_zip_compressed_mime(self):
+        from panhunt.archive import ZipArchive
+        cls = ArchiveFactory.get_archive('application/x-zip-compressed', '.zip')
+        assert cls is ZipArchive
+
     def test_tar_mime(self):
         from panhunt.archive import TarArchive
         cls = ArchiveFactory.get_archive('application/x-tar', '.tar')
@@ -85,6 +110,12 @@ class TestArchiveFactory:
         from panhunt.archive import XzArchive
         cls = ArchiveFactory.get_archive('application/x-xz', '.xz')
         assert cls is XzArchive
+
+    @pytest.mark.parametrize('extension', ['.docx', '.xlsx', '.pptx'])
+    def test_openxml_office_octet_stream_extension_fallback(self, extension):
+        from panhunt.archive import ZipArchive
+        cls = ArchiveFactory.get_archive('application/octet-stream', extension)
+        assert cls is ZipArchive
 
     def test_docx_is_zip(self):
         from panhunt.archive import ZipArchive

@@ -7,7 +7,7 @@ import pytest
 
 from panhunt.finder import PanFinder
 from panhunt.job import Job
-from panhunt.scanner import PlainTextFileScanner
+from panhunt.scanner import LegacyOfficeScanner, PlainTextFileScanner
 
 
 @pytest.fixture
@@ -44,6 +44,13 @@ class TestScanFile:
         result = scanner_with_exclusion.scan(job)
         assert result == []
 
+    def test_binary_encoding_falls_back_to_utf8_for_files(self, scanner, tmp_path):
+        path = tmp_path / 'legacy.doc'
+        path.write_bytes(b'\xd0\xcf\x11\xe0Payment 4111111111111111')
+        job = Job(basename=path.name, dirname=str(path.parent))
+        result = scanner.scan(job, encoding='binary')
+        assert len(result) == 1
+
 
 class TestScanBytes:
     def test_finds_pan_in_bytes_payload(self, scanner, mock_buffer):
@@ -62,6 +69,12 @@ class TestScanBytes:
         payload = b'4111111111111111'
         job = Job(basename='bin.bin', dirname='/tmp', payload=payload)
         result = scanner.scan(job, encoding='binary')
+        assert len(result) == 1
+
+    def test_unknown_encoding_falls_back_to_utf8(self, scanner):
+        payload = b'4111111111111111'
+        job = Job(basename='bin.bin', dirname='/tmp', payload=payload)
+        result = scanner.scan(job, encoding='unknown')
         assert len(result) == 1
 
 
@@ -149,3 +162,23 @@ class TestPanFinderInjection:
         custom_finder = PanFinder(config)
         scanner = PlainTextFileScanner(buffer=mock_buffer, config=config, pan_finder=custom_finder)
         assert scanner._pan_finder is custom_finder
+
+
+class TestLegacyOfficeScanner:
+    def test_finds_ascii_pan_in_legacy_office_bytes(self, mock_buffer, config):
+        scanner = LegacyOfficeScanner(buffer=mock_buffer, config=config)
+        payload = b'\xd0\xcf\x11\xe0' + b'Payment 4111111111111111' + b'\x00\x01'
+        job = Job(basename='legacy.doc', dirname='/tmp', payload=payload)
+
+        result = scanner.scan(job, encoding='binary')
+
+        assert len(result) == 1
+
+    def test_finds_utf16le_pan_in_legacy_office_bytes(self, mock_buffer, config):
+        scanner = LegacyOfficeScanner(buffer=mock_buffer, config=config)
+        payload = b'\xd0\xcf\x11\xe0' + 'Payment 4111111111111111'.encode('utf-16le') + b'\x00\x01'
+        job = Job(basename='legacy.xls', dirname='/tmp', payload=payload)
+
+        result = scanner.scan(job, encoding='binary')
+
+        assert len(result) == 1

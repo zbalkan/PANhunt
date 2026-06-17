@@ -5,7 +5,7 @@ from .archive import Archive, GzipArchive, OpenDocumentArchive, TarArchive, XzAr
 from .buffer import JobBuffer
 from .config import ScanConfiguration
 from .finder import PanFinder
-from .scanner import EmlScanner, MboxScanner, MsgScanner, PdfScanner, PlainTextFileScanner, PstScanner, ScannerBase
+from .scanner import EmlScanner, MboxScanner, MsgScanner, LegacyOfficeScanner, PdfScanner, PlainTextFileScanner, PstScanner, ScannerBase
 
 
 class ScannerFactory:
@@ -40,6 +40,9 @@ class ScannerFactory:
         return {
             enums.FileTypeEnum.Plaintext: PlainTextFileScanner,
             enums.FileTypeEnum.Rtf: PlainTextFileScanner,
+            enums.FileTypeEnum.MsWordLegacy: LegacyOfficeScanner,
+            enums.FileTypeEnum.MsExcelLegacy: LegacyOfficeScanner,
+            enums.FileTypeEnum.MsPowerpointLegacy: LegacyOfficeScanner,
             enums.FileTypeEnum.MsMsg: MsgScanner,
             enums.FileTypeEnum.MsPst: PstScanner,
             enums.FileTypeEnum.Eml: EmlScanner,
@@ -57,6 +60,13 @@ class ScannerFactory:
         parts = mime_type_text.split(sep='/')
         mime_type = parts[0]
         mime_subtype = parts[1] if len(parts) > 1 else ''
+        extension_file_type = ScannerFactory._get_filetype_from_extension(extension)
+
+        if extension_file_type in {
+                enums.FileTypeEnum.MsWordLegacy,
+                enums.FileTypeEnum.MsExcelLegacy,
+                enums.FileTypeEnum.MsPowerpointLegacy}:
+            return extension_file_type
 
         # Early return for non-document types
         if mime_type in ['Unknown', 'audio', 'video', 'image', 'chemical', 'model', 'gcode', 'x-conference', 'font', 'x-world']:
@@ -75,8 +85,6 @@ class ScannerFactory:
 
         # Application types
         if mime_type == 'application':
-            extension_file_type = ScannerFactory._get_filetype_from_extension(extension)
-
             if mime_subtype == 'octet-stream':
                 if extension_file_type != enums.FileTypeEnum.Unknown:
                     return extension_file_type
@@ -110,13 +118,19 @@ class ScannerFactory:
                 return enums.FileTypeEnum.OpenDocumentFormula
             elif mime_subtype == 'vnd.oasis.opendocument.text-master':
                 return enums.FileTypeEnum.OpenDocumentMaster
-            elif mime_subtype in ['vnd.ms-powerpoint', 'vnd.ms-excel', 'msword']:
-                return enums.FileTypeEnum.Plaintext
+            elif mime_subtype == 'msword':
+                return enums.FileTypeEnum.MsWordLegacy
+            elif mime_subtype == 'vnd.ms-excel':
+                return enums.FileTypeEnum.MsExcelLegacy
+            elif mime_subtype == 'vnd.ms-powerpoint':
+                return enums.FileTypeEnum.MsPowerpointLegacy
+            elif mime_subtype == 'x-ole-storage':
+                return extension_file_type if extension_file_type != enums.FileTypeEnum.Unknown else enums.FileTypeEnum.Unknown
             elif mime_subtype == 'vnd.ms-outlook':
                 return enums.FileTypeEnum.MsMsg
             elif mime_subtype == 'pdf':
                 return enums.FileTypeEnum.Pdf
-            elif mime_subtype == 'zip':
+            elif mime_subtype in ['zip', 'x-zip-compressed']:
                 return enums.FileTypeEnum.Zip
             elif mime_subtype == 'x-tar':
                 return enums.FileTypeEnum.Tar
@@ -141,6 +155,12 @@ class ScannerFactory:
     @staticmethod
     def _get_filetype_from_extension(extension: str) -> enums.FileTypeEnum:
         extension_map = {
+            '.doc': enums.FileTypeEnum.MsWordLegacy,
+            '.xls': enums.FileTypeEnum.MsExcelLegacy,
+            '.ppt': enums.FileTypeEnum.MsPowerpointLegacy,
+            '.docx': enums.FileTypeEnum.MsWord,
+            '.xlsx': enums.FileTypeEnum.MsExcel,
+            '.pptx': enums.FileTypeEnum.MsPowerpoint,
             '.mbox': enums.FileTypeEnum.Mbox,
             '.pst': enums.FileTypeEnum.MsPst,
             '.odt': enums.FileTypeEnum.OpenDocumentText,

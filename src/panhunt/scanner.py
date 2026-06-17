@@ -88,9 +88,15 @@ class PlainTextFileScanner(ScannerBase):
                 return self._scan_stream(job.payload, encoding)
         return self._scan_file(job.abspath, encoding)
 
+    @staticmethod
+    def _text_encoding(encoding: str) -> str:
+        # libmagic reports legacy binary Office/OLE and other opaque files as
+        # "binary", which is not a Python codec name. Decode those byte
+        # streams as UTF-8 with replacement so ASCII PANs remain searchable.
+        return 'utf8' if encoding.lower() in ('binary', 'unknown') else encoding
+
     def _scan_bytes(self, payload: bytes, encoding: str = 'utf8') -> list[PAN]:
-        if encoding == 'binary':
-            encoding = 'utf8'
+        encoding = self._text_encoding(encoding)
 
         text = payload.decode(encoding=encoding, errors='backslashreplace')
 
@@ -101,6 +107,7 @@ class PlainTextFileScanner(ScannerBase):
 
     def _scan_file(self, filepath: str, encoding: str = 'utf8') -> list[PAN]:
         matches: list[PAN] = []
+        encoding = self._text_encoding(encoding)
 
         file_size: int = os.stat(path=filepath).st_size
 
@@ -121,8 +128,7 @@ class PlainTextFileScanner(ScannerBase):
     def _scan_stream(self, stream: FileLikePayload, encoding: str = 'utf8') -> list[PAN]:
         matches: list[PAN] = []
 
-        if encoding == 'binary':
-            encoding = 'utf8'
+        encoding = self._text_encoding(encoding)
 
         seek = getattr(stream, 'seek', None)
         if callable(seek):
@@ -154,6 +160,75 @@ class PlainTextFileScanner(ScannerBase):
             buffer = lines[-1]
 
         return matches
+
+
+
+class LegacyOfficeScanner(ScannerBase):
+    """Scanner for legacy Office 97-2003 compound binary files.
+
+    Word .doc, Excel .xls, and PowerPoint .ppt files are not ZIP containers
+    like .docx/.xlsx/.pptx.  Their document text is commonly stored as ASCII
+    or UTF-16LE strings inside an OLE/CFB binary, so extract printable string
+    runs from the raw bytes and scan those runs for PANs.
+    """
+
+    _MIN_STRING_RUN = MIN_PAN_LENGTH
+
+    def scan(self, job: Job, encoding: str = 'utf8') -> list[PAN]:
+        payload = self._payload_bytes(job)
+        if payload is None:
+            with open(job.abspath, 'rb') as file:
+                payload = file.read()
+        return self._scan_payload(payload)
+
+    def _scan_payload(self, payload: bytes) -> list[PAN]:
+        matches: list[PAN] = []
+        seen: set[str] = set()
+
+        for text in self._iter_binary_strings(payload):
+            if text in seen:
+                continue
+            seen.add(text)
+            matches.extend(self._pan_finder.find(text))
+
+        return matches
+
+    @classmethod
+    def _iter_binary_strings(cls, payload: bytes):
+        yield from cls._iter_ascii_strings(payload)
+        yield from cls._iter_utf16le_strings(payload)
+
+    @classmethod
+    def _iter_ascii_strings(cls, payload: bytes):
+        current = bytearray()
+        for value in payload:
+            if value in (9, 10, 13) or 32 <= value <= 126:
+                current.append(value)
+                continue
+            if len(current) >= cls._MIN_STRING_RUN:
+                yield current.decode('ascii', errors='ignore')
+            current.clear()
+        if len(current) >= cls._MIN_STRING_RUN:
+            yield current.decode('ascii', errors='ignore')
+
+    @classmethod
+    def _iter_utf16le_strings(cls, payload: bytes):
+        current = bytearray()
+        length = len(payload) - 1
+        index = 0
+        while index < length:
+            value = payload[index]
+            marker = payload[index + 1]
+            if marker == 0 and (value in (9, 10, 13) or 32 <= value <= 126):
+                current.extend((value, marker))
+                index += 2
+                continue
+            if len(current) >= cls._MIN_STRING_RUN * 2:
+                yield current.decode('utf-16le', errors='ignore')
+            current.clear()
+            index += 1
+        if len(current) >= cls._MIN_STRING_RUN * 2:
+            yield current.decode('utf-16le', errors='ignore')
 
 
 class MsgScanner(ScannerBase):
