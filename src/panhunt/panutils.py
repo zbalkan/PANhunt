@@ -6,7 +6,6 @@ import os
 import pathlib
 import re
 import struct
-import sys
 import unicodedata
 import zipfile
 from gzip import FEXTRA, FNAME, GzipFile
@@ -33,15 +32,6 @@ def is_file_like(payload: Any) -> TypeGuard[FileLikePayload]:
     so use capability detection instead of relying only on isinstance(..., IOBase).
     """
     return hasattr(payload, 'read') and callable(payload.read)
-
-
-def get_root_dir() -> str:
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    elif __file__:
-        return os.path.dirname(__file__)
-    else:
-        return './'
 
 
 def get_mimetype(path: Optional[str] = None,

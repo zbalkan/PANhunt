@@ -5,8 +5,6 @@ import os
 import time
 from typing import Optional
 
-from . import panutils
-
 
 class ScanConfiguration:
     """Configuration for a single scan session. Created once and injected into all components."""
@@ -48,7 +46,7 @@ class ScanConfiguration:
             self.excluded_directories = ['/mnt', '/dev', '/proc']
 
         self.file_path = None
-        self.report_dir = panutils.get_root_dir()
+        self.report_dir = os.getcwd()
         self.json_dir = None
         self.excluded_pans = []
         self.size_limit = 8 * 1_073_741_824  # 8GB
@@ -233,10 +231,10 @@ class ScanConfiguration:
             self.target_path = os.path.abspath(path=target_path)
 
         if report_dir and report_dir != 'None':
-            self.report_dir = panutils.get_root_dir() if report_dir == './' else os.path.abspath(report_dir)
+            self.report_dir = os.getcwd() if report_dir == './' else os.path.abspath(report_dir)
 
         if json_dir:
-            self.json_dir = panutils.get_root_dir() if json_dir == './' else os.path.abspath(json_dir)
+            self.json_dir = os.getcwd() if json_dir == './' else os.path.abspath(json_dir)
 
         if excluded_directories_string and excluded_directories_string != 'None':
             self.excluded_directories = [d.lower() for d in excluded_directories_string.split(',')]

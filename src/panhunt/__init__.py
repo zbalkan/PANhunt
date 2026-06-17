@@ -17,7 +17,6 @@ from typing import Final
 
 import colorama
 
-from . import panutils
 from .config import ScanConfiguration
 from .presenter import CliPresenter
 from .service import PanHuntService
@@ -36,7 +35,7 @@ def _log_uncaught_exception(exc_type, exc_value, exc_traceback) -> None:
 
 def main() -> None:
     logging.basicConfig(
-        filename=os.path.join(panutils.get_root_dir(), f'{APP_NAME}.log'),
+        filename=os.path.join(os.getcwd(), f'{APP_NAME}.log'),
         encoding='utf-8',
         format='%(asctime)s:%(levelname)s:%(message)s',
         datefmt='%Y-%m-%dT%H:%M:%S%z',
