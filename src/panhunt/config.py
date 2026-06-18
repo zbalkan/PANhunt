@@ -38,11 +38,9 @@ class ScanConfiguration:
 
     def __init__(self) -> None:
         if os.name == 'nt':
-            self.target_path = 'C:\\'
             self.excluded_paths = [
                 'c:\\windows', 'c:\\program files', 'c:\\program files(x86)']
         else:
-            self.target_path = '/'
             self.excluded_paths = ['/mnt', '/dev', '/proc']
 
         self.file_path = None

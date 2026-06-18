@@ -10,11 +10,6 @@ from panhunt.config import ScanConfiguration
 
 
 class TestDefaults:
-    def test_default_target_path(self):
-        c = ScanConfiguration()
-        expected = 'C:\\' if os.name == 'nt' else '/'
-        assert c.target_path == expected
-
     def test_default_excluded_paths_not_empty(self):
         c = ScanConfiguration()
         assert isinstance(c.excluded_paths, list)
