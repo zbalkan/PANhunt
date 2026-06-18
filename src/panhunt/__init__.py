@@ -56,7 +56,7 @@ def main() -> None:
         ))
     arg_parser.add_argument('target_path', nargs='?',
                             help='file or directory to search')
-    arg_parser.add_argument('-x', dest='exclude_dirs', help='directories to exclude from the search (use absolute paths)')
+    arg_parser.add_argument('-x', dest='exclude_paths', help='paths to exclude from the search, including files or directories (use absolute paths)')
     arg_parser.add_argument('-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
     arg_parser.add_argument('-j', dest='json_dir', help='Report file directory for JSON formatted PAN report', default=None)
     arg_parser.add_argument('-C', dest='config', help='configuration file to use')
@@ -78,8 +78,7 @@ def main() -> None:
             target_path=args.target_path,
             report_dir=args.report_dir,
             json_dir=args.json_dir,
-            excluded_directories_string=args.exclude_dirs,
-            excluded_pans_string=args.exclude_pan,
+            excluded_paths_string=args.exclude_paths,            excluded_pans_string=args.exclude_pan,
             worker_count=args.workers,
             quiet=args.quiet)
 

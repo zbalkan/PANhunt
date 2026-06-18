@@ -1,4 +1,5 @@
 import platform
+
 from . import panutils
 from .models import ScanResult
 
@@ -14,7 +15,7 @@ class ReportGenerator:
             f'PAN Hunt Report - {result.start_time.strftime("%H:%M:%S %d/%m/%Y")}{newline}'
             f'{sep}{newline}'
             f'Searched {result.config.target_path}{newline}'
-            f'Excluded {",".join(result.config.excluded_directories)}{newline}'
+            f'Excluded {",".join(result.config.excluded_paths)}{newline}'
             f'Uname: {" | ".join(platform.uname())}{newline}'
             f'Elapsed time: {result.elapsed}{newline}'
             f'Found {result.pan_count} possible PANs.{newline}'
@@ -44,7 +45,7 @@ class ReportGenerator:
         data: dict = {
             'timestamp': result.start_time.strftime('%H:%M:%S %d/%m/%Y'),
             'searched': result.config.target_path,
-            'excluded': ','.join(result.config.excluded_directories),
+            'excluded': ','.join(result.config.excluded_paths),
             'elapsed': str(result.elapsed),
             'pans_found': result.pan_count,
             'pans_found_results': {

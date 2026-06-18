@@ -15,10 +15,10 @@ class TestDefaults:
         expected = 'C:\\' if os.name == 'nt' else '/'
         assert c.target_path == expected
 
-    def test_default_excluded_dirs_not_empty(self):
+    def test_default_excluded_paths_not_empty(self):
         c = ScanConfiguration()
-        assert isinstance(c.excluded_directories, list)
-        assert len(c.excluded_directories) > 0
+        assert isinstance(c.excluded_paths, list)
+        assert len(c.excluded_paths) > 0
 
     def test_default_file_path_is_none(self):
         assert ScanConfiguration().file_path is None
@@ -75,11 +75,11 @@ class TestFromArgs:
         c = ScanConfiguration.from_args(quiet=True)
         assert c.quiet is True
 
-    def test_excluded_dirs_split_by_comma(self):
-        c = ScanConfiguration.from_args(excluded_directories_string='/a,/b,/c')
-        assert '/a' in c.excluded_directories
-        assert '/b' in c.excluded_directories
-        assert '/c' in c.excluded_directories
+    def test_excluded_paths_split_by_comma(self):
+        c = ScanConfiguration.from_args(excluded_paths_string='/a,/b,/c')
+        assert '/a' in c.excluded_paths
+        assert '/b' in c.excluded_paths
+        assert '/c' in c.excluded_paths
 
     def test_excluded_pans_split_by_comma(self):
         c = ScanConfiguration.from_args(excluded_pans_string='1234,5678')

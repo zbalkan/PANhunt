@@ -12,7 +12,7 @@ class ScanConfiguration:
     target_path: str
     report_dir: str
     json_dir: Optional[str]
-    excluded_directories: list[str]
+    excluded_paths: list[str]
     excluded_pans: list[str]
     size_limit: int
     worker_count: int
@@ -39,11 +39,11 @@ class ScanConfiguration:
     def __init__(self) -> None:
         if os.name == 'nt':
             self.target_path = 'C:\\'
-            self.excluded_directories = [
+            self.excluded_paths = [
                 'c:\\windows', 'c:\\program files', 'c:\\program files(x86)']
         else:
             self.target_path = '/'
-            self.excluded_directories = ['/mnt', '/dev', '/proc']
+            self.excluded_paths = ['/mnt', '/dev', '/proc']
 
         self.file_path = None
         self.report_dir = os.getcwd()
@@ -116,7 +116,7 @@ class ScanConfiguration:
                   target_path: Optional[str] = None,
                   report_dir: Optional[str] = None,
                   json_dir: Optional[str] = None,
-                  excluded_directories_string: Optional[str] = None,
+                  excluded_paths_string: Optional[str] = None,
                   excluded_pans_string: Optional[str] = None,
                   size_limit: Optional[int] = None,
                   worker_count: Optional[int] = None,
@@ -143,7 +143,7 @@ class ScanConfiguration:
             target_path=target_path,
             report_dir=report_dir,
             json_dir=json_dir,
-            excluded_directories_string=excluded_directories_string,
+            excluded_paths_string=excluded_paths_string,
             excluded_pans_string=excluded_pans_string,
             size_limit=size_limit,
             worker_count=worker_count,
@@ -179,7 +179,7 @@ class ScanConfiguration:
                 raw, 'search') or cls._try_parse(raw, 'file'),
             report_dir=cls._try_parse(raw, 'outfile'),
             json_dir=cls._try_parse(raw, 'json'),
-            excluded_directories_string=cls._try_parse(raw, 'exclude'),
+            excluded_paths_string=cls._try_parse(raw, 'exclude'),
             excluded_pans_string=cls._try_parse(raw, 'excludepans'),
             size_limit=cls._try_parse_int(raw, 'sizelimit'),
             worker_count=cls._try_parse_int(raw, 'workers'),
@@ -206,7 +206,7 @@ class ScanConfiguration:
                 target_path: Optional[str],
                 report_dir: Optional[str],
                 json_dir: Optional[str],
-                excluded_directories_string: Optional[str],
+                excluded_paths_string: Optional[str],
                 excluded_pans_string: Optional[str],
                 size_limit: Optional[int],
                 worker_count: Optional[int] = None,
@@ -237,8 +237,8 @@ class ScanConfiguration:
         if json_dir:
             self.json_dir = os.getcwd() if json_dir == './' else os.path.abspath(json_dir)
 
-        if excluded_directories_string and excluded_directories_string != 'None':
-            self.excluded_directories = [d.lower() for d in excluded_directories_string.split(',')]
+        if excluded_paths_string and excluded_paths_string != 'None':
+            self.excluded_directories = [d.lower() for d in excluded_paths_string.split(',')]
 
         if excluded_pans_string and excluded_pans_string != 'None':
             self.excluded_pans = [

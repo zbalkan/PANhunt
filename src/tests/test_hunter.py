@@ -50,14 +50,13 @@ class TestHuntDirectory:
         assert mock_buffer.enqueue.call_count == 2
 
     def test_excludes_configured_directories(self, mock_dispatcher, mock_buffer, tmp_dir):
-        # Hunter skips files in excluded directories and their descendants.
         excl = os.path.join(tmp_dir, 'excluded')
         nested = os.path.join(excl, 'nested')
         os.makedirs(nested)
         open(os.path.join(nested, 'file.txt'), 'w').close()
         config = ScanConfiguration.from_args(
             target_path=tmp_dir,
-            excluded_directories_string=excl,
+            excluded_paths_string=excl,
             quiet=True,
         )
         mock_buffer.is_finished.return_value = True
@@ -65,14 +64,14 @@ class TestHuntDirectory:
         h.hunt(config)
         mock_buffer.enqueue.assert_not_called()
 
-    def test_excludes_configured_file_paths(self, mock_dispatcher, mock_buffer, tmp_dir):
+    def test_excludes_configured_files(self, mock_dispatcher, mock_buffer, tmp_dir):
         included = os.path.join(tmp_dir, 'included.txt')
-        excluded = os.path.join(tmp_dir, 'lastlog')
+        excluded = os.path.join(tmp_dir, 'excluded.txt')
         open(included, 'w').close()
         open(excluded, 'w').close()
         config = ScanConfiguration.from_args(
             target_path=tmp_dir,
-            excluded_directories_string=excluded,
+            excluded_paths_string=excluded,
             quiet=True,
         )
         mock_buffer.is_finished.return_value = True
@@ -81,6 +80,17 @@ class TestHuntDirectory:
         mock_buffer.enqueue.assert_called_once()
         job: Job = mock_buffer.enqueue.call_args[0][0]
         assert job.basename == 'included.txt'
+
+    def test_excludes_single_file_target(self, mock_dispatcher, mock_buffer, tmp_text_file):
+        config = ScanConfiguration.from_args(
+            target_path=tmp_text_file,
+            excluded_paths_string=tmp_text_file,
+            quiet=True,
+        )
+        mock_buffer.is_finished.return_value = True
+        h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
+        h.hunt(config)
+        mock_buffer.enqueue.assert_not_called()
 
 
 class TestHuntResults:

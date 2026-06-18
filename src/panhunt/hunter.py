@@ -44,13 +44,12 @@ class Hunter:
                 for root, dirs, files in os.walk(target_path):
                     dirs[:] = [
                         d for d in dirs
-                        if not self._is_directory_excluded(os.path.join(root, d), config)
+                        if not self._is_path_excluded(os.path.join(root, d), config)
                     ]
                     for file in files:
-                        if self._is_path_excluded(os.path.join(root, file), config):
-                            continue
-                        self._buffer.enqueue(
-                            Job(basename=file, dirname=root, payload=None))
+                        if not self._is_path_excluded(os.path.join(root, file), config):
+                            self._buffer.enqueue(
+                                Job(basename=file, dirname=root, payload=None))
 
             self._buffer.mark_input_complete()
 
@@ -75,14 +74,13 @@ class Hunter:
         while not done.wait(0.25):
             print(".", end="", flush=True)
 
-    def _is_directory_excluded(self, dirname: str, config: ScanConfiguration) -> bool:
-        return self._is_path_excluded(dirname, config)
-
     def _is_path_excluded(self, path: str, config: ScanConfiguration) -> bool:
         sep = os.sep
         lower_path = os.path.abspath(path).lower()
-        for excluded_path in config.excluded_directories:
-            normalized_excluded = os.path.abspath(excluded_path).lower()
-            if lower_path == normalized_excluded or lower_path.startswith(normalized_excluded + sep):
+        for excluded_path in config.excluded_paths:
+            normalized_excluded_path = os.path.abspath(
+                excluded_path).lower().rstrip(sep)
+            if (lower_path == normalized_excluded_path
+                    or lower_path.startswith(normalized_excluded_path + sep)):
                 return True
         return False

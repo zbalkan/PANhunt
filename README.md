@@ -93,24 +93,31 @@ To include coverage details, run `pytest --cov=panhunt src/tests/`.
 ## Usage
 
 ```shell
-usage: panhunt [-h] [-x EXCLUDE_DIRS] [-o REPORT_DIR] [-j JSON_DIR] [-C CONFIG] [-X EXCLUDE_PAN] [-w WORKERS] [-q] [target_path]
+usage: panhunt [-h] [-x EXCLUDE_PATHS] [-o REPORT_DIR] [-j JSON_DIR]
+               [-C CONFIG] [-X EXCLUDE_PAN] [-w WORKERS] [-q]
+               [target_path]
 
-PANHunt : search directories and sub directories for documents containing PANs.
+PANHunt : search directories and sub directories for documents containing
+PANs.
 
 positional arguments:
-  target_path      file or directory to search (default: None)
+  target_path       file or directory to search (default: None)
 
 options:
-  -h, --help       show this help message and exit
-  -x EXCLUDE_DIRS  directories to exclude from the search (use absolute paths) (default: None)
-  -o REPORT_DIR    Report file directory for TXT formatted PAN report (default: ./)
-  -j JSON_DIR      Report file directory for JSON formatted PAN report (default: None)
-  -C CONFIG        configuration file to use (default: None)
-  -X EXCLUDE_PAN   PAN to exclude from search (default: None)
-  -w WORKERS       Number of worker threads (default: 1) (default: None)
-  -q               No terminal output (default: False)
+  -h, --help        show this help message and exit
+  -x EXCLUDE_PATHS  paths to exclude from the search, including files or
+                    directories (use absolute paths) (default: None)
+  -o REPORT_DIR     Report file directory for TXT formatted PAN report
+                    (default: ./)
+  -j JSON_DIR       Report file directory for JSON formatted PAN report
+                    (default: None)
+  -C CONFIG         configuration file to use (default: None)
+  -X EXCLUDE_PAN    PAN to exclude from search (default: None)
+  -w WORKERS        Number of worker threads (default: 1) (default: None)
+  -q                No terminal output (default: False)
 
-For advanced scanning controls, use -C config.ini. The configuration file supports additional options beyond the command-line parameters.
+For advanced scanning controls, use -C config.ini. The configuration file
+supports additional options beyond the command-line parameters.
 ```
 
 Running PANhunt without a target path or `-C config.ini` no longer starts a root-directory scan. It prints a short reminder to use `-h` or `--help` and exits without scanning. Reports are written as `panhunt_<timestamp>.report` in the report directory, and JSON reports are written as `panhunt_<timestamp>.json` when `-j` or the `json` configuration key is set.
@@ -241,7 +248,7 @@ Example `config.ini`:
 [DEFAULT]
 # Target can be supplied as target, search, or file.
 search = /data
-exclude = /data/logs,/data/tmp
+exclude = /data/logs,/data/tmp,/data/secrets.txt
 outfile = /var/reports
 json = /var/reports
 excludepans = 4111111111111111
