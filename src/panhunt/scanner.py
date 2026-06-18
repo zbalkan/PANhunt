@@ -4,7 +4,7 @@ import io
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Union
 
 from . import panutils
 from .buffer import JobBuffer
@@ -74,10 +74,13 @@ class ScannerBase(ABC):
             except OSError as e:
                 logging.warning(f"Failed to seek stream to start: {e}")
 
-        stream_payload = payload.read()
+        stream_payload: Union[bytes, bytearray, memoryview] = payload.read()
         if isinstance(stream_payload, bytes):
             return stream_payload
-        return stream_payload.encode('utf8', errors='backslashreplace')
+        elif isinstance(stream_payload, memoryview):
+            return stream_payload.tobytes()
+        elif isinstance(stream_payload, bytearray):
+            return bytes(stream_payload)
 
 
 class PlainTextFileScanner(ScannerBase):
@@ -162,7 +165,6 @@ class PlainTextFileScanner(ScannerBase):
             buffer = lines[-1]
 
         return matches
-
 
 
 class LegacyOfficeScanner(ScannerBase):
