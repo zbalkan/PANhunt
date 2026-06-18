@@ -119,8 +119,7 @@ class TestFromArgs:
 
     def test_none_string_is_ignored(self):
         c = ScanConfiguration.from_args(target_path='None')
-        default = ScanConfiguration()
-        assert c.target_path == default.target_path
+        assert c.target_path is None
 
     def test_file_target_path_is_resolved(self, tmp_path):
         p = tmp_path / 'test.txt'

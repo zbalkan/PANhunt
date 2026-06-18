@@ -9,7 +9,7 @@ from typing import Optional
 class ScanConfiguration:
     """Configuration for a single scan session. Created once and injected into all components."""
 
-    target_path: str
+    target_path: Optional[str]
     report_dir: str
     json_dir: Optional[str]
     excluded_paths: list[str]
@@ -37,6 +37,7 @@ class ScanConfiguration:
     json_file: str
 
     def __init__(self) -> None:
+        self.target_path = None
         if os.name == 'nt':
             self.excluded_paths = [
                 'c:\\windows', 'c:\\program files', 'c:\\program files(x86)']
@@ -236,7 +237,7 @@ class ScanConfiguration:
             self.json_dir = os.getcwd() if json_dir == './' else os.path.abspath(json_dir)
 
         if excluded_paths_string and excluded_paths_string != 'None':
-            self.excluded_directories = [d.lower() for d in excluded_paths_string.split(',')]
+            self.excluded_paths = [d.lower() for d in excluded_paths_string.split(',')]
 
         if excluded_pans_string and excluded_pans_string != 'None':
             self.excluded_pans = [
