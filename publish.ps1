@@ -27,8 +27,9 @@ Write-Host "Installing build dependencies..."
 & $Pip install --quiet --upgrade pip
 & $Pip install --quiet build twine
 
-foreach ($dir in @("dist", "build")) {
-    if (Test-Path $dir) { Remove-Item -Recurse -Force $dir }
+Write-Host "Removing previous build artifacts..."
+foreach ($path in @("dist", "build") + @(Get-ChildItem -Path . -Recurse -Depth 2 -Force -Include "*.egg-info", "*.egg" | ForEach-Object { $_.FullName })) {
+    if (Test-Path $path) { Remove-Item -Recurse -Force $path }
 }
 
 Write-Host "Building distribution..."

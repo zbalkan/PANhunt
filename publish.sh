@@ -33,7 +33,9 @@ echo "Installing build dependencies..."
 "$PIP" install --quiet --upgrade pip
 "$PIP" install --quiet build twine
 
+echo "Removing previous build artifacts..."
 rm -rf dist/ build/
+find . -maxdepth 3 \( -name "*.egg-info" -o -name "*.egg" \) -exec rm -rf {} +
 
 echo "Building distribution..."
 "$PYTHON" -m build
