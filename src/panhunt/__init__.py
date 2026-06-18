@@ -78,7 +78,8 @@ def main() -> None:
             target_path=args.target_path,
             report_dir=args.report_dir,
             json_dir=args.json_dir,
-            excluded_paths_string=args.exclude_paths,            excluded_pans_string=args.exclude_pan,
+            excluded_paths_string=args.exclude_paths,
+            excluded_pans_string=args.exclude_pan,
             worker_count=args.workers,
             quiet=args.quiet)
 
