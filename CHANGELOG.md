@@ -4,6 +4,35 @@ All notable changes to this project are documented in this file.
 
 PANhunt follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [2.1.0] - 2026-06-18
+
+### Added
+
+- Added a `python -m panhunt` module execution entry point.
+- Added example systemd service, timer, and scan configuration files for scheduled scans.
+- Added regression tests for module entrypoint behavior, MIME caching, archive and stream handling, finder edge cases, findings, reporting, scanner correctness, dispatcher collection, presenter output, limited I/O, and utility helpers.
+
+### Changed
+
+- Optimized MIME detection and PAN candidate scanning, including cached MIME lookups and cheaper scan waiting behavior.
+- Updated PAN detection patterns and the minimum PAN length constant.
+- Updated PyPI release metadata, README documentation, and development dependency pins.
+- Treated CLI exclusion inputs consistently as paths.
+
+### Removed
+
+- Removed the broad default scan paths from the packaged sample configuration so scans require an explicit target instead of defaulting to overly wide locations.
+- Removed an obsolete pre-check from PAN candidate scanning after regression testing.
+- Removed an unnecessary sample configuration resource file.
+
+### Fixed
+
+- Fixed scanner correctness regressions and byte payload parsing.
+- Fixed no-target CLI behavior and tests so missing targets do not trigger a root-directory scan.
+- Fixed MIME detection fallback behavior in environments without `libmagic`.
+- Fixed archive, stream, `Finding`, report, and presenter edge cases covered by the expanded regression suite.
+
 ## [2.0.0] - 2026-06-17
 
 ### Added

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "panhunt"
-version = "2.0.0"
+version = "2.1.0"
 description = "Search directories and archives for documents containing payment card numbers (PANs)."
 readme = "README.md"
 requires-python = ">=3.9"
