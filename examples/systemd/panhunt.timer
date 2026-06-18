@@ -1,0 +1,11 @@
+[Unit]
+Description=Run PANhunt daily
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=24h
+Persistent=true
+Unit=panhunt.service
+
+[Install]
+WantedBy=timers.target

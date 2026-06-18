@@ -50,8 +50,7 @@ class TestHuntDirectory:
         assert mock_buffer.enqueue.call_count == 2
 
     def test_excludes_configured_directories(self, mock_dispatcher, mock_buffer, tmp_dir):
-        # Hunter skips files in SUBDIRECTORIES of excluded dirs (pattern: excluded/.*).
-        # Files directly inside the excluded dir itself are still visited.
+        # Hunter skips files in excluded directories and their descendants.
         excl = os.path.join(tmp_dir, 'excluded')
         nested = os.path.join(excl, 'nested')
         os.makedirs(nested)
@@ -65,6 +64,23 @@ class TestHuntDirectory:
         h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
         h.hunt(config)
         mock_buffer.enqueue.assert_not_called()
+
+    def test_excludes_configured_file_paths(self, mock_dispatcher, mock_buffer, tmp_dir):
+        included = os.path.join(tmp_dir, 'included.txt')
+        excluded = os.path.join(tmp_dir, 'lastlog')
+        open(included, 'w').close()
+        open(excluded, 'w').close()
+        config = ScanConfiguration.from_args(
+            target_path=tmp_dir,
+            excluded_directories_string=excluded,
+            quiet=True,
+        )
+        mock_buffer.is_finished.return_value = True
+        h = Hunter(dispatcher=mock_dispatcher, buffer=mock_buffer)
+        h.hunt(config)
+        mock_buffer.enqueue.assert_called_once()
+        job: Job = mock_buffer.enqueue.call_args[0][0]
+        assert job.basename == 'included.txt'
 
 
 class TestHuntResults:

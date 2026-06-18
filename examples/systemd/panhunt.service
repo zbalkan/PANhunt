@@ -1,0 +1,14 @@
+[Unit]
+Description=Run PANhunt scans for /opt and /var/log
+Documentation=https://github.com/zbalkan/PANhunt
+
+[Service]
+Type=oneshot
+# Resource control applies to both ExecStart scans.
+CPUQuota=60%
+
+# Replace this path with the absolute path returned by: which panhunt
+Environment=PANHUNT_BIN=/home/panhunt/.local/bin/panhunt
+ExecStartPre=/usr/bin/install -d -m 0750 /var/log/panhunt
+ExecStart=${PANHUNT_BIN} -C /etc/panhunt/panhunt-opt.ini
+ExecStart=${PANHUNT_BIN} -C /etc/panhunt/panhunt-var-log.ini

@@ -38,7 +38,7 @@ class Hunter:
             if os.path.isfile(target_path):
                 basename = os.path.basename(target_path)
                 dirname = os.path.dirname(target_path)
-                if not self._is_directory_excluded(dirname, config):
+                if not self._is_path_excluded(target_path, config):
                     self._buffer.enqueue(Job(basename, dirname=dirname))
             else:
                 for root, dirs, files in os.walk(target_path):
@@ -47,6 +47,8 @@ class Hunter:
                         if not self._is_directory_excluded(os.path.join(root, d), config)
                     ]
                     for file in files:
+                        if self._is_path_excluded(os.path.join(root, file), config):
+                            continue
                         self._buffer.enqueue(
                             Job(basename=file, dirname=root, payload=None))
 
@@ -74,9 +76,13 @@ class Hunter:
             print(".", end="", flush=True)
 
     def _is_directory_excluded(self, dirname: str, config: ScanConfiguration) -> bool:
+        return self._is_path_excluded(dirname, config)
+
+    def _is_path_excluded(self, path: str, config: ScanConfiguration) -> bool:
         sep = os.sep
-        lower_dirname = dirname.lower()
-        for excluded_dir in config.excluded_directories:
-            if lower_dirname == excluded_dir or lower_dirname.startswith(excluded_dir + sep):
+        lower_path = os.path.abspath(path).lower()
+        for excluded_path in config.excluded_directories:
+            normalized_excluded = os.path.abspath(excluded_path).lower()
+            if lower_path == normalized_excluded or lower_path.startswith(normalized_excluded + sep):
                 return True
         return False

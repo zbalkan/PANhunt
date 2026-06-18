@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -31,8 +32,13 @@ class TestDefaults:
     def test_default_size_limit(self):
         assert ScanConfiguration().size_limit == 8 * 1_073_741_824
 
-    def test_default_worker_count(self):
-        assert ScanConfiguration().worker_count == 1
+    def test_default_worker_count_uses_cpu_count(self):
+        with patch('panhunt.config.os.cpu_count', return_value=6):
+            assert ScanConfiguration().worker_count == 6
+
+    def test_default_worker_count_falls_back_to_one(self):
+        with patch('panhunt.config.os.cpu_count', return_value=None):
+            assert ScanConfiguration().worker_count == 1
 
     def test_default_scan_limits(self):
         c = ScanConfiguration()

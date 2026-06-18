@@ -245,21 +245,22 @@ exclude = /data/logs,/data/tmp
 outfile = /var/reports
 json = /var/reports
 excludepans = 4111111111111111
-sizeLimit = 8589934592
+sizeLimit = 21474836480
+# Omit workers to default to the host CPU core count; set it to override.
 workers = 2
 quiet = false
 
 # Optional safety/resource limits. Values are bytes unless otherwise noted.
 maxScanDepth = 25
 maxChildJobs = 100000
-maxTotalExpandedBytes = 8589934592
+maxTotalExpandedBytes = 21474836480
 maxArchiveMembers = 10000
 maxArchiveCompressionRatio = 100
 maxArchivePathLength = 4096
 archiveSpoolThreshold = 8388608
-maxAttachmentSize = 8589934592
+maxAttachmentSize = 21474836480
 maxAttachmentsPerMessage = 1000
-maxTotalAttachmentBytes = 8589934592
+maxTotalAttachmentBytes = 21474836480
 allowedArchiveTypes =
 deniedArchiveTypes =
 parserTimeoutSeconds = 30
@@ -268,7 +269,12 @@ maxPdfPages = 100
 maxPdfTextBytes = 10485760
 ```
 
-Pass the config file with `-C config.ini`. The configuration file is the preferred way to use advanced scanning controls because it supports more options than the command-line parameters, including safety limits for nested archives, compressed data, attachments, parser isolation, and PDF extraction. Command-line quiet mode (`-q`) overrides the `quiet` value from the configuration file. The `sizeLimit` setting also updates the default total expanded-byte and attachment-byte limits unless those more specific settings are supplied.
+Pass the config file with `-C config.ini`. The configuration file is the preferred way to use advanced scanning controls because it supports more options than the command-line parameters, including safety limits for nested archives, compressed data, attachments, parser isolation, and PDF extraction. Command-line quiet mode (`-q`) overrides the `quiet` value from the configuration file. The default `sizeLimit` is 8 GB, and the default worker count is the host CPU core count. Set `sizeLimit` in an INI file when a scheduled scan needs a larger limit, such as the 20 GB systemd examples below. The `sizeLimit` setting also updates the default total expanded-byte and attachment-byte limits unless those more specific settings are supplied.
+
+
+## Systemd timer example
+
+Example system-level systemd files are available in `examples/systemd/`. They run PANhunt against `/opt` and `/var/log`, skip `/var/log/sudo-io`, `/var/log/lastlog`, and the report directory itself, allow files up to 20 GB, omit an explicit worker count so PANhunt uses the CPU core count, write JSON reports under `/var/log/panhunt` for SIEM collection, and cap service CPU usage with `CPUQuota=60%`. Copy the `.ini` files to `/etc/panhunt/`, replace `PANHUNT_BIN` in the service with the absolute path returned by `which panhunt`, copy the service/timer files to `/etc/systemd/system/`, and enable the timer with `systemctl enable --now panhunt.timer`.
 
 ## Restricting memory usage
 

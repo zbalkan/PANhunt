@@ -50,7 +50,7 @@ class ScanConfiguration:
         self.json_dir = None
         self.excluded_pans = []
         self.size_limit = 8 * 1_073_741_824  # 8GB
-        self.worker_count = 1
+        self.worker_count = os.cpu_count() or 1
         self.max_scan_depth = 25
         self.max_child_jobs = 100_000
         self.max_total_expanded_bytes = self.size_limit
