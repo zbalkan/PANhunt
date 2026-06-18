@@ -13,6 +13,8 @@ PANhunt is a tool that can be used to search drives for [primary account numbers
 
 The tool is useful for checking PCI DSS scope accuracy. Ensuring PAN does not leak out of the authorized locations and there's no clear text PAN within the infrastructure, the tool may help as a simple control.
 
+[PCI DSS 4.0.1](https://docs-prv.pcisecuritystandards.org/PCI%20DSS/Standard/PCI-DSS-v4_0_1.pdf) **Req 3.5.1** requires PAN *unreadable* wherever it is stored. It does not require an automation or detection tool directly, but a process. This tool helps building a detection capability.
+
 ## Acknowledgements
 
 PANhunt remains rooted in the original [Dionach PANhunt project](https://github.com/dionach/PANhunt), created and released by Dionach Ltd. The original project made a simple, practical PAN discovery tool available to the PCI and security community, including the PST parsing foundation that this fork continues to build on.
@@ -21,7 +23,7 @@ This fork keeps the Dionach icon as a visible sign of respect for the original s
 
 ## Function
 
-PANhunt uses regular expressions to look for Visa, MasterCard, AMEX and other credit card numbers across a broad set of document, mail, and archive formats. Archive and container formats are recursed so nested documents, emails, and attachments can be searched.
+PANhunt uses regular expressions to look for Visa, MasterCard, AMEX and other brands of primary account numbers across a broad set of document, mail, and archive formats. Archive and container formats are recursed so nested documents, emails, and attachments can be searched.
 
 Currently supported searchable formats include:
 
@@ -277,7 +279,6 @@ maxPdfTextBytes = 10485760
 ```
 
 Pass the config file with `-C config.ini`. The configuration file is the preferred way to use advanced scanning controls because it supports more options than the command-line parameters, including safety limits for nested archives, compressed data, attachments, parser isolation, and PDF extraction. Command-line quiet mode (`-q`) overrides the `quiet` value from the configuration file. The default `sizeLimit` is 8 GB, and the default worker count is the host CPU core count. Set `sizeLimit` in an INI file when a scheduled scan needs a larger limit, such as the 20 GB systemd examples below. The `sizeLimit` setting also updates the default total expanded-byte and attachment-byte limits unless those more specific settings are supplied.
-
 
 ## Systemd timer example
 
