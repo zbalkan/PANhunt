@@ -8,7 +8,6 @@ Type=oneshot
 CPUQuota=60%
 
 # Replace this path with the absolute path returned by: which panhunt
-Environment=PANHUNT_BIN=/home/panhunt/.local/bin/panhunt
 ExecStartPre=/usr/bin/install -d -m 0750 /var/log/panhunt
-ExecStart=${PANHUNT_BIN} -C /etc/panhunt/panhunt-opt.ini
-ExecStart=${PANHUNT_BIN} -C /etc/panhunt/panhunt-var-log.ini
+ExecStart=/root/.local/bin/panhunt -C /etc/panhunt/panhunt-opt.ini
+ExecStart=/root/.local/bin/panhunt -C /etc/panhunt/panhunt-var-log.ini
