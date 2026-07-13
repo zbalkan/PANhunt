@@ -4,7 +4,7 @@
 # Update via: pip install -e .[dev] && pip freeze > requirements.dev.txt
 build==1.5.0
 colorama==0.4.6
-mypy==2.1.0
+mypy==2.3.0
 mypy-extensions==1.1.0
 pdfminer.six==20260107
 psutil==7.2.2
