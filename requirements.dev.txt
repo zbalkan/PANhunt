@@ -12,6 +12,6 @@ pytest==9.1.0
 pytest-cov==7.1.0
 python-magic-bin==0.4.14 ; platform_system == 'Windows'
 python-magic==0.4.27 ; platform_system != 'Windows'
-twine==6.2.0
+twine==7.0.0
 typing-extensions==4.15
 vermin==1.8.0
