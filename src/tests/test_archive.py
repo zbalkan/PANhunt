@@ -105,3 +105,31 @@ def test_tar_archive_preserves_nested_member_path_and_scan_context_budget():
     assert children[0].context.logical_path == 'bundle.tar!/nested/card.txt'
     assert context.budget.child_jobs == 1
     assert context.budget.expanded_bytes == len(data)
+
+
+def test_opendocument_archive_rejects_entity_expansion_xml():
+    payload = _zip_payload({
+        'content.xml': b'''<?xml version="1.0"?>
+<!DOCTYPE document [<!ENTITY card "4111111111111111">]>
+<document>&card;</document>''',
+    })
+
+    children, error = OpenDocumentArchive(path='unsafe.odt', payload=payload).get_children()
+
+    assert children == []
+    assert isinstance(error, PANHuntException)
+    assert 'Unsafe OpenDocument XML' in str(error)
+
+
+def test_opendocument_archive_rejects_xml_over_configured_limit():
+    payload = _zip_payload({'content.xml': b'<document>' + (b'x' * 16) + b'</document>'})
+
+    children, error = OpenDocumentArchive(
+        path='oversized.odt',
+        payload=payload,
+        max_xml_bytes=16,
+    ).get_children()
+
+    assert children == []
+    assert isinstance(error, PANHuntException)
+    assert 'OpenDocument XML member exceeds configured limit' in str(error)

@@ -19,6 +19,7 @@ from .formats.pdf import Pdf
 from .formats.pst import PST
 from .formats.pst import Attachment as PstAttachment
 from .job import FileLikePayload, Job
+from .limitedio import read_limited
 from .pan import PAN
 from .parser_isolation import SubprocessParserRunner
 
@@ -56,11 +57,15 @@ class ScannerBase(ABC):
             context=context
         )
 
-    def _payload_bytes(self, job: Job) -> Optional[bytes]:
+    def _payload_bytes(self, job: Job, max_bytes: Optional[int] = None) -> Optional[bytes]:
         payload = job.payload
         if payload is None:
             return None
         if isinstance(payload, bytes):
+            if max_bytes is not None and len(payload) > max_bytes:
+                raise PANHuntException(
+                    f'Embedded payload exceeds configured size limit of {max_bytes} bytes: {job.abspath}'
+                )
             return payload
         if not panutils.is_file_like(payload):
             return None
@@ -74,13 +79,17 @@ class ScannerBase(ABC):
             except OSError as e:
                 logging.warning(f"Failed to seek stream to start: {e}")
 
+        if max_bytes is not None:
+            return read_limited(payload, max_bytes)
+
         stream_payload: Union[bytes, bytearray, memoryview] = payload.read()
         if isinstance(stream_payload, bytes):
             return stream_payload
-        elif isinstance(stream_payload, memoryview):
+        if isinstance(stream_payload, memoryview):
             return stream_payload.tobytes()
-        elif isinstance(stream_payload, bytearray):
+        if isinstance(stream_payload, bytearray):
             return bytes(stream_payload)
+        return None
 
 
 class PlainTextFileScanner(ScannerBase):
@@ -377,9 +386,12 @@ class PdfScanner(ScannerBase):
             timeout_seconds=self._config.parser_timeout_seconds,
             memory_limit_bytes=self._config.parser_memory_limit_bytes
         )
-        payload = self._payload_bytes(job)
+        payload = self._payload_bytes(
+            job,
+            max_bytes=self._config.max_embedded_document_bytes
+        )
         pdf = Pdf(
-            file=io.BytesIO(initial_bytes=payload) if payload is not None else job.abspath,
+            file=payload if payload is not None else job.abspath,
             runner=runner,
             max_pages=self._config.max_pdf_pages,
             max_text_bytes=self._config.max_pdf_text_bytes

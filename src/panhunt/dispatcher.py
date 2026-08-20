@@ -206,7 +206,8 @@ class Dispatcher:
                 max_members=self._config.max_archive_members,
                 compression_ratio_limit=self._config.max_archive_compression_ratio,
                 max_path_length=self._config.max_archive_path_length,
-                spool_threshold=self._config.archive_spool_threshold
+                spool_threshold=self._config.archive_spool_threshold,
+                max_xml_bytes=self._config.max_xml_bytes
             )
             try:
                 children, e = archive.get_children()

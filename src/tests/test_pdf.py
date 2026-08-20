@@ -1,5 +1,3 @@
-import io
-
 import pytest
 
 from panhunt.config import ScanConfiguration
@@ -20,7 +18,7 @@ class InlineRunner(SubprocessParserRunner):
 
 def test_pdf_text_limit(monkeypatch):
     monkeypatch.setattr(pdf_module, 'extract_text', lambda source, maxpages=0: 'x' * 20)
-    pdf = Pdf(file=io.BytesIO(b'%PDF'), runner=InlineRunner(), max_pages=1, max_text_bytes=4)
+    pdf = Pdf(file=b'%PDF', runner=InlineRunner(), max_pages=1, max_text_bytes=4)
     with pytest.raises(Exception, match='exceeds configured limit'):
         pdf.get_text()
 
@@ -51,3 +49,11 @@ def test_pdf_scanner_uses_isolated_limits(monkeypatch, mock_buffer):
     assert captured['timeout_seconds'] == 3
     assert captured['memory_limit_bytes'] == 4096
     assert captured['args'][1:] == (2, 128)
+
+
+def test_pdf_scanner_rejects_oversized_embedded_payload(mock_buffer):
+    config = ScanConfiguration.from_args(max_embedded_document_bytes=4)
+    scanner = PdfScanner(buffer=mock_buffer, config=config)
+
+    with pytest.raises(Exception, match='Embedded payload exceeds configured size limit'):
+        scanner.scan(Job(basename='inline.pdf', dirname='/tmp', payload=b'%PDF-1.7'))

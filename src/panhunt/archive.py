@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import os
 import tarfile
-import xml.etree.ElementTree as ET
 from gzip import GzipFile
 from io import BytesIO
 from lzma import LZMAFile
 from tarfile import TarFile, TarInfo
 from typing import IO, Optional, Union, cast
 from zipfile import ZipFile, ZipInfo
+
+from defusedxml import ElementTree as SafeElementTree
+from defusedxml.common import DefusedXmlException
 
 from . import panutils
 from .exceptions import PANHuntException
@@ -32,7 +34,8 @@ class Archive:
             max_members: int = 10_000,
             compression_ratio_limit: int = 100,
             max_path_length: int = 4096,
-            spool_threshold: int = 8 * 1024 * 1024) -> None:
+            spool_threshold: int = 8 * 1024 * 1024,
+            max_xml_bytes: int = 10 * 1024 * 1024) -> None:
         self.path = path
         self.payload = payload
         self.size_limit = size_limit
@@ -41,6 +44,7 @@ class Archive:
         self.compression_ratio_limit = compression_ratio_limit
         self.max_path_length = max_path_length
         self.spool_threshold = spool_threshold
+        self.max_xml_bytes = max_xml_bytes
 
     def get_children(self) -> tuple[list[Job], Optional[PANHuntException]]:
         raise NotImplementedError()
@@ -239,13 +243,18 @@ class OpenDocumentArchive(ZipArchive):
             )
         return self._ENCRYPTION_MARKER in manifest, None
 
-    @staticmethod
-    def _extract_xml_text(payload: IO[bytes]) -> bytes:
+    def _extract_xml_text(self, payload: IO[bytes]) -> bytes:
         payload.seek(0)
-        raw_payload = payload.read()
+        raw_payload = payload.read(self.max_xml_bytes + 1)
+        if len(raw_payload) > self.max_xml_bytes:
+            raise PANHuntException(
+                f'OpenDocument XML member exceeds configured limit of {self.max_xml_bytes} bytes'
+            )
         try:
-            root = ET.fromstring(raw_payload)
-        except ET.ParseError:
+            root = SafeElementTree.fromstring(raw_payload)
+        except DefusedXmlException as ex:
+            raise PANHuntException(f'Unsafe OpenDocument XML: {type(ex).__name__}') from ex
+        except SafeElementTree.ParseError:
             return raw_payload
 
         text = ' '.join(part.strip() for part in root.itertext() if part and part.strip())

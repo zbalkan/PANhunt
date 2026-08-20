@@ -21,14 +21,14 @@ def _extract_pdf_text(pdfFile: Union[str, bytes], max_pages: int, max_text_bytes
 
 class Pdf:
 
-    __file: Union[str, BytesIO]
+    __file: Union[str, bytes]
     __runner: Optional[SubprocessParserRunner]
     __max_pages: int
     __max_text_bytes: int
 
     def __init__(
             self,
-            file: Union[str, BytesIO],
+            file: Union[str, bytes],
             runner: Optional[SubprocessParserRunner] = None,
             max_pages: int = 100,
             max_text_bytes: int = 10 * 1024 * 1024) -> None:
@@ -39,11 +39,7 @@ class Pdf:
 
     def get_text(self) -> str:
         parser_input: Union[str, bytes]
-        if isinstance(self.__file, str):
-            parser_input = self.__file
-        else:
-            self.__file.seek(0)
-            parser_input = bytes(self.__file.read())
+        parser_input = self.__file
 
         if self.__runner is not None:
             return self.__runner.run(_extract_pdf_text, parser_input, self.__max_pages, self.__max_text_bytes)

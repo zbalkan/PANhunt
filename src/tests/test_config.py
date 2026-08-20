@@ -221,6 +221,8 @@ class TestParserLimitConfiguration:
         assert c.parser_memory_limit_bytes == 512 * 1024 * 1024
         assert c.max_pdf_pages == 100
         assert c.max_pdf_text_bytes == 10 * 1024 * 1024
+        assert c.max_xml_bytes == 10 * 1024 * 1024
+        assert c.max_embedded_document_bytes == 32 * 1024 * 1024
 
     def test_parser_limit_overrides(self):
         c = ScanConfiguration.from_args(
@@ -228,11 +230,15 @@ class TestParserLimitConfiguration:
             parser_memory_limit_bytes=1024,
             max_pdf_pages=7,
             max_pdf_text_bytes=2048,
+            max_xml_bytes=4096,
+            max_embedded_document_bytes=8192,
         )
         assert c.parser_timeout_seconds == 5
         assert c.parser_memory_limit_bytes == 1024
         assert c.max_pdf_pages == 7
         assert c.max_pdf_text_bytes == 2048
+        assert c.max_xml_bytes == 4096
+        assert c.max_embedded_document_bytes == 8192
 
 
 class TestValidation:

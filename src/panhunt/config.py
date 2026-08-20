@@ -32,6 +32,8 @@ class ScanConfiguration:
     parser_memory_limit_bytes: int
     max_pdf_pages: int
     max_pdf_text_bytes: int
+    max_xml_bytes: int
+    max_embedded_document_bytes: int
     quiet: bool
     report_file: str
     json_file: str
@@ -66,6 +68,8 @@ class ScanConfiguration:
         self.parser_memory_limit_bytes = 512 * 1024 * 1024
         self.max_pdf_pages = 100
         self.max_pdf_text_bytes = 10 * 1024 * 1024
+        self.max_xml_bytes = 10 * 1024 * 1024
+        self.max_embedded_document_bytes = 32 * 1024 * 1024
         self.quiet = False
         timestamp = time.strftime("%Y-%m-%d-%H%M%S")
         self.report_file = f'panhunt_{timestamp}.report'
@@ -106,6 +110,8 @@ class ScanConfiguration:
         self._validate_non_negative_int('parser_memory_limit_bytes', self.parser_memory_limit_bytes)
         self._validate_positive_int('max_pdf_pages', self.max_pdf_pages)
         self._validate_non_negative_int('max_pdf_text_bytes', self.max_pdf_text_bytes)
+        self._validate_positive_int('max_xml_bytes', self.max_xml_bytes)
+        self._validate_positive_int('max_embedded_document_bytes', self.max_embedded_document_bytes)
 
     def is_excluded(self, pan: str) -> bool:
         return self._canonicalize_pan(pan) in self.excluded_pans
@@ -135,6 +141,8 @@ class ScanConfiguration:
                   parser_memory_limit_bytes: Optional[int] = None,
                   max_pdf_pages: Optional[int] = None,
                   max_pdf_text_bytes: Optional[int] = None,
+                  max_xml_bytes: Optional[int] = None,
+                  max_embedded_document_bytes: Optional[int] = None,
                   quiet: Optional[bool] = None) -> 'ScanConfiguration':
 
         config = cls()
@@ -162,6 +170,8 @@ class ScanConfiguration:
             parser_memory_limit_bytes=parser_memory_limit_bytes,
             max_pdf_pages=max_pdf_pages,
             max_pdf_text_bytes=max_pdf_text_bytes,
+            max_xml_bytes=max_xml_bytes,
+            max_embedded_document_bytes=max_embedded_document_bytes,
             quiet=quiet
         )
         return config
@@ -198,6 +208,8 @@ class ScanConfiguration:
             parser_memory_limit_bytes=cls._try_parse_int(raw, 'parsermemorylimitbytes'),
             max_pdf_pages=cls._try_parse_int(raw, 'maxpdfpages'),
             max_pdf_text_bytes=cls._try_parse_int(raw, 'maxpdftextbytes'),
+            max_xml_bytes=cls._try_parse_int(raw, 'maxxmlbytes'),
+            max_embedded_document_bytes=cls._try_parse_int(raw, 'maxembeddeddocumentbytes'),
             quiet=quiet if quiet is not None else cls._try_parse_bool(raw, 'quiet'),
         )
 
@@ -225,6 +237,8 @@ class ScanConfiguration:
                 parser_memory_limit_bytes: Optional[int] = None,
                 max_pdf_pages: Optional[int] = None,
                 max_pdf_text_bytes: Optional[int] = None,
+                max_xml_bytes: Optional[int] = None,
+                max_embedded_document_bytes: Optional[int] = None,
                 quiet: Optional[bool] = None) -> None:
 
         if target_path and target_path != 'None':
@@ -318,6 +332,14 @@ class ScanConfiguration:
         if max_pdf_text_bytes is not None:
             self._validate_non_negative_int('max_pdf_text_bytes', max_pdf_text_bytes)
             self.max_pdf_text_bytes = max_pdf_text_bytes
+
+        if max_xml_bytes is not None:
+            self._validate_positive_int('max_xml_bytes', max_xml_bytes)
+            self.max_xml_bytes = max_xml_bytes
+
+        if max_embedded_document_bytes is not None:
+            self._validate_positive_int('max_embedded_document_bytes', max_embedded_document_bytes)
+            self.max_embedded_document_bytes = max_embedded_document_bytes
 
         if quiet is not None:
             self.quiet = quiet

@@ -4,10 +4,40 @@ Documentation=https://github.com/zbalkan/PANhunt
 
 [Service]
 Type=oneshot
-# Resource control applies to both ExecStart scans.
-CPUQuota=60%
+User=panhunt
+Group=panhunt
+UMask=0027
 
-# Replace this path with the absolute path returned by: which panhunt
-ExecStartPre=/usr/bin/install -d -m 0750 /var/log/panhunt
-ExecStart=/root/.local/bin/panhunt -C /etc/panhunt/panhunt-opt.ini
-ExecStart=/root/.local/bin/panhunt -C /etc/panhunt/panhunt-var-log.ini
+# Grant the panhunt account read access to the configured scan roots with ACLs
+# or group membership. Do not run a document parser as root by default.
+# The + prefix limits root use to pre-creating the report directory.
+ExecStartPre=+/usr/bin/install -d -o panhunt -g panhunt -m 0750 /var/log/panhunt
+WorkingDirectory=/var/log/panhunt
+ExecStart=/usr/local/bin/panhunt -C /etc/panhunt/panhunt-opt.ini
+ExecStart=/usr/local/bin/panhunt -C /etc/panhunt/panhunt-var-log.ini
+
+# Bound resource consumption from hostile or malformed documents.
+CPUQuota=60%
+MemoryMax=1G
+TasksMax=128
+LimitNOFILE=8192
+TimeoutStartSec=30min
+
+# Restrict the service to its scan roots and report directory.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+ReadOnlyPaths=/opt /var/log
+ReadWritePaths=/var/log/panhunt
+
+[Install]
+WantedBy=multi-user.target

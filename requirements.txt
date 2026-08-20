@@ -1,9 +1,10 @@
 # PANhunt runtime dependencies with pinned versions for reproducible installs.
 # For development only; end users should use: pip install panhunt
 # These versions are validated against pyproject.toml constraints before each release.
-colorama==0.4.6
-pdfminer.six==20260107
-psutil==7.2.2
-python-magic-bin==0.4.14 ; platform_system == 'Windows'
-python-magic==0.4.27 ; platform_system != 'Windows'
-typing-extensions==4.15
+colorama>=0.4.6
+defusedxml>=0.7.1
+pdfminer.six>=20260107
+psutil>=7.2.2
+python-magic-bin>=0.4.14 ; platform_system == 'Windows'
+python-magic>=0.4.27 ; platform_system != 'Windows'
+typing-extensions>=4.15

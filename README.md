@@ -276,13 +276,16 @@ parserTimeoutSeconds = 30
 parserMemoryLimitBytes = 536870912
 maxPdfPages = 100
 maxPdfTextBytes = 10485760
+# Limits for OpenDocument XML and embedded document payloads.
+maxXmlBytes = 10485760
+maxEmbeddedDocumentBytes = 33554432
 ```
 
 Pass the config file with `-C config.ini`. The configuration file is the preferred way to use advanced scanning controls because it supports more options than the command-line parameters, including safety limits for nested archives, compressed data, attachments, parser isolation, and PDF extraction. Command-line quiet mode (`-q`) overrides the `quiet` value from the configuration file. The default `sizeLimit` is 8 GB, and the default worker count is the host CPU core count. Set `sizeLimit` in an INI file when a scheduled scan needs a larger limit, such as the 20 GB systemd examples below. The `sizeLimit` setting also updates the default total expanded-byte and attachment-byte limits unless those more specific settings are supplied.
 
 ## Systemd timer example
 
-Example system-level systemd files are available in `examples/systemd/`. They run PANhunt against `/opt` and `/var/log`, skip `/var/log/sudo-io`, `/var/log/lastlog`, and the report directory itself, allow files up to 20 GB, omit an explicit worker count so PANhunt uses the CPU core count, write JSON reports under `/var/log/panhunt` for SIEM collection, and cap service CPU usage with `CPUQuota=60%`. Copy the `.ini` files to `/etc/panhunt/`, replace `PANHUNT_BIN` in the service with the absolute path returned by `which panhunt`, copy the service/timer files to `/etc/systemd/system/`, and enable the timer with `systemctl enable --now panhunt.timer`.
+Example system-level systemd files are available in `examples/systemd/`. They run PANhunt against `/opt` and `/var/log`, skip `/var/log/sudo-io`, `/var/log/lastlog`, and the report directory itself, allow files up to 20 GB, write JSON reports under `/var/log/panhunt` for SIEM collection, and apply CPU, memory, task, file-descriptor, timeout, filesystem, and privilege restrictions. The service runs as a dedicated `panhunt` user rather than root; grant that account read access to approved scan roots using ACLs or group membership before enabling the timer. Copy the `.ini` files to `/etc/panhunt/`, confirm `/usr/local/bin/panhunt` is the installed path or change it in the service file, copy the service/timer files to `/etc/systemd/system/`, and enable the timer with `systemctl enable --now panhunt.timer`.
 
 ## Restricting memory usage
 
