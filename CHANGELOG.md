@@ -4,6 +4,38 @@ All notable changes to this project are documented in this file.
 
 PANhunt follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-08-20
+
+### Added
+
+- Added `defusedxml` as a runtime and development dependency for hardened OpenDocument XML handling.
+- Added configurable `maxXmlBytes` and `maxEmbeddedDocumentBytes` limits, with secure defaults of 10 MiB and 32 MiB respectively.
+- Added regression coverage for entity-expansion XML, oversized OpenDocument XML, oversized embedded PDFs, and the new parser-limit configuration options.
+- Added a Python 3.9–3.12 quality workflow that runs syntax checks, tests with unfiltered coverage, package builds, and distribution metadata validation.
+- Added systemd resource and sandbox controls, including memory, task, file-descriptor, timeout, filesystem, and privilege restrictions.
+
+### Changed
+
+- Changed OpenDocument XML extraction to use a hardened parser and reject unsafe XML constructs.
+- Changed embedded PDF processing to enforce a payload-size limit before parser-process handoff.
+- Changed PDF parsing to pass bounded byte payloads directly, avoiding an unnecessary in-memory `BytesIO` copy.
+- Changed the example systemd deployment to run scans as a dedicated `panhunt` service account with a restrictive umask and controlled report directory.
+- Changed the example scan configurations and README to document conservative XML, PDF, timeout, and parser-memory limits.
+- Changed the Bandit workflow to scan `src/panhunt` and fail on medium-or-higher-confidence findings rather than reporting success unconditionally.
+
+### Removed
+
+- Removed direct use of the standard-library XML parser for OpenDocument text extraction.
+- Removed Bandit’s fail-open `exit_zero: true` behavior from the security workflow.
+- Removed the redundant in-memory conversion of embedded PDF content before isolated parsing.
+- Removed the root-default execution model from the supplied systemd service example.
+
+### Fixed
+
+- Fixed an availability risk in which hostile XML could reach a non-hardened parser without an XML-specific byte limit.
+- Fixed an availability risk in which nested or embedded PDFs could create unbounded parent-process memory copies before isolation controls applied.
+- Fixed delivery-control gaps by making the security scan blocking and expanding test coverage across all advertised Python versions.
+- Fixed the scheduled-scan example so untrusted document parsing is confined to an unprivileged, resource-bounded service context.
 
 ## [2.1.0] - 2026-06-18
 
