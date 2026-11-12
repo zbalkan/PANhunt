@@ -33,7 +33,7 @@ def _log_uncaught_exception(exc_type, exc_value, exc_traceback) -> None:
     logging.critical('Unhandled fatal error', exc_info=(exc_type, exc_value, exc_traceback))
 
 
-def main() -> None:
+def main() -> int:
     logging.basicConfig(
         filename=os.path.join(os.getcwd(), f'{APP_NAME}.log'),
         encoding='utf-8',
@@ -72,7 +72,7 @@ def main() -> None:
         arg_parser.print_usage()
         print('No scan target or configuration file specified; no scan was started.')
         print('Use -h or --help for more information.')
-        return
+        return 2
     else:
         config = ScanConfiguration.from_args(
             target_path=args.target_path,
@@ -85,22 +85,27 @@ def main() -> None:
 
     result = PanHuntService().scan(config)
     CliPresenter().show(result)
+    return result.exit_code
 
 
 def run() -> None:
     try:
-        main()
-        logging.info('Exiting')
+        code = main()
+        logging.info('Exiting with status %s', code)
+        if code:
+            raise SystemExit(code)
     except KeyboardInterrupt:
         print('\nInterrupted. Exiting cleanly.')
         logging.info('Interrupted by user.')
         logging.info('Exiting')
         raise SystemExit(130)
+    except SystemExit:
+        raise
     except Exception as ex:
         print('ERROR: ' + str(ex))
         logging.exception('Unhandled fatal error')
         logging.info('Exiting')
-        raise SystemExit(1)
+        raise SystemExit(2)
 
 
 if __name__ == '__main__':
