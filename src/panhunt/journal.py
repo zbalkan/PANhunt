@@ -108,5 +108,11 @@ def scan_export(stream: BinaryIO, config: ScanConfiguration) -> ScanResult:
                                 mimetype='application/vnd.fdo.journal',
                                 encoding='binary', err=exc))
 
+    if entry_index == 0 and not failures:
+        failures.append(Finding('journal-export', 'stdin', payload=b'',
+                                mimetype='application/vnd.fdo.journal',
+                                encoding='binary',
+                                err=JournalFormatError('Empty journal export; no coverage can be established')))
+
     return ScanResult(matched_files=findings, interesting_files=failures,
                       start_time=start_time, end_time=datetime.now(), config=config)
