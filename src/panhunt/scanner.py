@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import codecs
 import logging
 import os
 from abc import ABC, abstractmethod
@@ -120,58 +121,54 @@ class PlainTextFileScanner(ScannerBase):
         return self._pan_finder.find(text)
 
     def _scan_file(self, filepath: str, encoding: str = 'utf8') -> list[PAN]:
-        matches: list[PAN] = []
-        encoding = self._text_encoding(encoding)
-
-        file_size: int = os.stat(path=filepath).st_size
-
-        if file_size < MIN_PAN_LENGTH:
+        if os.stat(path=filepath).st_size < MIN_PAN_LENGTH:
             return []
-
-        if 0 < file_size < BLOCK_SIZE_BYTES:
-            with open(file=filepath, mode='r', encoding=encoding, errors='backslashreplace') as f:
-                text = f.read()
-            matches.extend(self._pan_finder.find(text))
-        else:
-            with open(file=filepath, mode='r', encoding=encoding, errors='backslashreplace') as f:
-                for line in f:
-                    matches.extend(self._pan_finder.find(line))
-
-        return matches
+        with open(filepath, 'rb') as stream:
+            return self._scan_stream(stream, encoding)
 
     def _scan_stream(self, stream: FileLikePayload, encoding: str = 'utf8') -> list[PAN]:
+        """Scan bounded windows with enough right context for every PAN pattern.
+
+        A byte decoder persists across reads. Keep one character of left context
+        for lookbehind checks, and a 96-character right lookahead. No input line
+        is retained in full, even if it has no newline.
+        """
         matches: list[PAN] = []
-
         encoding = self._text_encoding(encoding)
-
         seek = getattr(stream, 'seek', None)
         if callable(seek):
             try:
                 seek(0)
             except io.UnsupportedOperation:
-                pass  # non-seekable stream; read from current position
-            except OSError as e:
-                logging.warning(f"Failed to seek stream to start: {e}")
+                pass
+            except OSError as ex:
+                logging.warning("Failed to seek stream to start: %s", ex)
 
+        decoder = None
         buffer = ''
+        overlap = 96
         while True:
             chunk = stream.read(STREAM_CHUNK_SIZE_BYTES)
             if not chunk:
-                if buffer and len(buffer) >= MIN_PAN_LENGTH:
-                    matches.extend(self._pan_finder.find(buffer))
+                if decoder is not None:
+                    buffer += decoder.decode(b'', final=True)
+                matches.extend(self._pan_finder.find(buffer))
                 break
 
             if isinstance(chunk, bytes):
-                chunk = chunk.decode(encoding=encoding, errors='backslashreplace')
+                if decoder is None:
+                    decoder = codecs.getincrementaldecoder(encoding)(errors='backslashreplace')
+                buffer += decoder.decode(chunk, final=False)
+            else:
+                buffer += chunk
 
-            buffer += chunk
-
-            lines = buffer.split('\n')
-            for line in lines[:-1]:
-                if len(line) >= MIN_PAN_LENGTH:
-                    matches.extend(self._pan_finder.find(line))
-
-            buffer = lines[-1]
+            if len(buffer) > 2 * overlap:
+                cutoff = len(buffer) - overlap
+                matches.extend(
+                    pan for start, _, pan in self._pan_finder.find_with_offsets(buffer)
+                    if start < cutoff
+                )
+                buffer = buffer[cutoff - 1:]
 
         return matches
 
