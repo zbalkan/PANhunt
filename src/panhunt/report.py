@@ -19,6 +19,7 @@ class ReportGenerator:
             f'Uname: {" | ".join(platform.uname())}{newline}'
             f'Elapsed time: {result.elapsed}{newline}'
             f'Found {result.pan_count} possible PANs.{newline}'
+            f'Scan status: {result.status} ({len(result.interesting_files)} unprocessed/failed items){newline}'
             f'{sep}{newline}'
         )
 
@@ -48,6 +49,9 @@ class ReportGenerator:
             'excluded': ','.join(result.config.excluded_paths),
             'elapsed': str(result.elapsed),
             'pans_found': result.pan_count,
+            'scan_status': result.status,
+            'exit_code': result.exit_code,
+            'failed_items': len(result.interesting_files),
             'pans_found_results': {
                 f.abspath: [str(pan) for pan in f.matches]
                 for f in result.matched_files
