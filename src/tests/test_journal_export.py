@@ -55,3 +55,16 @@ def test_two_entries_have_distinct_source_identity(tmp_path):
                               b'MESSAGE=4111111111111111\n\n')
     assert result.pan_count == 2
     assert result.matched_files[0].logical_path != result.matched_files[1].logical_path
+
+
+def test_missing_cursor_is_reported_as_incomplete(tmp_path):
+    result = _scan(tmp_path, b'MESSAGE=4111111111111111\n\n')
+    assert result.pan_count == 1
+    assert result.interesting_files
+    assert 'no __CURSOR' in result.interesting_files[0].errors[0]
+
+
+def test_empty_input_is_incomplete(tmp_path):
+    result = _scan(tmp_path, b'')
+    assert result.pan_count == 0
+    assert result.interesting_files
