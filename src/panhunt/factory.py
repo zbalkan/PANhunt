@@ -87,6 +87,8 @@ class ScannerFactory:
 
         # Application types
         if mime_type == 'application':
+            if mime_subtype in ('json', 'x-ndjson', 'jsonl', 'x-jsonlines'):
+                return enums.FileTypeEnum.Plaintext
             if mime_subtype == 'octet-stream':
                 if extension_file_type != enums.FileTypeEnum.Unknown:
                     return extension_file_type
