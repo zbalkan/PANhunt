@@ -31,6 +31,8 @@ class ReportGenerator:
             report += f'FOUND PANs: {file.abspath} ({panutils.size_friendly(file.size)}){newline}'
             for pan in file.matches:
                 report += f'\t{pan}{newline}'
+            if getattr(file, 'source_cursor', None) is not None:
+                report += f'Journal cursor: {file.source_cursor}{newline}'
             report += newline
 
         if result.interesting_files:
@@ -48,6 +50,11 @@ class ReportGenerator:
             'excluded': ','.join(result.config.excluded_paths),
             'elapsed': str(result.elapsed),
             'pans_found': result.pan_count,
+            'journal_findings': [
+                {'path': f.logical_path, 'source_cursor': getattr(f, 'source_cursor', None),
+                 'masked_pans': [str(pan) for pan in f.matches]}
+                for f in result.matched_files if getattr(f, 'source_cursor', None) is not None
+            ],
             'pans_found_results': {
                 f.abspath: [str(pan) for pan in f.matches]
                 for f in result.matched_files
