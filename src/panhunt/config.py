@@ -346,7 +346,7 @@ class ScanConfiguration:
 
     @staticmethod
     def _canonicalize_pan(pan: str) -> str:
-        return ''.join(ch for ch in pan if ch.isdigit())
+        return ''.join(ch for ch in pan if ch in '0123456789')
 
     @staticmethod
     def _validate_positive_int(name: str, value: int) -> None:
