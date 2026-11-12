@@ -18,6 +18,19 @@ class ScanResult:
     config: ScanConfiguration
 
     @property
+    def status(self) -> str:
+        """A scan with unprocessed items cannot be certified clean."""
+        if self.interesting_files:
+            return 'incomplete'
+        if self.pan_count:
+            return 'findings'
+        return 'clean'
+
+    @property
+    def exit_code(self) -> int:
+        return {'clean': 0, 'findings': 1, 'incomplete': 2}[self.status]
+
+    @property
     def elapsed(self) -> timedelta:
         return self.end_time - self.start_time
 
