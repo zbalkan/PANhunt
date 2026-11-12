@@ -9,7 +9,7 @@ def _matches(brand: str, text: str) -> list[str]:
 
 
 def test_diners_and_discover_do_not_consume_neighboring_separator():
-    assert _matches('DinersClub', 'x: 30569309025904 ;') == []
+    assert _matches('DinersClub', 'x30569309025904;') == []
     assert _matches('DinersClub', ':30569309025904;') == ['30569309025904']
     assert _matches('Discover', ':6011111111111117;') == ['6011111111111117']
 
