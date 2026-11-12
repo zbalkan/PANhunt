@@ -137,3 +137,36 @@ class TestScanOpenDocumentFile:
         assert result.pan_count == 0
         assert len(result.interesting_files) == 1
         assert 'Encrypted OpenDocument files are not supported' in result.interesting_files[0].errors[0]
+
+
+class TestCompressedLogPipeline:
+    """Gzip must be handled as an archive rather than skipped as opaque data."""
+
+    def test_rotated_gzip_log_detects_pan(self, tmp_dir):
+        import gzip
+        path = os.path.join(tmp_dir, 'messages.log.1.gz')
+        with gzip.open(path, 'wb') as stream:
+            stream.write(b'payment 4111111111111111\n')
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
+        result = PanHuntService().scan(config)
+        assert result.pan_count == 1, result.interesting_files
+        assert result.interesting_files == []
+
+    def test_gzip_buffer_chunk_detects_pan(self, tmp_dir):
+        import gzip
+        path = os.path.join(tmp_dir, 'buffer.0.gz')
+        with gzip.open(path, 'wb') as stream:
+            stream.write(b'{"message":"4111111111111111"}\n')
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
+        result = PanHuntService().scan(config)
+        assert result.pan_count == 1, result.interesting_files
+        assert result.interesting_files == []
+
+    def test_invalid_gzip_is_reported_instead_of_silently_ignored(self, tmp_dir):
+        path = os.path.join(tmp_dir, 'corrupt.gz')
+        with open(path, 'wb') as stream:
+            stream.write(b'\x1f\x8b\x08invalid gzip payload')
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
+        result = PanHuntService().scan(config)
+        assert result.pan_count == 0
+        assert result.interesting_files
