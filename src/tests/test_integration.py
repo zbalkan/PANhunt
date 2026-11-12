@@ -143,3 +143,25 @@ class TestScanOpenDocumentFile:
         assert 'Encrypted OpenDocument files are not supported' in result.interesting_files[0].errors[0]
         assert result.status == 'incomplete'
         assert result.exit_code == 2
+
+
+class TestIncompleteCoverage:
+    def test_unknown_nonempty_file_is_not_reported_clean(self, tmp_dir):
+        path = os.path.join(tmp_dir, 'opaque.bin')
+        with open(path, 'wb') as stream:
+            stream.write(bytes.fromhex('00010203040506070809'))
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
+        result = PanHuntService().scan(config)
+        assert result.unsupported_items >= 1
+        assert result.status == 'incomplete'
+        assert result.exit_code == 2
+        assert result.unsupported_samples
+
+    def test_empty_file_is_trivially_inspected(self, tmp_dir):
+        path = os.path.join(tmp_dir, 'empty.txt')
+        with open(path, 'wb'):
+            pass
+        config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
+        result = PanHuntService().scan(config)
+        assert result.unsupported_items == 0
+        assert result.status == 'clean'
