@@ -41,7 +41,14 @@ class Hunter:
                 if not self._is_path_excluded(target_path, config):
                     self._buffer.enqueue(Job(basename, dirname=dirname))
             else:
-                for root, dirs, files in os.walk(target_path):
+                def on_walk_error(error: OSError) -> None:
+                    path = error.filename or target_path
+                    self._dispatcher.record_failure(Finding(
+                        basename=os.path.basename(path),
+                        dirname=os.path.dirname(path),
+                        mimetype='Unknown', encoding='Unknown', err=error))
+
+                for root, dirs, files in os.walk(target_path, onerror=on_walk_error):
                     dirs[:] = [
                         d for d in dirs
                         if not self._is_path_excluded(os.path.join(root, d), config)
