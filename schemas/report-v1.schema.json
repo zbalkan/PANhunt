@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PANhunt JSON scan report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "scan_status",
+    "exit_code",
+    "pans_found",
+    "findings",
+    "failed_items"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "scan_status": {
+      "enum": [
+        "clean",
+        "findings",
+        "incomplete"
+      ]
+    },
+    "exit_code": {
+      "enum": [
+        0,
+        1,
+        2
+      ]
+    },
+    "searched": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "pans_found": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "failed_items": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "brand",
+          "masked_pan",
+          "start",
+          "end",
+          "source_cursor"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "masked_pan": {
+            "type": "string"
+          },
+          "start": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "end": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "source_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}
