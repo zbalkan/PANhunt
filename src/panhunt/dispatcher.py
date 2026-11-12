@@ -45,6 +45,10 @@ class Dispatcher:
         self._threads = []
         self.findings = []
         self.failures = []
+        self._coverage_lock = threading.Lock()
+        self._scanned_count = 0
+        self._unsupported_count = 0
+        self._unsupported_samples: list[str] = []
         self.__findings_lock = threading.Lock()
 
     def start(self) -> None:
@@ -122,6 +126,14 @@ class Dispatcher:
                 job = None
                 self._buffer.complete_job()
 
+    def coverage(self) -> tuple[int, int, list[str]]:
+        with self._coverage_lock:
+            return self._scanned_count, self._unsupported_count, list(self._unsupported_samples)
+
+    def record_failure(self, failure: Finding) -> None:
+        with self.__findings_lock:
+            self.failures.append(failure)
+
     def _dispatch_job(self, job: Job) -> Optional[Finding]:
         logging.info(f"Processing job: {job.abspath}")
         if job.context is None:
@@ -152,6 +164,12 @@ class Dispatcher:
                 size = 0
         else:
             size = os.stat(job.abspath).st_size
+
+        if size == 0 and job.payload is None:
+            # Empty regular files contain no characters and require no parser.
+            with self._coverage_lock:
+                self._scanned_count += 1
+            return None
 
         if size > self._config.size_limit:
             return Finding(
@@ -233,7 +251,13 @@ class Dispatcher:
             extension=panutils.get_ext(job.basename)
         )
         if not scanner_instance:
+            with self._coverage_lock:
+                self._unsupported_count += 1
+                if len(self._unsupported_samples) < 100:
+                    self._unsupported_samples.append(job.abspath)
             return None
+        with self._coverage_lock:
+            self._scanned_count += 1
 
         finding = None
         try:
