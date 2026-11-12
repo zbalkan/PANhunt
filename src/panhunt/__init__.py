@@ -58,6 +58,7 @@ def main() -> int:
                             help='file or directory to search')
     arg_parser.add_argument('-x', dest='exclude_paths', help='paths to exclude from the search, including files or directories (use absolute paths)')
     arg_parser.add_argument('-o', dest='report_dir', help='Report file directory for TXT formatted PAN report', default='./')
+    arg_parser.add_argument('--sarif-dir', dest='sarif_dir', help='Directory for SARIF 2.1.0 report', default=None)
     arg_parser.add_argument('-j', dest='json_dir', help='Report file directory for JSON formatted PAN report', default=None)
     arg_parser.add_argument('-C', dest='config', help='configuration file to use')
     arg_parser.add_argument('-X', dest='exclude_pan', help='PAN to exclude from search')
@@ -84,7 +85,7 @@ def main() -> int:
             quiet=args.quiet)
 
     result = PanHuntService().scan(config)
-    CliPresenter().show(result)
+    CliPresenter().show(result, sarif_dir=args.sarif_dir)
     return result.exit_code
 
 
