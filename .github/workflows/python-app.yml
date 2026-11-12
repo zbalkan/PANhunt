@@ -2,7 +2,7 @@ name: Quality
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "feat/log-pipeline-audit"]
   pull_request:
     branches: ["master"]
 
