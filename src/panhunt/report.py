@@ -19,7 +19,7 @@ class ReportGenerator:
             f'Uname: {" | ".join(platform.uname())}{newline}'
             f'Elapsed time: {result.elapsed}{newline}'
             f'Found {result.pan_count} possible PANs.{newline}'
-            f'Scan status: {result.status} ({len(result.interesting_files)} unprocessed/failed items){newline}'
+            f'Scan status: {result.status} ({len(result.interesting_files)} failed, {result.unsupported_items} unsupported items){newline}'
             f'{sep}{newline}'
         )
 
@@ -52,6 +52,9 @@ class ReportGenerator:
             'scan_status': result.status,
             'exit_code': result.exit_code,
             'failed_items': len(result.interesting_files),
+            'scanned_items': result.scanned_items,
+            'unsupported_items': result.unsupported_items,
+            'unsupported_samples': result.unsupported_samples or [],
             'schema_version': '1.0.0',
             'findings': [
                 {'path': finding.logical_path, 'brand': pan.brand,
