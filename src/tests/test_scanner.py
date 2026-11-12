@@ -208,3 +208,30 @@ class TestLegacyOfficeScanner:
         result = scanner.scan(job, encoding='binary')
 
         assert len(result) == 1
+
+
+class TestBoundedIncrementalScanning:
+    def test_pan_crosses_multiple_chunks_with_no_newline(self, scanner, monkeypatch):
+        import panhunt.scanner as scanner_module
+        monkeypatch.setattr(scanner_module, 'STREAM_CHUNK_SIZE_BYTES', 7)
+        raw = b'a' * 5000 + b' 4111111111111111 ' + b'z' * 5000
+        job = Job(basename='long.txt', dirname='/tmp', payload=io.BytesIO(raw))
+        result = scanner.scan(job)
+        assert len(result) == 1
+
+    def test_utf8_multibyte_boundary_does_not_create_duplicate(self, scanner, monkeypatch):
+        import panhunt.scanner as scanner_module
+        monkeypatch.setattr(scanner_module, 'STREAM_CHUNK_SIZE_BYTES', 3)
+        raw = ('x' * 300 + 'é 4111111111111111 ' + 'z' * 300).encode('utf-8')
+        job = Job(basename='utf8.txt', dirname='/tmp', payload=io.BytesIO(raw))
+        result = scanner.scan(job, encoding='utf-8')
+        assert len(result) == 1
+
+    def test_two_pans_at_window_boundaries_emit_once(self, scanner, monkeypatch):
+        import panhunt.scanner as scanner_module
+        monkeypatch.setattr(scanner_module, 'STREAM_CHUNK_SIZE_BYTES', 17)
+        raw = ('a' * 93 + ' 4111111111111111 ' + 'b' * 100 +
+               ' 5500005555555559 ' + 'c' * 300).encode('ascii')
+        job = Job(basename='windows.txt', dirname='/tmp', payload=io.BytesIO(raw))
+        result = scanner.scan(job)
+        assert len(result) == 2
