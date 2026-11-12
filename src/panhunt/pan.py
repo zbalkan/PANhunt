@@ -8,11 +8,23 @@ class PAN:
 
     __brand: str
     __masked: str
+    start: int | None
+    end: int | None
 
-    def __init__(self, brand: str, pan: str) -> None:
+    def __init__(self, brand: str, pan: str, start: int | None = None, end: int | None = None) -> None:
 
+        self.start = start
+        self.end = end
         self.__brand = brand
         self.__masked = self.__mask_pan(pan)
+
+    @property
+    def brand(self) -> str:
+        return self.__brand
+
+    @property
+    def masked(self) -> str:
+        return self.__masked
 
     def __str__(self) -> str:
         return f'{self.__brand}:{self.__masked}'
