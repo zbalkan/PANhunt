@@ -2,7 +2,7 @@ name: Quality
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "chore/ci-python-support-2026"]
   pull_request:
     branches: ["master"]
 
