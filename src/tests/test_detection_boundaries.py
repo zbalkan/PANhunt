@@ -47,6 +47,8 @@ def test_unicode_digits_not_classified_as_ascii_pan(tmp_path):
     config = ScanConfiguration.from_args(target_path=str(tmp_path))
     assert not PanFinder(config).find('４１１１１１１１１１１１１１１１')
     assert not PanFinder(config).find('411111111111111١')
+    assert not PanFinder(config).find('４1111111111111111')
+    assert not PanFinder(config).find('4111111111111111４')
 
 
 def test_overlapping_schemes_have_one_reported_position(tmp_path):
