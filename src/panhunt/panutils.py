@@ -11,12 +11,7 @@ import unicodedata
 import zipfile
 from gzip import FEXTRA, FNAME, GzipFile
 from types import SimpleNamespace
-from typing import Any, Optional, Protocol, Union
-
-try:
-    from typing import TypeGuard
-except ImportError:
-    from typing_extensions import TypeGuard
+from typing import Any, Optional, Protocol, TypeGuard, Union
 
 _magic_module: Any
 try:
