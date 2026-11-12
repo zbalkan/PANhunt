@@ -1,0 +1,7 @@
+[Unit]
+Description=PANhunt audit notification for %i
+
+[Service]
+Type=oneshot
+# The service instance name determines the report directory. Never log PANs.
+ExecStart=/usr/bin/logger -p user.err -t panhunt -- PANhunt profile %i returned findings or scan errors; inspect /var/log/panhunt/%i
