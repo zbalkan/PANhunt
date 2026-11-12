@@ -85,6 +85,7 @@ def main() -> None:
             quiet=args.quiet)
 
     if args.target_path == '-':
+        config.target_path = 'stdin:journal-export'
         # Journal export is a structured binary stream; never decode stdin as lines.
         result = scan_export(sys.stdin.buffer, config)
     else:
