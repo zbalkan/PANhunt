@@ -32,7 +32,7 @@ class PanFinder:
         for start, end, _, brand, pan in candidates:
             if start < previous_end:
                 continue
-            resolved.append((start, end, PAN(brand=brand, pan=pan)))
+            resolved.append((start, end, PAN(brand=brand, pan=pan, start=start, end=end)))
             previous_end = end
         return resolved
 
