@@ -16,11 +16,14 @@ class ScanResult:
     start_time: datetime
     end_time: datetime
     config: ScanConfiguration
+    scanned_items: int = 0
+    unsupported_items: int = 0
+    unsupported_samples: list[str] | None = None
 
     @property
     def status(self) -> str:
         """A scan with unprocessed items cannot be certified clean."""
-        if self.interesting_files:
+        if self.interesting_files or self.unsupported_items:
             return 'incomplete'
         if self.pan_count:
             return 'findings'
