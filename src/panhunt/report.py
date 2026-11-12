@@ -56,7 +56,7 @@ class ReportGenerator:
             'findings': [
                 {'path': finding.logical_path, 'brand': pan.brand,
                  'masked_pan': pan.masked, 'start': pan.start, 'end': pan.end,
-                 'source_cursor': None}
+                 'source_cursor': getattr(finding, 'source_cursor', None)}
                 for finding in result.matched_files for pan in finding.matches
             ],
             'pans_found_results': {
