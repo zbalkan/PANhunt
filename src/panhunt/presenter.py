@@ -15,12 +15,17 @@ class CliPresenter:
     def __init__(self) -> None:
         self._report_gen = ReportGenerator()
 
-    def show(self, result: ScanResult) -> None:
+    def show(self, result: ScanResult, sarif_dir: str | None = None) -> None:
         """Save report files and, when not quiet, print results to the terminal."""
         self._save_text(result)
 
         if result.config.json_dir:
             self._save_json(result)
+
+        if sarif_dir is not None:
+            filename = os.path.splitext(result.config.report_file)[0] + '.sarif'
+            _write_file(os.path.join(sarif_dir, filename),
+                        json.dumps(self._report_gen.generate_sarif(result), indent=2))
 
         if not result.config.quiet:
             self._print(result)
