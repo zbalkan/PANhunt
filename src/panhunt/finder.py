@@ -19,6 +19,8 @@ class PanFinder:
         for priority, (brand, regex) in enumerate(self._brands):
             for match in regex.finditer(text):
                 pan = match.group(1)
+                if brand == 'Maestro' and sum(ch in '0123456789' for ch in pan) < self._config.maestro_min_length:
+                    continue
                 if PAN.is_valid_luhn_checksum(pan) and not self._config.is_excluded(pan):
                     candidates.append((match.start(1), match.end(1), priority, brand, pan))
 
