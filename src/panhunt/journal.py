@@ -52,6 +52,11 @@ def scan_export(stream: BinaryIO, config: ScanConfiguration) -> ScanResult:
         if current_size == 0:
             return
         entry_index += 1
+        if current_cursor is None:
+            failures.append(Finding('journal-entry', f'stdin/entry-{entry_index}', payload=b'',
+                                    mimetype='application/vnd.fdo.journal',
+                                    encoding='binary',
+                                    err=JournalFormatError('Journal record has no __CURSOR')))
         for field, matches in current_matches:
             finding = Finding(field, f'journal/entry-{entry_index}', payload=b'',
                               mimetype='text/plain', encoding='utf-8')
