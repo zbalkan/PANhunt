@@ -16,6 +16,8 @@ class TestScanCleanFile:
         result = PanHuntService().scan(config)
         assert result.pan_count == 0
         assert result.matched_files == []
+        assert result.status == 'clean'
+        assert result.exit_code == 0
 
     def test_result_has_elapsed_time(self, tmp_dir):
         config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
@@ -31,6 +33,8 @@ class TestScanPanFile:
         config = ScanConfiguration.from_args(target_path=tmp_dir, quiet=True)
         result = PanHuntService().scan(config)
         assert result.pan_count == 1
+        assert result.status == 'findings'
+        assert result.exit_code == 1
 
     def test_finds_multiple_pans(self, tmp_dir):
         path = os.path.join(tmp_dir, 'multi.txt')
@@ -137,3 +141,5 @@ class TestScanOpenDocumentFile:
         assert result.pan_count == 0
         assert len(result.interesting_files) == 1
         assert 'Encrypted OpenDocument files are not supported' in result.interesting_files[0].errors[0]
+        assert result.status == 'incomplete'
+        assert result.exit_code == 2
