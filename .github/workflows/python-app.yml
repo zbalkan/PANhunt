@@ -2,7 +2,7 @@ name: Quality
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "feat/pan-detection-streaming"]
   pull_request:
     branches: ["master"]
 
