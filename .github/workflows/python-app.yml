@@ -2,7 +2,7 @@ name: Quality
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "feat/reporting-completeness"]
   pull_request:
     branches: ["master"]
 
