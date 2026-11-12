@@ -7,7 +7,7 @@ name = "panhunt"
 version = "2.2.0"
 description = "Search directories and archives for documents containing payment card numbers (PANs)."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = "BSD-3-Clause"
 authors = [
     { name = "Dionach Ltd" },
@@ -21,10 +21,11 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Security",
     "Topic :: System :: Archiving",
     "Topic :: Utilities",
@@ -36,7 +37,6 @@ dependencies = [
     "psutil>=7.0.0",
     "python-magic-bin>=0.4.14; platform_system == 'Windows'",
     "python-magic>=0.4.27; platform_system != 'Windows'",
-    "typing-extensions>=4.0.0; python_version < '3.10'",
 ]
 
 [project.optional-dependencies]
