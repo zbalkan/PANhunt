@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily PANhunt audit for %i
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=15min
+Persistent=true
+Unit=panhunt@%i.service
+
+[Install]
+WantedBy=timers.target
