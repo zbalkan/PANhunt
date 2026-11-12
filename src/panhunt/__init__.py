@@ -61,6 +61,7 @@ def main() -> None:
     arg_parser.add_argument('-j', dest='json_dir', help='Report file directory for JSON formatted PAN report', default=None)
     arg_parser.add_argument('-C', dest='config', help='configuration file to use')
     arg_parser.add_argument('-X', dest='exclude_pan', help='PAN to exclude from search')
+    arg_parser.add_argument('--maestro-min-length', type=int, default=None, help='Minimum Maestro PAN length (12-19; default 16)')
     arg_parser.add_argument('-w', dest='workers', type=int, default=None, help='Number of worker threads (default: 1)')
     arg_parser.add_argument('-q', dest='quiet', action='store_true', default=False, help='No terminal output')
 
@@ -81,6 +82,7 @@ def main() -> None:
             excluded_paths_string=args.exclude_paths,
             excluded_pans_string=args.exclude_pan,
             worker_count=args.workers,
+            maestro_min_length=args.maestro_min_length,
             quiet=args.quiet)
 
     result = PanHuntService().scan(config)
