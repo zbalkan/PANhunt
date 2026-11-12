@@ -52,6 +52,13 @@ class ReportGenerator:
             'scan_status': result.status,
             'exit_code': result.exit_code,
             'failed_items': len(result.interesting_files),
+            'schema_version': '1.0.0',
+            'findings': [
+                {'path': finding.logical_path, 'brand': pan.brand,
+                 'masked_pan': pan.masked, 'start': pan.start, 'end': pan.end,
+                 'source_cursor': None}
+                for finding in result.matched_files for pan in finding.matches
+            ],
             'pans_found_results': {
                 f.abspath: [str(pan) for pan in f.matches]
                 for f in result.matched_files
@@ -68,3 +75,24 @@ class ReportGenerator:
             }
 
         return data
+
+    def generate_sarif(self, result: ScanResult) -> dict:
+        """Produce SARIF 2.1.0 without exposing the unmasked card number."""
+        items = []
+        for finding in result.matched_files:
+            for pan in finding.matches:
+                region = {'charOffset': pan.start, 'charLength': pan.end - pan.start} if (
+                    pan.start is not None and pan.end is not None) else None
+                location = {'physicalLocation': {'artifactLocation': {'uri': finding.logical_path}}}
+                if region is not None:
+                    location['physicalLocation']['region'] = region
+                items.append({'ruleId': 'PANHUNT001', 'level': 'warning',
+                              'message': {'text': f'Possible {pan.brand} PAN: {pan.masked}'},
+                              'locations': [location]})
+        return {'version': '2.1.0', '$schema':
+                'https://json.schemastore.org/sarif-2.1.0.json',
+                'runs': [{'tool': {'driver': {'name': 'PANhunt',
+                         'rules': [{'id': 'PANHUNT001', 'name': 'PaymentAccountNumber',
+                                    'shortDescription': {'text': 'Possible payment card number'}}]}},
+                          'results': items, 'properties': {'scanStatus': result.status,
+                          'failedItems': len(result.interesting_files)}}]}
