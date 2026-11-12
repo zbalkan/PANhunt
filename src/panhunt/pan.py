@@ -29,7 +29,9 @@ class PAN:
     def is_valid_luhn_checksum(pan: str) -> bool:
         """ from wikipedia: https://en.wikipedia.org/wiki/Luhn_algorithm"""
 
-        safe_pan: str = re.sub(r'[^\d]', '', pan)
+        if any(ch not in '0123456789 -' for ch in pan):
+            return False
+        safe_pan: str = re.sub(r'[^0-9]', '', pan)
 
         def digits_of(n) -> list[int]:
             return [int(d) for d in str(n)]
