@@ -20,6 +20,7 @@ import colorama
 from .config import ScanConfiguration
 from .presenter import CliPresenter
 from .service import PanHuntService
+from .journal import scan_export
 
 APP_NAME: Final[str] = 'PANhunt'
 
@@ -75,7 +76,7 @@ def main() -> None:
         return
     else:
         config = ScanConfiguration.from_args(
-            target_path=args.target_path,
+            target_path=os.getcwd() if args.target_path == '-' else args.target_path,
             report_dir=args.report_dir,
             json_dir=args.json_dir,
             excluded_paths_string=args.exclude_paths,
@@ -83,24 +84,34 @@ def main() -> None:
             worker_count=args.workers,
             quiet=args.quiet)
 
-    result = PanHuntService().scan(config)
+    if args.target_path == '-':
+        # Journal export is a structured binary stream; never decode stdin as lines.
+        result = scan_export(sys.stdin.buffer, config)
+    else:
+        result = PanHuntService().scan(config)
     CliPresenter().show(result)
+    if args.target_path == '-':
+        return 2 if result.interesting_files else (1 if result.pan_count else 0)
 
 
 def run() -> None:
     try:
-        main()
+        code = main()
         logging.info('Exiting')
+        if code:
+            raise SystemExit(code)
     except KeyboardInterrupt:
         print('\nInterrupted. Exiting cleanly.')
         logging.info('Interrupted by user.')
         logging.info('Exiting')
         raise SystemExit(130)
+    except SystemExit:
+        raise
     except Exception as ex:
         print('ERROR: ' + str(ex))
         logging.exception('Unhandled fatal error')
         logging.info('Exiting')
-        raise SystemExit(1)
+        raise SystemExit(2)
 
 
 if __name__ == '__main__':
