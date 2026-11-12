@@ -15,6 +15,7 @@ class ScanConfiguration:
     excluded_paths: list[str]
     excluded_pans: list[str]
     size_limit: int
+    maestro_min_length: int
     worker_count: int
     max_scan_depth: int
     max_child_jobs: int
@@ -52,6 +53,7 @@ class ScanConfiguration:
         self.excluded_pans = []
         self.size_limit = 8 * 1_073_741_824  # 8GB
         self.worker_count = os.cpu_count() or 1
+        self.maestro_min_length = 16
         self.max_scan_depth = 25
         self.max_child_jobs = 100_000
         self.max_total_expanded_bytes = self.size_limit
@@ -96,6 +98,8 @@ class ScanConfiguration:
 
         self._validate_non_negative_int('size_limit', self.size_limit)
         self._validate_positive_int('worker_count', self.worker_count)
+        if not 12 <= self.maestro_min_length <= 19:
+            raise ValueError('maestro_min_length must be 12..19')
         self._validate_non_negative_int('max_scan_depth', self.max_scan_depth)
         self._validate_positive_int('max_child_jobs', self.max_child_jobs)
         self._validate_non_negative_int('max_total_expanded_bytes', self.max_total_expanded_bytes)
@@ -143,7 +147,8 @@ class ScanConfiguration:
                   max_pdf_text_bytes: Optional[int] = None,
                   max_xml_bytes: Optional[int] = None,
                   max_embedded_document_bytes: Optional[int] = None,
-                  quiet: Optional[bool] = None) -> 'ScanConfiguration':
+                  quiet: Optional[bool] = None,
+                  maestro_min_length: Optional[int] = None) -> 'ScanConfiguration':
 
         config = cls()
         config._update(
@@ -172,7 +177,8 @@ class ScanConfiguration:
             max_pdf_text_bytes=max_pdf_text_bytes,
             max_xml_bytes=max_xml_bytes,
             max_embedded_document_bytes=max_embedded_document_bytes,
-            quiet=quiet
+            quiet=quiet,
+            maestro_min_length=maestro_min_length
         )
         return config
 
@@ -211,6 +217,7 @@ class ScanConfiguration:
             max_xml_bytes=cls._try_parse_int(raw, 'maxxmlbytes'),
             max_embedded_document_bytes=cls._try_parse_int(raw, 'maxembeddeddocumentbytes'),
             quiet=quiet if quiet is not None else cls._try_parse_bool(raw, 'quiet'),
+            maestro_min_length=cls._try_parse_int(raw, 'maestrominlength'),
         )
 
     def _update(self,
@@ -239,7 +246,8 @@ class ScanConfiguration:
                 max_pdf_text_bytes: Optional[int] = None,
                 max_xml_bytes: Optional[int] = None,
                 max_embedded_document_bytes: Optional[int] = None,
-                quiet: Optional[bool] = None) -> None:
+                quiet: Optional[bool] = None,
+                maestro_min_length: Optional[int] = None) -> None:
 
         if target_path and target_path != 'None':
             self.target_path = os.path.abspath(path=target_path)
@@ -343,6 +351,10 @@ class ScanConfiguration:
 
         if quiet is not None:
             self.quiet = quiet
+        if maestro_min_length is not None:
+            if not isinstance(maestro_min_length, int) or not 12 <= maestro_min_length <= 19:
+                raise ValueError('maestro_min_length must be 12..19')
+            self.maestro_min_length = maestro_min_length
 
     @staticmethod
     def _canonicalize_pan(pan: str) -> str:
