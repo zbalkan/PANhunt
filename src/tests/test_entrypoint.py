@@ -41,6 +41,15 @@ def test_run_delegates_to_main(monkeypatch):
     assert called is True
 
 
+def test_run_exits_on_findings(monkeypatch):
+    import pytest
+    import panhunt
+    monkeypatch.setattr(panhunt, 'main', lambda: 1)
+    with pytest.raises(SystemExit) as exc_info:
+        panhunt.run()
+    assert exc_info.value.code == 1
+
+
 def test_run_converts_keyboard_interrupt_to_exit_code(monkeypatch, capsys):
     import pytest
     import panhunt
@@ -69,7 +78,7 @@ def test_run_converts_fatal_exception_to_exit_code(monkeypatch, capsys):
     with pytest.raises(SystemExit) as exc_info:
         panhunt.run()
 
-    assert exc_info.value.code == 1
+    assert exc_info.value.code == 2
     assert capsys.readouterr().out == 'ERROR: boom\n'
 
 
@@ -99,7 +108,7 @@ def test_main_without_arguments_prints_short_help_and_does_not_scan(monkeypatch,
     monkeypatch.setattr('sys.argv', ['panhunt'])
     monkeypatch.setattr(panhunt.PanHuntService, 'scan', fail_scan)
 
-    panhunt.main()
+    assert panhunt.main() == 2
 
     output = capsys.readouterr().out
     assert 'usage: panhunt' in output
