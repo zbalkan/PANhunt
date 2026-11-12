@@ -27,3 +27,32 @@ def test_visa_13_16_19_digit_lengths():
 
 def test_amex_mixed_separators():
     assert _matches('AMEX', ':3782-822463 10005;') == ['3782-822463 10005']
+
+
+def test_maestro_minimum_length_policy(tmp_path):
+    from panhunt.config import ScanConfiguration
+    from panhunt.finder import PanFinder
+
+    candidate = '501800000009'  # 12 digits, valid Luhn
+    strict = ScanConfiguration.from_args(target_path=str(tmp_path))
+    permissive = ScanConfiguration.from_args(target_path=str(tmp_path), maestro_min_length=12)
+    assert not PanFinder(strict).find(candidate)
+    assert len(PanFinder(permissive).find(candidate)) == 1
+
+
+def test_unicode_digits_not_classified_as_ascii_pan(tmp_path):
+    from panhunt.config import ScanConfiguration
+    from panhunt.finder import PanFinder
+
+    config = ScanConfiguration.from_args(target_path=str(tmp_path))
+    assert not PanFinder(config).find('４１１１１１１１１１１１１１１１')
+    assert not PanFinder(config).find('411111111111111١')
+
+
+def test_overlapping_schemes_have_one_reported_position(tmp_path):
+    from panhunt.config import ScanConfiguration
+    from panhunt.finder import PanFinder
+
+    config = ScanConfiguration.from_args(target_path=str(tmp_path))
+    offsets = PanFinder(config).find_with_offsets('payment 6221260000000000')
+    assert len(offsets) <= 1
