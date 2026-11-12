@@ -69,7 +69,7 @@ def test_run_converts_fatal_exception_to_exit_code(monkeypatch, capsys):
     with pytest.raises(SystemExit) as exc_info:
         panhunt.run()
 
-    assert exc_info.value.code == 1
+    assert exc_info.value.code == 2
     assert capsys.readouterr().out == 'ERROR: boom\n'
 
 
