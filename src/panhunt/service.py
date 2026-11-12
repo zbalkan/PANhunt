@@ -29,6 +29,7 @@ class PanHuntService:
         hunter = Hunter(dispatcher=dispatcher, buffer=buffer)
 
         findings, failures = hunter.hunt(config)
+        scanned, unsupported, samples = dispatcher.coverage()
         logging.info("Finished searching.")
 
         return ScanResult(
@@ -37,4 +38,7 @@ class PanHuntService:
             start_time=start_time,
             end_time=datetime.now(),
             config=config,
+            scanned_items=scanned,
+            unsupported_items=unsupported,
+            unsupported_samples=samples,
         )
