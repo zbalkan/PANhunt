@@ -34,7 +34,7 @@ def _log_uncaught_exception(exc_type, exc_value, exc_traceback) -> None:
     logging.critical('Unhandled fatal error', exc_info=(exc_type, exc_value, exc_traceback))
 
 
-def main() -> None:
+def main() -> int:
     logging.basicConfig(
         filename=os.path.join(os.getcwd(), f'{APP_NAME}.log'),
         encoding='utf-8',
@@ -91,8 +91,7 @@ def main() -> None:
     else:
         result = PanHuntService().scan(config)
     CliPresenter().show(result)
-    if args.target_path == '-':
-        return 2 if result.interesting_files else (1 if result.pan_count else 0)
+    return 2 if result.interesting_files else (1 if result.pan_count else 0)
 
 
 def run() -> None:
