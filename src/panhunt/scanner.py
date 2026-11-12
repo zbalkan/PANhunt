@@ -148,15 +148,18 @@ class PlainTextFileScanner(ScannerBase):
         buffer = ''
         overlap = 96
         has_left_context = False
+        offset_base = 0
         while True:
             chunk = stream.read(STREAM_CHUNK_SIZE_BYTES)
             if not chunk:
                 if decoder is not None:
                     buffer += decoder.decode(b'', final=True)
-                matches.extend(
-                    pan for start, _, pan in self._pan_finder.find_with_offsets(buffer)
-                    if not has_left_context or start > 0
-                )
+                for start, end, pan in self._pan_finder.find_with_offsets(buffer):
+                    if has_left_context and start == 0:
+                        continue
+                    pan.start = offset_base + start
+                    pan.end = offset_base + end
+                    matches.append(pan)
                 break
 
             if isinstance(chunk, bytes):
@@ -168,11 +171,14 @@ class PlainTextFileScanner(ScannerBase):
 
             if len(buffer) > 2 * overlap:
                 cutoff = len(buffer) - overlap
-                matches.extend(
-                    pan for start, _, pan in self._pan_finder.find_with_offsets(buffer)
-                    if start < cutoff and (not has_left_context or start > 0)
-                )
+                for start, end, pan in self._pan_finder.find_with_offsets(buffer):
+                    if start >= cutoff or (has_left_context and start == 0):
+                        continue
+                    pan.start = offset_base + start
+                    pan.end = offset_base + end
+                    matches.append(pan)
                 buffer = buffer[cutoff - 1:]
+                offset_base += cutoff - 1
                 has_left_context = True
 
         return matches
