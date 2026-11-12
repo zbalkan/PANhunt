@@ -1,3 +1,7 @@
+## Unreleased (breaking CLI exit statuses)
+
+- Exits 0 for a complete clean scan, 1 for findings, 2 for incomplete scans or failures, and 130 for keyboard interruption. Scheduled scans and CI pipelines must handle findings as a nonzero result. A scan with findings and failures reports both and exits 2.
+
 # Changelog
 
 All notable changes to this project are documented in this file.
